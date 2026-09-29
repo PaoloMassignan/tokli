@@ -1,7 +1,7 @@
 # S0 — Completion report
 
 Slice: **S0 — Walking skeleton (no proxying yet)** · Branch `s0-walking-skeleton` (not merged)
-Status: **awaiting Human Gate 2**
+Status: **accepted 2026-09-29 (Human Gate 2)**
 
 ## Requirements implemented
 
@@ -94,4 +94,4 @@ ambiguity (S8).
 
 ## Gate 2 record
 
-_(pending)_
+Accepted on 2026-09-29 by the product owner: "Accetto s0". Merged into `main`.
