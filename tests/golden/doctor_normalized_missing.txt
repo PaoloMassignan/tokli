@@ -1,0 +1,14 @@
+Tokli doctor (normalized)
+
+Configuration  hash e7fcdbd16d8f1a7a
+  tokens.default = "o200k_base"  [default]
+  tokens.model_map = [{"pattern": "gpt-*", "tokenizer": "o200k_base"}, {"pattern": "o*", "tokenizer": "o200k_base"}, {"pattern": "claude-*", "tokenizer": "o200k_base"}]  [default]
+
+Tokenizers
+  o200k_base  missing  tiktoken:o200k_base@446a9538cb6c
+
+Checks
+  [ok]   data dir writable
+  [FAIL] tokenizer o200k_base present
+
+Result: 1 check failed

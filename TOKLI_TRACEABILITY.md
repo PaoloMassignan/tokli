@@ -135,11 +135,11 @@ Evidence codes:
 | TM-003 | Brief§10 exact vs estimate | AC-AN-3 | `test_anthropic_usage_non_stream` (and per protocol) |
 | TM-004 | H21 | AC-TM-5 | `test_calibration_factor` |
 | TM-005 | Brief§10 "never present an estimate as exact" | AC-TM-4 | `test_every_api_token_field_has_method` |
-| TM-006 | MD-02 | AC-TM-2 | `test_missing_tokenizer_fails_with_actionable_message` |
+| TM-006 | MD-02 | AC-TM-2 | `test_missing_tokenizer_fails_with_actionable_message`, `test_tampered_tokenizer_is_reported` |
 | TM-007 | MD-02, MD-20 | AC-TM-3 | `test_import_has_no_side_effects`, `test_starts_offline_with_provisioned_tokenizer` |
 | TM-008 | Brief§19 | AC-TM-1 | `test_fingerprint_equal_across_os` |
 | TM-009 | tokenizer drift detection | AC-TM-5 | `test_calibration_outlier_falls_back_to_estimate` |
-| TM-010 | MD-02; Q7 decision (S0 review P2) | AC-TM-6 | `test_setup_tokenizers_verifies_sha256`, `test_setup_tokenizers_from_file` |
+| TM-010 | MD-02; Q7 decision (S0 review P2) | AC-TM-6 | `test_setup_tokenizers_verifies_sha256`, `test_setup_tokenizers_from_file`, `test_setup_tokenizers_refuses_tampered_download`, `test_setup_tokenizers_from_file_rejects_unknown_file`, `test_setup_tokenizers_from_file_never_downloads_missing_ones`, `test_required_tokenizers`, `test_catalog_entries_are_pinned`, `test_check_tokenizer_states`, `test_setup_tokenizers_cli_refuses_unknown_file` |
 
 ## Compression core (SPEC 009)
 
@@ -312,18 +312,18 @@ Evidence codes:
 
 | Req | Why | AC | Tests |
 |---|---|---|---|
-| CF-001 | MD-05 | AC-CF-1 | `test_env_overrides_file_for_every_key`, `test_cli_overrides_env`, `test_ui_override_only_when_not_pinned`, `test_set_flag_overrides_env` |
+| CF-001 | MD-05 | AC-CF-1 | `test_env_overrides_file_for_every_key`, `test_cli_overrides_env`, `test_ui_override_only_when_not_pinned`, `test_set_flag_overrides_env`, `test_defaults_when_no_layers`, `test_config_file_found_in_config_dir` |
 | CF-002 | Brief§18 inspectable | AC-CF-1 | `test_config_show_reports_sources` |
-| CF-003 | fail clearly (Brief§18) | AC-CF-2 | `test_unknown_key_rejected_with_layer` |
+| CF-003 | fail clearly (Brief§18) | AC-CF-2 | `test_unknown_key_rejected_with_layer`, `test_unknown_section_rejected`, `test_invalid_value_names_layer_key_and_expected_type`, `test_explicit_config_file_must_exist`, `test_set_requires_key_equals_value` |
 | CF-004 | MD-04, MD-08 | AC-CF-3 | `test_cwd_config_and_dotenv_ignored` |
 | CF-005 | mid-request consistency | AC-API-5 | `test_config_snapshot_immutable` |
 | CF-006 | fingerprint + telemetry | AC-CF-4 | `test_config_hash_stable_and_sensitive` |
 | CF-007 | H12, H14: no silent substitution | AC-CC-7 | `test_optional_capability_never_silently_substituted` |
-| CF-008 | MD-04, MD-07 | AC-PT-2 | `test_data_dir_resolution_per_platform`, `test_config_dir_resolution_per_platform` |
+| CF-008 | MD-04, MD-07 | AC-PT-2 | `test_data_dir_resolution_per_platform`, `test_config_dir_resolution_per_platform`, `test_linux_xdg_fallbacks_use_home`, `test_missing_home_fails_clearly` |
 | CF-009 | Brief§8 UI | AC-API-3 | `test_patch_unknown_key_rejected` |
 | CF-010 | credential hygiene | AC-CF-5 | `test_secret_values_rejected_in_config` |
 | CF-011 | MD-05; S0 review M2, X2 | AC-CF-6 | `test_env_json_value_errors_name_variable`, `test_reserved_env_vars_only` |
-| CF-012 | S0 review M1 (YAML implicit types, duplicate keys) | AC-CF-7 | `test_duplicate_yaml_key_rejected`, `test_yaml_implicit_types_rejected` |
+| CF-012 | S0 review M1 (YAML implicit types, duplicate keys) | AC-CF-7 | `test_duplicate_yaml_key_rejected`, `test_yaml_implicit_types_rejected`, `test_empty_config_file_is_an_empty_layer` |
 
 ## Portability & diagnostics (SPEC 018)
 
@@ -338,8 +338,8 @@ Evidence codes:
 | PT-007 | Brief§20 never expose secrets | AC-PT-2 | `test_doctor_never_prints_secrets` |
 | PT-008 | fail clearly | AC-PT-4 | `test_port_in_use_fails_clearly`, `test_unwritable_data_dir_fails_clearly`, `test_missing_tokenizer_fails_with_actionable_message`, `test_alternative_port` |
 | PT-009 | MD-12 | per-compressor | `test_json_minify_crlf_roundtrip`, `test_search_group_crlf_roundtrip`, … |
-| PT-011 | MD-01…MD-28 (SPEC 018 checklist) | AC-PT-6 | `test_no_dotenv_loading`, `test_cli_output_encodable_cp1252`, `test_daily_rollup_respects_tz_param`, `test_wheel_imports_tokli_in_clean_venv`, `test_no_module_reads_cwd_relative_paths` (+ the tests named per row) |
-| PT-012 | S0 review X1, M3 (exit criterion, doctor exit code) | AC-PT-7, AC-PT-4 | `test_doctor_normalised_snapshot`, `test_doctor_makes_no_network_calls`, `test_invalid_config_fails_clearly` |
+| PT-011 | MD-01…MD-28 (SPEC 018 checklist) | AC-PT-6 | `test_no_dotenv_loading`, `test_cli_output_encodable_cp1252`, `test_daily_rollup_respects_tz_param`, `test_wheel_imports_tokli_in_clean_venv`, `test_no_module_reads_cwd_relative_paths` (+ the tests named per row), `test_machine_dependence_checklist_tests_exist`, `test_starts_offline_with_provisioned_tokenizer` |
+| PT-012 | S0 review X1, M3 (exit criterion, doctor exit code) | AC-PT-7, AC-PT-4 | `test_doctor_normalised_snapshot`, `test_doctor_makes_no_network_calls`, `test_invalid_config_fails_clearly`, `test_doctor_normalised_snapshot_provisioned`, `test_doctor_exit_codes`, `test_unwritable_data_dir_reported` |
 | PT-010 | MD-27 | AC-PT-1 | `test_fixtures_contain_no_developer_paths` |
 
 ## Hazard view: evidence → requirements

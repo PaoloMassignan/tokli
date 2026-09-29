@@ -1,7 +1,7 @@
 # S0 — Spec review
 
 Slice: **S0 — Walking skeleton (no proxying yet)** (`TOKLI_ROADMAP.md`).
-Status: **Human Gate 1 answered 2026-09-29; spec delta applied, awaiting confirmation of the delta.** No code has been written.
+Status: **Human Gate 1 passed 2026-09-29.** Implementation in progress.
 
 ## Scope
 
@@ -156,4 +156,4 @@ Spec delta: SPEC 008 (TM-006 wording, TM-010, Q7 resolved), SPEC 017 (precedence
 format, platform dirs, reserved variables, CF-011, CF-012, AC-CF-6…8), SPEC 018 (PT-012, AC-PT-7,
 `TOKLI_SERVER__PORT`, MD-02 control), `TOKLI_ROADMAP.md` S0, traceability rows.
 
-Slice approval: _(pending explicit confirmation of the delta)_
+Slice approval: **approved 2026-09-29**, product owner: "Approvo s0".

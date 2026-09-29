@@ -1,0 +1,75 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "tokli"
+version = "0.1.0.dev0"
+description = "Local transparent proxy that reduces and measures the tokens coding agents send to LLM providers"
+readme = "README.md"
+requires-python = ">=3.11,<3.14"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
+authors = [{ name = "Paolo Massignan" }]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: MacOS",
+    "Operating System :: POSIX :: Linux",
+]
+dependencies = [
+    "pydantic>=2.7,<3",
+    "PyYAML>=6.0,<7",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "ruff>=0.6",
+    "mypy>=1.11",
+    "import-linter>=2.1",
+    "types-PyYAML",
+]
+
+[project.scripts]
+tokli = "tokli.cli.main:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/tokli"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+markers = [
+    "packaging: builds a wheel and installs it into a clean virtual environment (needs network for dependencies; enabled with RUN_PACKAGING_TESTS=1)",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+# Only Python sources: the specification documents contain illustrative, unformatted snippets.
+extend-exclude = ["*.md"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF"]
+
+[tool.mypy]
+strict = true
+files = ["src"]
+plugins = ["pydantic.mypy"]
+
+[tool.importlinter]
+root_package = "tokli"
+
+[[tool.importlinter.contracts]]
+name = "Layers (TOKLI_ARCHITECTURE.md §5): cli > app > config | tokens"
+type = "layers"
+layers = [
+    "tokli.cli",
+    "tokli.app",
+    "tokli.config | tokli.tokens",
+]

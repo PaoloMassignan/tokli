@@ -27,6 +27,21 @@ Spec map: 000 scope · 001 canonical model · 002 transparent proxy · 003 Anthr
 012 quality evaluation · 013 telemetry & cost · 014 observability · 015 application API ·
 016 dashboard · 017 configuration · 018 portability & diagnostics · 019 tool-history pruning.
 
+## Development
+
+Requires CPython 3.11, 3.12 or 3.13.
+
+```bash
+python -m venv .venv && . .venv/bin/activate      # Windows: .venv\Scripts\activate
+pip install -e ".[dev]"
+tokli setup tokenizers                            # downloads and verifies the tokenizer files
+tokli doctor
+pytest && ruff check . && mypy && lint-imports
+```
+
+The process for every change is in `CLAUDE.md`. Per-slice records are in `slices/`, and
+architectural decisions are in `docs/adr/`.
+
 ## Largest technical risks
 
 | # | Risk | Why it matters | Mitigation / decider |

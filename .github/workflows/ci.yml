@@ -1,0 +1,89 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: ${{ matrix.os }} / Python ${{ matrix.python }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python: ["3.11", "3.12", "3.13"]
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install
+        run: python -m pip install -e ".[dev]"
+
+      - name: Lint and format
+        run: |
+          ruff check .
+          ruff format --check .
+
+      - name: Type check (mypy --strict)
+        run: mypy
+
+      - name: Import contracts (TOKLI_ARCHITECTURE.md §5)
+        run: lint-imports
+
+      - name: Cache tokenizer files
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/tokli-data/tokenizers
+          key: tokenizers-${{ runner.os }}-o200k_base-446a9538cb6c
+
+      - name: Provision tokenizers (the only networked Tokli command, PT-003)
+        run: tokli setup tokenizers --data-dir "${{ runner.temp }}/tokli-data"
+
+      - name: Tests
+        env:
+          TEST_TOKLI_PROVISIONED_DATA_DIR: ${{ runner.temp }}/tokli-data
+          RUN_PACKAGING_TESTS: "1"
+        run: python -m pytest
+
+      - name: Normalized doctor snapshot (AC-PT-7)
+        run: |
+          tokli doctor --normalized --data-dir "${{ runner.temp }}/tokli-data" | tr -d '\r' > doctor-normalized.txt
+          cat doctor-normalized.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: doctor-${{ matrix.os }}-${{ matrix.python }}
+          path: doctor-normalized.txt
+
+  doctor-identical:
+    name: Doctor snapshot identical in all 9 jobs (S0 exit)
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: doctor-*
+          path: snapshots
+      - name: Compare
+        run: |
+          set -euo pipefail
+          count=$(ls -d snapshots/*/ | wc -l)
+          test "$count" -eq 9 || { echo "expected 9 snapshots, got $count"; exit 1; }
+          first=$(ls -d snapshots/*/ | head -1)
+          for dir in snapshots/*/; do
+            diff -u "$first/doctor-normalized.txt" "$dir/doctor-normalized.txt"
+          done
+          echo "all 9 normalized doctor snapshots are identical"
