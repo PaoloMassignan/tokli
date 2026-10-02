@@ -36,6 +36,7 @@ python -m venv .venv && . .venv/bin/activate      # Windows: .venv\Scripts\activ
 pip install -e ".[dev]"
 tokli setup tokenizers                            # downloads and verifies the tokenizer files
 tokli doctor
+tokli serve                                       # http://127.0.0.1:8787/anthropic
 pytest && ruff check . && mypy && lint-imports
 ```
 
@@ -60,7 +61,7 @@ architectural decisions are in `docs/adr/`.
 | ID | Question | Owner / resolver |
 |---|---|---|
 | Q1 | Expose `system` and tool descriptions as mutable in v1? (Proposed: no.) | E2 + E5 |
-| Q2 | Does Claude Code accept `ANTHROPIC_BASE_URL` with a path prefix? | E1 |
+| Q2 | ~~Path prefix in `ANTHROPIC_BASE_URL`?~~ | **Resolved 2026-10-02 (E1):** accepted. |
 | Q3 | Current Anthropic SSE usage fields (`message_delta` cumulative input?) | E4 |
 | Q4 | Compress `count_tokens` bodies so the client's context accounting matches what is sent? | Product decision |
 | Q5 | Chat-compatible providers with usage in every chunk: take the last value? | Proposed yes |

@@ -1,6 +1,7 @@
 # SPEC 014 — Observability
 
 Status: Draft · Slice: S1 onward (DoD of every slice) · Related: TOKLI_OBSERVABILITY.md (explanatory)
+Approved for S1 (2026-09-30): OB-001…OB-008, OB-010, OB-011 (sink failure, unavailable compressor), OB-012. OB-009 deferred to the first slice that needs debug content.
 
 ## Requirements
 
@@ -16,6 +17,7 @@ Status: Draft · Slice: S1 onward (DoD of every slice) · Related: TOKLI_OBSERVA
 | OB-008 | THE SYSTEM SHALL NOT write segment text, prompt or response content to any sink unless `observability.debug_content` is true **and** `TOKLI_DEBUG_CONTENT=1` is set. |
 | OB-009 | WHILE debug-content mode is active, THE SYSTEM SHALL show a startup banner, a persistent UI banner and a doctor warning, and SHALL store captured content only in `<data>/debug-content/` with a 24 h TTL and a 200 MB cap. |
 | OB-010 | THE SYSTEM SHALL emit one INFO summary log line per request (JSON by default) containing request_id, provider, model, outcome, reason, tokens (with methods), status and overhead. |
+| OB-012 | THE trace SHALL record the **names** of the client's request headers (lower-cased, sorted) and SHALL NOT record any header value. |
 | OB-011 | THE `GET /tokli/health` endpoint SHALL report `degraded` with named checks when a sink fails, an enabled compressor is unavailable, or calibration outliers exceed 20 % of the last 100 requests. |
 
 ## Acceptance criteria
@@ -30,4 +32,4 @@ Status: Draft · Slice: S1 onward (DoD of every slice) · Related: TOKLI_OBSERVA
 `test_reason_codes_closed_set` · `test_upstream_correlation_ids_recorded` · `test_upstream_error_logging_respects_content_rule` ·
 `test_logs_never_contain_credentials` · `test_default_logging_contains_no_prompt_text` ·
 `test_debug_content_requires_both_switches` · `test_debug_content_banner_visible` · `test_debug_content_ttl_and_cap` ·
-`test_request_summary_log_line` · `test_health_degraded_conditions`
+`test_request_summary_log_line` · `test_health_degraded_conditions` · `test_trace_records_header_names_only`

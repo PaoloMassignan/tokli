@@ -1,0 +1,1 @@
+{"model":"claude-sonnet-4-5","max_tokens":128,"x_future":{"flag":true,"values":[1,2.5,"three"]},"messages":[{"role":"user","content":[{"type":"future_block","payload":{"text":"not a segment"}},{"type":"text","text":"Known block."}]}]}

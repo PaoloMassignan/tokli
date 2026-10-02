@@ -13,12 +13,19 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from types import MappingProxyType
+from typing import Any
 
 from pydantic import ValidationError
 
 from tokli.config.errors import ConfigError
 from tokli.config.paths import ResolvedDirs, resolve_dirs
-from tokli.config.schema import BEHAVIOUR_SECTIONS, KeyInfo, TokliSettings, schema_keys
+from tokli.config.schema import (
+    BEHAVIOUR_SECTIONS,
+    KeyInfo,
+    TokliSettings,
+    is_section,
+    schema_keys,
+)
 from tokli.config.yamlfile import load_strict_yaml
 
 # Environment variables that are not schema keys (SPEC 017, CF-011).
@@ -27,6 +34,7 @@ RESERVED_ENV: frozenset[str] = frozenset(
 )
 
 CONFIG_FILE_NAME = "tokli.yaml"
+_KEYS_CACHE = frozenset(schema_keys())
 _SHOW_FIX = "run 'tokli config show' to list valid settings"
 
 
@@ -36,6 +44,7 @@ class CliOverrides:
     config_dir: str | None = None
     data_dir: str | None = None
     sets: tuple[str, ...] = ()
+    named: tuple[tuple[str, str, str], ...] = ()  # (key, raw value, flag), e.g. --port
 
 
 @dataclass(frozen=True)
@@ -97,17 +106,24 @@ def _file_layer(path: Path, keys: Mapping[str, KeyInfo]) -> dict[str, _Setting]:
             fix="write sections such as 'tokens:' with their keys indented below",
         )
     layer: dict[str, _Setting] = {}
-    for section, body in document.items():
-        if not isinstance(body, dict):
-            raise ConfigError(
-                cause=f"{path}: section '{section}' must be a mapping of keys",
-                fix=_SHOW_FIX,
-            )
-        for name, value in body.items():
-            key = f"{section}.{name}"
+
+    def walk(prefix: tuple[str, ...], node: dict[object, object]) -> None:
+        for name, value in node.items():
+            here = (*prefix, str(name))
+            if is_section(here):
+                if not isinstance(value, dict):
+                    raise ConfigError(
+                        cause=f"{path}: section '{'.'.join(here)}' must be a mapping of keys",
+                        fix=_SHOW_FIX,
+                    )
+                walk(here, value)
+                continue
+            key = ".".join(here)
             if key not in keys:
                 raise ConfigError(cause=f"{path}: unknown setting '{key}'", fix=_SHOW_FIX)
             layer[key] = _Setting(value, source)
+
+    walk((), document)
     return layer
 
 
@@ -127,8 +143,15 @@ def _env_layer(env: Mapping[str, str], keys: Mapping[str, KeyInfo]) -> dict[str,
     return layer
 
 
-def _cli_layer(sets: tuple[str, ...], keys: Mapping[str, KeyInfo]) -> dict[str, _Setting]:
+def _cli_layer(
+    sets: tuple[str, ...],
+    named: tuple[tuple[str, str, str], ...],
+    keys: Mapping[str, KeyInfo],
+) -> dict[str, _Setting]:
     layer: dict[str, _Setting] = {}
+    for key, raw, flag in named:
+        named_info = keys[key]
+        layer[key] = _Setting(_parse_text_value(named_info, raw, f"cli:{flag}"), f"cli:{flag}")
     for item in sets:
         key, sep, raw = item.partition("=")
         key = key.strip()
@@ -164,10 +187,13 @@ def _locate_config_file(
 
 
 def _validate(merged: dict[str, _Setting], defaults: TokliSettings) -> TokliSettings:
-    document: dict[str, dict[str, object]] = defaults.model_dump(mode="json")
+    document: dict[str, Any] = defaults.model_dump(mode="json")
     for key, setting in merged.items():
-        section, name = key.split(".", 1)
-        document[section][name] = setting.value
+        *parents, name = key.split(".")
+        node = document
+        for part in parents:
+            node = node[part]
+        node[name] = setting.value
     try:
         payload = json.dumps(document, allow_nan=False)
     except (TypeError, ValueError) as exc:
@@ -182,13 +208,23 @@ def _validate(merged: dict[str, _Setting], defaults: TokliSettings) -> TokliSett
     except ValidationError as exc:
         error = exc.errors()[0]
         loc = [str(part) for part in error["loc"]]
-        key = ".".join(loc[:2])
+        key = next(
+            (".".join(loc[:n]) for n in range(len(loc), 0, -1) if ".".join(loc[:n]) in _KEYS_CACHE),
+            ".".join(loc),
+        )
         source = merged[key].source if key in merged else "default"
         where = ".".join(loc)
         raise ConfigError(
             cause=f"{source}: invalid value for '{key}' at {where}: {error['msg']}",
             fix=f"expected: {_expected(error)}",
         ) from exc
+
+
+def _lookup(document: Mapping[str, Any], key: str) -> object:
+    node: Any = document
+    for part in key.split("."):
+        node = node[part]
+    return node
 
 
 def _json_ok(value: object) -> bool:
@@ -225,12 +261,12 @@ def load_config(cli: CliOverrides, env: Mapping[str, str], platform: str) -> Eff
     if config_file is not None:
         merged.update(_file_layer(config_file, keys))
     merged.update(_env_layer(env, keys))
-    merged.update(_cli_layer(cli.sets, keys))
+    merged.update(_cli_layer(cli.sets, cli.named, keys))
 
     defaults = TokliSettings()
     settings = _validate(merged, defaults)
     dumped = settings.model_dump(mode="json")
-    values = {key: _freeze(dumped[key.split(".")[0]][key.split(".")[1]]) for key in keys}
+    values = {key: _freeze(_lookup(dumped, key)) for key in keys}
     sources = {key: merged[key].source if key in merged else "default" for key in keys}
     return EffectiveConfig(
         settings=settings,

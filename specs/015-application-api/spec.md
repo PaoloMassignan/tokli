@@ -1,6 +1,7 @@
 # SPEC 015 — Application API (metrics, compressors, configuration, diagnostics)
 
 Status: Draft · Slices: S1 (`requests/{id}`), S3 (metrics), S4 (config), S9 (diagnostics)
+Approved for S1 (2026-09-30): `GET /tokli/api/requests/{id}`, `GET /tokli/health`, API-001, API-002, API-004.
 
 ## Purpose
 One JSON API under `/tokli/api` that the dashboard, the CLI and any replacement UI consume.

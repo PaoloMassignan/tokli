@@ -14,6 +14,9 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from tokli.app.setup_tokenizers import required_tokenizers
+from tokli.compression.contract import Compressor
+from tokli.compression.engine import availability_of
+from tokli.compression.registry import REGISTRY
 from tokli.config import EffectiveConfig
 from tokli.tokens import CATALOG, TokenizerSpec, TokenizerState, TokenizerStatus, check_tokenizer
 
@@ -36,11 +39,21 @@ class Environment:
 
 
 @dataclass(frozen=True)
+class CompressorLine:
+    id: str
+    version: str
+    kind: str
+    enabled: bool
+    availability: str
+
+
+@dataclass(frozen=True)
 class DoctorReport:
     environment: Environment
     config: EffectiveConfig
     tokenizers: tuple[TokenizerStatus, ...]
     checks: tuple[Check, ...]
+    compressors: tuple[CompressorLine, ...] = ()
 
     @property
     def ok(self) -> bool:
@@ -80,6 +93,22 @@ def _tokenizer_check(status: TokenizerStatus) -> Check:
     return Check(name, False, cause=cause, fix=SETUP_FIX)
 
 
+def compressor_lines(
+    config: EffectiveConfig, registry: tuple[Compressor, ...] = REGISTRY
+) -> tuple[CompressorLine, ...]:
+    toggles = config.settings.compressors.model_dump()
+    return tuple(
+        CompressorLine(
+            id=c.spec.id,
+            version=c.spec.version,
+            kind=c.spec.kind,
+            enabled=bool(toggles.get(c.spec.id, {}).get("enabled", False)),
+            availability=availability_of(c.spec.requires),
+        )
+        for c in registry
+    )
+
+
 def build_report(
     config: EffectiveConfig,
     environment: Environment,
@@ -90,7 +119,7 @@ def build_report(
         for name in required_tokenizers(config.settings)
     )
     checks = (_data_dir_check(config), *(_tokenizer_check(s) for s in statuses))
-    return DoctorReport(environment, config, statuses, checks)
+    return DoctorReport(environment, config, statuses, checks, compressor_lines(config))
 
 
 def _source(source: str, normalized: bool) -> str:
@@ -103,8 +132,10 @@ def config_lines(config: EffectiveConfig, *, normalized: bool) -> list[str]:
     dumped = config.settings.model_dump(mode="json")
     lines = []
     for key, source in config.sources.items():
-        section, name = key.split(".", 1)
-        value = json.dumps(dumped[section][name], ensure_ascii=True)
+        node = dumped
+        for part in key.split("."):
+            node = node[part]
+        value = json.dumps(node, ensure_ascii=True)
         lines.append(f"  {key} = {value}  [{_source(source, normalized)}]")
     return lines
 
@@ -133,6 +164,10 @@ def render(report: DoctorReport, *, normalized: bool) -> str:
 
     out.append(f"Configuration  hash {config.config_hash[:16]}")
     out += config_lines(config, normalized=normalized)
+    out += ["", "Auth", "  anthropic  passthrough", "", "Compressors"]
+    for entry in report.compressors:
+        state = "enabled" if entry.enabled else "disabled"
+        out.append(f"  {entry.id}  v{entry.version}  {entry.kind}  {state}  {entry.availability}")
     out += ["", "Tokenizers"]
     for status in report.tokenizers:
         line = f"  {status.spec.name}  {status.state.value}  {status.spec.tokenizer_id}"

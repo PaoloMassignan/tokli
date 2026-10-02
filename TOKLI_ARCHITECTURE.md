@@ -178,6 +178,10 @@ the provider, prices or storage.
 
 ## 5. Dependency rules (enforced by an import-linter test)
 
+> **Since S1 the enforced rules are those of ADR 0004** (`docs/adr/0004-module-dependency-rules-from-s1.md`,
+> accepted 2026-10-02): `tokli.app.bootstrap` is the composition root, and the list below is kept
+> as the original intent. Every forbidden edge below still holds.
+
 ```text
 tokli.http        → tokli.app, tokli.pipeline, tokli.protocols, tokli.upstream, tokli.auth,
                     tokli.observability, tokli.config, tokli.domain

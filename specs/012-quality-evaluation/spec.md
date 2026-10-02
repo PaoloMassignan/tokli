@@ -1,6 +1,7 @@
 # SPEC 012 — Quality evaluation
 
 Status: Draft (revised in Phase 0.1) · Slices: **S2.5 (smoke tier: minimal harness, case/record formats, cost controls)**, S8 (full tier) · Related: TOKLI_TEST_STRATEGY §5, §7, PHASE0_1_REVIEW.md
+Approved for S1 (2026-09-30): QE-016 `provisional` record for `json_minify` only.
 
 ## Purpose
 Decide with evidence whether a compressor may be enabled by default, and publish its quality

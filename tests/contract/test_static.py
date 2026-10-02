@@ -122,3 +122,45 @@ def test_wheel_imports_tokli_in_clean_venv(tmp_path: Path) -> None:
         check=False,
     )
     assert shown.returncode == 0, shown.stderr
+
+
+def test_routing_inputs_closed_and_no_ml() -> None:
+    import dataclasses
+
+    from tokli.domain.stage import Features
+
+    # The routing inputs are exactly the features of SPEC 011 (S1 subset), the segment view,
+    # the compressor specs and the engine settings (AC-RT-4).
+    assert {f.name for f in dataclasses.fields(Features)} == {"tokens", "json_candidate"}
+    ml = re.compile(r"^\s*(?:import|from)\s+(transformers|torch|onnxruntime|sklearn)\b", re.M)
+    storage = re.compile(r"^\s*(?:import|from)\s+(sqlite3|tokli\.telemetry)\b", re.M)
+    for path in python_sources(SRC):
+        text = path.read_text(encoding="utf-8")
+        assert not ml.search(text), path
+        if "compression" in path.parts or "compressors" in path.parts:
+            assert not storage.search(text), path
+
+
+def test_repository_contains_no_developer_paths() -> None:
+    """No tracked file may contain a personal home path (privacy; CLAUDE.md §9, PT-010)."""
+    tracked = subprocess.run(
+        ["git", "ls-files"], cwd=ROOT, capture_output=True, text=True, check=True
+    ).stdout.splitlines()
+    users = "Us" + "ers"
+    home_path = re.compile(
+        r"[A-Za-z]:[\\/]+" + users + r"[\\/]+(?!dev[\\/]|<)[A-Za-z0-9._-]+[\\/]"
+        r"|/" + users + r"/(?!dev/)[a-z][a-z0-9._-]*/"
+        r"|/home/(?!dev/|runner/)[a-z][a-z0-9._-]*/"
+    )
+    offenders = []
+    for name in tracked:
+        path = ROOT / name
+        if path.suffix in {".tiktoken", ".png", ".db"} or not path.is_file():
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            continue
+        if home_path.search(text):
+            offenders.append(name)
+    assert offenders == [], offenders

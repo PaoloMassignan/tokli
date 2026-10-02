@@ -1,6 +1,7 @@
 # SPEC 003 — Anthropic Messages adapter
 
 Status: Draft · Slice: S1 (request), S2 (usage) · Related: SPEC 001, 002
+Approved for S1 (2026-09-30): AN-001…AN-004, AN-008. Usage (AN-005…AN-007, AN-009) in S2.
 
 ## Purpose
 Map `POST /v1/messages` requests to canonical segments and back, and extract provider usage from

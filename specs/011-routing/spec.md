@@ -1,6 +1,8 @@
 # SPEC 011 — Compression routing (cheap classification before transformation)
 
 Status: Draft · Slice: S1 (minimal), S4/S8 (features for more compressors)
+Changed by SCR-001 (2026-10-02): AC-RT-1 measurement sizes.
+Approved for S1 (2026-09-30): RT-002…RT-006; RT-001 for the `tokens` and `json_candidate` features.
 
 ## Purpose
 Decide cheaply, per segment, which compressors are worth attempting, and prefer pass-through when
@@ -37,7 +39,7 @@ Evidence: TOKLI_EVIDENCE.md (hazards and measurements); per-requirement rational
 | RT-006 | THE per-request trace SHALL show, per compressor, counts of considered/applicable/accepted and the skip-reason histogram. |
 
 ## Acceptance criteria
-- AC-RT-1: feature extraction time grows linearly: for inputs of 0.5 MB and 5 MB the time ratio is ≤ 15 (correctness constraint, every commit). The absolute time on a 5 MB segment is recorded by the nightly benchmark and checked against a regression limit once a baseline exists (TOKLI_TEST_STRATEGY §8). It is not a fixed millisecond threshold.
+- AC-RT-1: feature extraction time grows linearly: for inputs of 5 MB and 50 MB, best of 3 runs each, the time ratio is ≤ 15 (correctness constraint, every commit). The absolute time on a 5 MB segment is recorded by the nightly benchmark and checked against a regression limit once a baseline exists (TOKLI_TEST_STRATEGY §8). It is not a fixed millisecond threshold.
 - AC-RT-2: a spy compressor shows `applicable()` is never called for segments below `min_tokens` or in `verbatim_tools`.
 - AC-RT-3: a request with only prose segments → `passthrough(no_applicable_compressor)` and upstream receives the original bytes.
 - AC-RT-4: the engine's routing inputs are exactly the `Features` fields above, `SegmentView`, spec metadata and the effective config (a test enumerates the filter-chain inputs). A static scan finds no import of an ML framework (`transformers`, `torch`, `onnxruntime`, `sklearn`) under `tokli/`, and no read of telemetry storage from `tokli.compression`.

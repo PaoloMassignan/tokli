@@ -1,0 +1,1 @@
+{"model":"claude-sonnet-4-5","max_tokens":256,"system":"You are terse. TOKLI-CANARY-SYSTEM","messages":[{"role":"user","content":"Hi"}]}

@@ -1,6 +1,7 @@
 # SPEC 018 — Portability, reproducibility and diagnostics
 
 Status: **Approved for S0 (2026-09-29)**: PT-003 (setup command), PT-004, PT-005 (S0 subset), PT-007, PT-008 (invalid config, unwritable data dir, missing tokenizer), PT-010, PT-011 (MD-02, MD-04, MD-05, MD-07, MD-08, MD-16, MD-18, MD-19, MD-20, MD-27), PT-012. Other requirements: Draft. · Slices: S0 (doctor basic, server-less fresh-machine scenarios), S1 (remaining scenarios), S9 (fingerprint + UI)
+Approved for S1 (2026-09-30): PT-008 (port in use), fresh-machine scenarios for `serve`, MD-09, MD-10, MD-12, MD-22, MD-23, MD-24, MD-25.
 Related: SPEC 017 (configuration), TOKLI_TEST_STRATEGY.md §2
 
 ## Purpose

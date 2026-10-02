@@ -1,6 +1,7 @@
 # SPEC 006 — Upstream endpoints and authentication
 
 Status: Draft · Slice: S1 (passthrough, Anthropic), S5 (inject, both) · Related: ARCH §2, §6
+Approved for S1 (2026-09-30): UP-001, UP-002, UP-005, UP-006, UP-008, UP-009, UP-010, and live tests E1a (API key) and E1b (Pro/Max OAuth). Inject mode in S5.
 
 ## Purpose
 Keep provider endpoints and credentials explicit, separate from compression, and impossible to
@@ -18,9 +19,9 @@ Evidence: TOKLI_EVIDENCE.md (hazards and measurements); per-requirement rational
 
 | Client / credential | Mode | Status |
 |---|---|---|
-| Anthropic API key (`x-api-key`) from client | passthrough | SUPPORTED (S1) |
+| Anthropic API key (`x-api-key`) from client | passthrough | SUPPORTED (S1); live test E1a on 2026-10-02 |
 | Anthropic API key held by Tokli | inject | SUPPORTED (S5) |
-| Claude Pro/Max OAuth (`Authorization: Bearer`, `anthropic-beta` OAuth flag) from Claude Code | passthrough | In scope. Product owner accepted it on 2026-09-28 (Q8 resolved). Technical status **REQUIRES VERIFICATION (E1)**. Nothing in auth is transformed. |
+| Claude Pro/Max OAuth (`Authorization: Bearer`, `anthropic-beta` OAuth flag) from Claude Code | passthrough | **SUPPORTED (S1)**: live test E1b on 2026-10-02, 16 requests through Tokli with a Pro/Max login, all relayed with `credential_kind = oauth` (`slices/S1/COMPLETION_REPORT.md`). Nothing in auth is transformed. |
 | OpenAI API key (`Authorization: Bearer sk-…`) from client | passthrough | SUPPORTED (S5) |
 | OpenAI API key held by Tokli | inject | SUPPORTED (S5). Required by the product brief. |
 | Codex with ChatGPT-subscription login | — | NOT SUPPORTED (E6) |
@@ -67,7 +68,7 @@ tls:
 `test_inject_uses_only_configured_source` · `test_inherited_provider_env_is_ignored_unless_configured` ·
 `test_missing_inject_credential_returns_503` · `test_no_cross_provider_credentials` ·
 `test_logs_never_contain_credentials` · `test_key_file_with_bom_is_accepted` · `test_utf16_key_file_reported` ·
-`test_body_independent_of_auth_mode` · `test_tls_verification_default_on` · `test_read_timeout_between_chunks`
+`test_body_independent_of_auth_mode` · `test_tls_verification_default_on` · `test_read_timeout_between_chunks` · `test_credential_kind_classification`
 
 ## Open questions
 - ~~Q8~~ Resolved 2026-09-28: the product owner is comfortable with OAuth passthrough. It becomes SUPPORTED once E1 passes.

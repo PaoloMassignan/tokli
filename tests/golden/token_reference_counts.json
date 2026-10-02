@@ -1,0 +1,44 @@
+{
+ "generated_with": "tiktoken 0.14.0 get_encoding(...).encode_ordinary",
+ "samples": [
+  "hello world",
+  "The quick brown fox jumps over the lazy dog.",
+  "def load(path):\n    return open(path, \"rb\").read()\n",
+  "{\n  \"name\": \"tokli\",\n  \"tags\": [\n    \"proxy\",\n    \"tokens\"\n  ]\n}",
+  "line one\r\nline two\r\n",
+  "Caf\u00e9 cr\u00e8me br\u00fbl\u00e9e \u2014 na\u00efve r\u00e9sum\u00e9",
+  "\u6f22\u5b57\u3068\u304b\u306a\u6df7\u3058\u308a\u306e\u6587",
+  "emoji \ud83d\ude00\ud83d\ude80 end",
+  "<|endoftext|> must count as plain text",
+  "    indented\t\ttabs   and   spaces    ",
+  ""
+ ],
+ "counts": {
+  "o200k_base": [
+   2,
+   10,
+   14,
+   25,
+   6,
+   9,
+   9,
+   5,
+   12,
+   11,
+   0
+  ],
+  "cl100k_base": [
+   2,
+   10,
+   14,
+   25,
+   6,
+   15,
+   12,
+   6,
+   12,
+   11,
+   0
+  ]
+ }
+}

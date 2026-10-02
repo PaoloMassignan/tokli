@@ -1,6 +1,7 @@
 # SPEC 008 — Token measurement
 
 Status: **Approved for S0 (2026-09-29)**: TM-006, TM-007, TM-010, and the `tokens.default` / `tokens.model_map` schema. Other requirements: Draft. · Slice: S0 (tokenizer), S1 (estimates), S2 (exact + calibrated) · Related: TOKLI_TELEMETRY_AND_COST.md §1
+Approved for S1 (2026-09-30): TM-001, TM-002, TM-005 (estimate label), TM-008.
 
 ## Purpose
 Count tokens deterministically and label every figure with how it was obtained.
@@ -40,7 +41,7 @@ Evidence: TOKLI_EVIDENCE.md (hazards and measurements); per-requirement rational
 `test_missing_tokenizer_fails_with_actionable_message` · `test_import_has_no_side_effects` ·
 `test_starts_offline_with_provisioned_tokenizer` · `test_every_api_token_field_has_method` ·
 `test_calibration_factor` · `test_calibration_outlier_falls_back_to_estimate` ·
-`test_setup_tokenizers_verifies_sha256` · `test_setup_tokenizers_from_file`
+`test_setup_tokenizers_verifies_sha256` · `test_setup_tokenizers_from_file` · `test_token_counts_match_reference_values`
 
 ## Open questions
 - ~~Q7~~ Resolved 2026-09-29: tokenizer data is not bundled. It is provisioned by `tokli setup tokenizers` (TM-010).

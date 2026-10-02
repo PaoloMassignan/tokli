@@ -40,17 +40,19 @@ jobs:
       - name: Type check (mypy --strict)
         run: mypy
 
-      - name: Import contracts (TOKLI_ARCHITECTURE.md §5)
+      - name: Import contracts (TOKLI_ARCHITECTURE.md §5, ADR 0004)
         run: lint-imports
 
       - name: Cache tokenizer files
         uses: actions/cache@v4
         with:
           path: ${{ runner.temp }}/tokli-data/tokenizers
-          key: tokenizers-${{ runner.os }}-o200k_base-446a9538cb6c
+          key: tokenizers-${{ runner.os }}-o200k-446a9538cb6c-cl100k-223921b76ee9
 
       - name: Provision tokenizers (the only networked Tokli command, PT-003)
-        run: tokli setup tokenizers --data-dir "${{ runner.temp }}/tokli-data"
+        run: >
+          tokli setup tokenizers --data-dir "${{ runner.temp }}/tokli-data"
+          --set 'tokens.model_map=[{"pattern": "x-*", "tokenizer": "cl100k_base"}]'
 
       - name: Tests
         env:
@@ -63,19 +65,36 @@ jobs:
           tokli doctor --normalized --data-dir "${{ runner.temp }}/tokli-data" | tr -d '\r' > doctor-normalized.txt
           cat doctor-normalized.txt
 
+      - name: Rendered corpus hashes (S1 acceptance 5)
+        run: |
+          python -m tests.compat.render_corpus --data-dir "${{ runner.temp }}/tokli-data" | tr -d '\r' > corpus-hashes.txt
+          cat corpus-hashes.txt
+
       - uses: actions/upload-artifact@v4
         with:
-          name: doctor-${{ matrix.os }}-${{ matrix.python }}
-          path: doctor-normalized.txt
+          name: identity-${{ matrix.os }}-${{ matrix.python }}
+          path: |
+            doctor-normalized.txt
+            corpus-hashes.txt
 
-  doctor-identical:
-    name: Doctor snapshot identical in all 9 jobs (S0 exit)
+      - name: E9 overhead benchmark (reported, not gated)
+        if: matrix.python == '3.13'
+        run: python -m benchmarks.overhead --data-dir "${{ runner.temp }}/tokli-data" --iterations 30 --out e9-${{ runner.os }}.json
+
+      - uses: actions/upload-artifact@v4
+        if: matrix.python == '3.13'
+        with:
+          name: e9-${{ runner.os }}
+          path: e9-${{ runner.os }}.json
+
+  identical-across-jobs:
+    name: Doctor snapshot and rendered corpus identical in all 9 jobs
     needs: test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
         with:
-          pattern: doctor-*
+          pattern: identity-*
           path: snapshots
       - name: Compare
         run: |
@@ -85,5 +104,6 @@ jobs:
           first=$(ls -d snapshots/*/ | head -1)
           for dir in snapshots/*/; do
             diff -u "$first/doctor-normalized.txt" "$dir/doctor-normalized.txt"
+            diff -u "$first/corpus-hashes.txt" "$dir/corpus-hashes.txt"
           done
-          echo "all 9 normalized doctor snapshots are identical"
+          echo "doctor snapshots and rendered corpus hashes are identical in all 9 jobs"

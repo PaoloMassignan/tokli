@@ -16,25 +16,82 @@ from tokli.config.yamlfile import load_strict_yaml
 # One alternative value per schema key: (YAML text for the file layer, env/--set text, expected).
 # A new schema key without an entry here fails test_env_overrides_file_for_every_key.
 EXAMPLES: dict[str, tuple[str, str, object]] = {
+    "server.host": ("localhost", "127.0.0.2", "127.0.0.2"),
+    "server.port": ("9000", "9001", 9001),
+    "server.allow_remote": ("true", "false", False),
+    "upstreams.anthropic.base_url": ("https://a.invalid", "https://b.invalid", "https://b.invalid"),
+    "upstreams.anthropic.connect_timeout_s": ("5", "7.5", 7.5),
+    "upstreams.anthropic.read_timeout_s": ("100", "200", 200),
+    "tls.ca_bundle": ("a.pem", "b.pem", "b.pem"),
+    "limits.max_transform_bytes": ("1000", "2000", 2000),
+    "compression.segment_kinds": ("[TOOL_RESULT]", '["USER_TEXT"]', ("USER_TEXT",)),
+    "compression.verbatim_tools": ("[Read]", '["Bash"]', ("Bash",)),
+    "compression.min_segment_tokens": ("10", "20", 20),
+    "compression.min_gain_tokens": ("1", "2", 2),
+    "compression.min_gain_ratio": ("0.5", "0.25", 0.25),
+    "compression.request_budget_ms": ("10", "20", 20),
+    "compression.per_call_timeout_ms": ("10", "20", 20),
+    "compression.verify_lossless": ("true", "false", False),
+    "compressors.json_minify.enabled": ("false", "true", True),
     "tokens.default": ("cl100k_base", "o200k_base", "o200k_base"),
     "tokens.model_map": (
         '[{pattern: "x-*", tokenizer: cl100k_base}]',
         '[{"pattern": "y-*", "tokenizer": "o200k_base"}]',
         ({"pattern": "y-*", "tokenizer": "o200k_base"},),
     ),
+    "observability.trace_buffer": ("10", "20", 20),
+    "observability.response_header": ("false", "true", True),
+    "observability.log_format": ("text", "json", "json"),
+    "telemetry.retention_days": ("1", "2", 2),
 }
 FILE_EXPECTED: dict[str, object] = {
+    "server.host": "localhost",
+    "server.port": 9000,
+    "server.allow_remote": True,
+    "upstreams.anthropic.base_url": "https://a.invalid",
+    "upstreams.anthropic.connect_timeout_s": 5,
+    "upstreams.anthropic.read_timeout_s": 100,
+    "tls.ca_bundle": "a.pem",
+    "limits.max_transform_bytes": 1000,
+    "compression.segment_kinds": ("TOOL_RESULT",),
+    "compression.verbatim_tools": ("Read",),
+    "compression.min_segment_tokens": 10,
+    "compression.min_gain_tokens": 1,
+    "compression.min_gain_ratio": 0.5,
+    "compression.request_budget_ms": 10,
+    "compression.per_call_timeout_ms": 10,
+    "compression.verify_lossless": True,
+    "compressors.json_minify.enabled": False,
     "tokens.default": "cl100k_base",
     "tokens.model_map": ({"pattern": "x-*", "tokenizer": "cl100k_base"},),
+    "observability.trace_buffer": 10,
+    "observability.response_header": False,
+    "observability.log_format": "text",
+    "telemetry.retention_days": 1,
 }
 
-DEFAULT_TOKENS_JSON = {
-    "default": "o200k_base",
-    "model_map": [
-        {"pattern": "gpt-*", "tokenizer": "o200k_base"},
-        {"pattern": "o*", "tokenizer": "o200k_base"},
-        {"pattern": "claude-*", "tokenizer": "o200k_base"},
-    ],
+# Behaviour-affecting defaults, written out from SPEC 017 "Keys added in S1" (CF-006).
+DEFAULT_BEHAVIOUR_JSON = {
+    "compression": {
+        "segment_kinds": ["TOOL_RESULT", "USER_TEXT"],
+        "verbatim_tools": ["Read", "Bash", "shell", "shell_command", "container.exec"],
+        "min_segment_tokens": 64,
+        "min_gain_tokens": 4,
+        "min_gain_ratio": 0.01,
+        "request_budget_ms": 50.0,
+        "per_call_timeout_ms": 200.0,
+        "verify_lossless": False,
+    },
+    "compressors": {"json_minify": {"enabled": True}},
+    "limits": {"max_transform_bytes": 33554432},
+    "tokens": {
+        "default": "o200k_base",
+        "model_map": [
+            {"pattern": "gpt-*", "tokenizer": "o200k_base"},
+            {"pattern": "o*", "tokenizer": "o200k_base"},
+            {"pattern": "claude-*", "tokenizer": "o200k_base"},
+        ],
+    },
 }
 
 
@@ -46,8 +103,30 @@ def write_config(directory: Path, text: str) -> Path:
 
 
 def file_text(key: str, yaml_value: str) -> str:
-    section, name = key.split(".")
-    return f"{section}:\n  {name}: {yaml_value}\n"
+    parts = key.split(".")
+    lines = [f"{'  ' * depth}{part}:" for depth, part in enumerate(parts[:-1])]
+    lines.append(f"{'  ' * (len(parts) - 1)}{parts[-1]}: {yaml_value}")
+    return "\n".join(lines) + "\n"
+
+
+def test_nested_keys_and_env_names() -> None:
+    keys = schema_keys()
+    assert (
+        keys["compressors.json_minify.enabled"].env_var == "TOKLI_COMPRESSORS__JSON_MINIFY__ENABLED"
+    )
+    assert keys["upstreams.anthropic.base_url"].env_var == "TOKLI_UPSTREAMS__ANTHROPIC__BASE_URL"
+    assert keys["tls.ca_bundle"].text  # optional string: raw text in env and --set
+    assert set(keys) == set(EXAMPLES)
+
+
+def test_named_flag_source(env: dict[str, str]) -> None:
+    config = load_config(
+        CliOverrides(named=(("server.port", "9100", "--port"),)),
+        {**env, "TOKLI_SERVER__PORT": "9000"},
+        platform_name(),
+    )
+    assert config.values["server.port"] == 9100
+    assert config.sources["server.port"] == "cli:--port"
 
 
 def test_defaults_when_no_layers(env: dict[str, str]) -> None:
@@ -223,7 +302,7 @@ def test_config_snapshot_immutable(env: dict[str, str]) -> None:
 
 
 def test_config_hash_stable_and_sensitive(env: dict[str, str], tmp_path: Path) -> None:
-    canonical = json.dumps({"tokens": DEFAULT_TOKENS_JSON}, sort_keys=True, separators=(",", ":"))
+    canonical = json.dumps(DEFAULT_BEHAVIOUR_JSON, sort_keys=True, separators=(",", ":"))
     expected = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
     config = load_config(CliOverrides(), env, platform_name())
     assert config.config_hash == expected

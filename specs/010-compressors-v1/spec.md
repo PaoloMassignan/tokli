@@ -1,6 +1,8 @@
 # SPEC 010 — v1 compressor catalogue
 
 Status: Draft (revised in Phase 0.1) · Slices: S1 (`json_minify`), S4 (`duplicate_tool_results`, SPEC 019), S8 (`search_group`, `dictionary`, `diff_context_trim`, `log_filter`, `superseded_tool_results`)
+Approved for S1 (2026-09-30): CP-JM-001…CP-JM-005.
+Changed by SCR-001 (2026-10-02): `test_json_minify_linear_time` measurement sizes.
 Related: SPEC 009 (contract, preservation model, claim types), SPEC 012 (evaluation), PHASE0_1_REVIEW.md
 
 Every compressor here is a registry entry satisfying SPEC 009. Common engine-level rules
@@ -73,7 +75,7 @@ Tests: `prop_json_minify_decode_roundtrip` (Hypothesis JSON generator with rando
 unicode, duplicate keys, exotic numbers) · `test_json_minify_preserves_number_spelling` ·
 `test_json_minify_preserves_duplicate_keys` · `test_json_minify_not_applicable_on_mixed_text` ·
 `test_json_minify_rejects_nan` · `test_json_minify_crlf_roundtrip` · `test_json_minify_skipped_for_verbatim_tool` ·
-`test_json_minify_linear_time` (complexity check: time ratio for inputs of 10× size stays ≤ 15×).
+`test_json_minify_linear_time` (complexity check: for inputs of 5 MB and 50 MB, best of 3 runs each, the time ratio stays ≤ 15; SCR-001).
 
 Expected saving: unknown on real traffic until E5b. It is measured per release on the golden
 corpus (Tier 1).

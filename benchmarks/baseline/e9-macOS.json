@@ -1,0 +1,45 @@
+{
+  "benchmark": "E9 parse+pipeline+render (cold and warm token cache)",
+  "tokli_version": "0.1.0.dev0",
+  "os": "Darwin",
+  "python": "3.13.15",
+  "buckets": {
+    "10k_cold": {
+      "n": 30,
+      "p50_ms": 10.48,
+      "p95_ms": 21.16,
+      "max_ms": 23.27
+    },
+    "10k_warm": {
+      "n": 30,
+      "p50_ms": 3.92,
+      "p95_ms": 7.52,
+      "max_ms": 19.51
+    },
+    "50k_cold": {
+      "n": 30,
+      "p50_ms": 49.03,
+      "p95_ms": 67.96,
+      "max_ms": 73.91
+    },
+    "50k_warm": {
+      "n": 30,
+      "p50_ms": 20.01,
+      "p95_ms": 35.06,
+      "max_ms": 40.86
+    },
+    "200k_cold": {
+      "n": 30,
+      "p50_ms": 146.31,
+      "p95_ms": 204.51,
+      "max_ms": 234.89
+    },
+    "200k_warm": {
+      "n": 30,
+      "p50_ms": 68.42,
+      "p95_ms": 110.17,
+      "max_ms": 155.17
+    }
+  },
+  "vision_target": "p95 <= 25 ms for requests <= 200k tokens (a target, not a gate)"
+}

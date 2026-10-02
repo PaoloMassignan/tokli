@@ -1,8 +1,35 @@
 Tokli doctor (normalized)
 
-Configuration  hash e7fcdbd16d8f1a7a
+Configuration  hash 1431b98f1e176825
+  server.host = "127.0.0.1"  [default]
+  server.port = 8787  [default]
+  server.allow_remote = false  [default]
+  upstreams.anthropic.base_url = "https://api.anthropic.com"  [default]
+  upstreams.anthropic.connect_timeout_s = 10.0  [default]
+  upstreams.anthropic.read_timeout_s = 600.0  [default]
+  tls.ca_bundle = null  [default]
+  limits.max_transform_bytes = 33554432  [default]
+  compression.segment_kinds = ["TOOL_RESULT", "USER_TEXT"]  [default]
+  compression.verbatim_tools = ["Read", "Bash", "shell", "shell_command", "container.exec"]  [default]
+  compression.min_segment_tokens = 64  [default]
+  compression.min_gain_tokens = 4  [default]
+  compression.min_gain_ratio = 0.01  [default]
+  compression.request_budget_ms = 50.0  [default]
+  compression.per_call_timeout_ms = 200.0  [default]
+  compression.verify_lossless = false  [default]
+  compressors.json_minify.enabled = true  [default]
   tokens.default = "o200k_base"  [default]
   tokens.model_map = [{"pattern": "gpt-*", "tokenizer": "o200k_base"}, {"pattern": "o*", "tokenizer": "o200k_base"}, {"pattern": "claude-*", "tokenizer": "o200k_base"}]  [default]
+  observability.trace_buffer = 500  [default]
+  observability.response_header = true  [default]
+  observability.log_format = "json"  [default]
+  telemetry.retention_days = 30  [default]
+
+Auth
+  anthropic  passthrough
+
+Compressors
+  json_minify  v1  LOSSLESS  enabled  available
 
 Tokenizers
   o200k_base  present  tiktoken:o200k_base@446a9538cb6c

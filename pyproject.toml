@@ -23,11 +23,17 @@ classifiers = [
 dependencies = [
     "pydantic>=2.7,<3",
     "PyYAML>=6.0,<7",
+    "starlette>=0.40,<1",
+    "uvicorn>=0.30,<1",
+    "httpx>=0.27,<1",
+    "certifi>=2024.2.2",
+    "tiktoken>=0.8,<1",
 ]
 
 [project.optional-dependencies]
 dev = [
     "pytest>=8",
+    "hypothesis>=6.100",
     "ruff>=0.6",
     "mypy>=1.11",
     "import-linter>=2.1",
@@ -42,6 +48,7 @@ packages = ["src/tokli"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+python_functions = ["test_*", "prop_*"]
 addopts = "-ra --strict-markers"
 markers = [
     "packaging: builds a wheel and installs it into a clean virtual environment (needs network for dependencies; enabled with RUN_PACKAGING_TESTS=1)",
@@ -64,12 +71,44 @@ plugins = ["pydantic.mypy"]
 
 [tool.importlinter]
 root_package = "tokli"
+include_external_packages = true
 
+# Dependency rules of TOKLI_ARCHITECTURE.md §5 as applied from S1 (ADR 0004).
 [[tool.importlinter.contracts]]
-name = "Layers (TOKLI_ARCHITECTURE.md §5): cli > app > config | tokens"
+name = "Layers: cli > http > app > compressors > compression > leaf packages > domain"
 type = "layers"
 layers = [
     "tokli.cli",
+    "tokli.http",
     "tokli.app",
-    "tokli.config | tokli.tokens",
+    "tokli.compressors",
+    "tokli.compression",
+    "tokli.pipeline | tokli.protocols | tokli.upstream | tokli.auth | tokli.telemetry | tokli.observability | tokli.config | tokli.tokens",
+    "tokli.domain",
 ]
+# CC-011 places the explicit registry list in tokli.compression.registry.
+ignore_imports = ["tokli.compression.registry -> tokli.compressors.*"]
+
+[[tool.importlinter.contracts]]
+name = "Compression never knows protocols, providers, HTTP, auth, storage or the app"
+type = "forbidden"
+source_modules = ["tokli.compression", "tokli.compressors"]
+forbidden_modules = [
+    "tokli.protocols", "tokli.upstream", "tokli.auth", "tokli.http", "tokli.telemetry",
+    "tokli.app", "tokli.pipeline", "tokli.config",
+]
+
+[[tool.importlinter.contracts]]
+name = "The HTTP layer never reaches compression internals"
+type = "forbidden"
+source_modules = ["tokli.http"]
+forbidden_modules = ["tokli.compression", "tokli.compressors", "tokli.tokens"]
+# Direct imports only: tokli.app (the composition root) legitimately builds these for HTTP.
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "The domain uses the standard library only"
+type = "forbidden"
+source_modules = ["tokli.domain"]
+forbidden_modules = ["pydantic", "httpx", "starlette", "uvicorn", "tiktoken", "yaml"]
+allow_indirect_imports = true

@@ -44,9 +44,11 @@ Acceptance for S1 (all must hold):
 2. With `json_minify` on, only pretty-printed JSON tool results from non-verbatim tools change.
    Every change round-trips (`json.loads` equality). Structure is otherwise identical.
 3. A Claude Code session (E1a, API key) completes 3 scripted prompts through Tokli with no
-   client-visible error. Trace and records show per-compressor figures.
+   client-visible error. Trace and records show per-compressor figures. Then the same with a
+   Pro/Max login (E1b); if E1b fails, it is recorded as a finding and S1 still closes on E1a.
 4. No credential or canary content appears in logs or the DB.
-5. Fingerprint equal across the 3 CI OSes.
+5. The rendered output of the Anthropic compat and golden corpus is byte-identical in all 9 CI jobs
+   (the property behind the S9 fingerprint; decision P3).
 6. The overhead distribution (p50/p95/max per size bucket) from the E9 run and the E1a session is
    reported in the completion report against the Vision target. This is **reported, not gated**.
 
@@ -54,7 +56,11 @@ Acceptance for S1 (all must hold):
 
 - Usage parsing: non-stream body + passive SSE tee (AN-005…AN-007, AN-009); categories mapping (TM-003).
 - Calibration `k` (TM-004); methods on every figure (TM-005).
-- E1 (OAuth) and E4 (Anthropic part) executed; results recorded in the spec.
+- E4 (Anthropic part) executed; results recorded in the spec. (E1 was executed in S1: API key and
+  Pro/Max OAuth both supported, path prefix accepted.)
+- Decided at S1 Gate 2 (2026-10-02): a deterministic cache of compressor results per text (repeated
+  history becomes almost free; allowed by CC-006), request header **names** persisted in the request
+  record, and an optional rotating log file in the data dir (TOKLI_OBSERVABILITY §6).
 - Exit: trace shows exact forwarded usage and a calibrated saving for streamed Claude Code requests.
 
 ## S3 — Metrics API + minimal dashboard

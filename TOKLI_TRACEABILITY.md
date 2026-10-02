@@ -27,36 +27,36 @@ Evidence codes:
 
 | Req | Why | AC | Tests |
 |---|---|---|---|
-| CM-001 | transparency; H05 | AC-CM-1 | `test_passthrough_forwards_original_bytes` |
-| CM-002 | H06 | AC-CM-2 | `test_render_changes_only_patched_values` |
+| CM-001 | transparency; H05 | AC-CM-1 | `test_passthrough_forwards_original_bytes`, `test_passthrough_forwards_original_bytes (unit and end to end)` |
+| CM-002 | H06 | AC-CM-2 | `test_render_changes_only_patched_values`, `test_only_json_tool_results_of_non_verbatim_tools_change` |
 | CM-003 | forward compatibility: unknown parts are re-emitted untouched | AC-CM-3 | `test_unknown_block_types_roundtrip` |
 | CM-004 | H07 | AC-CM-2 | `test_structure_preserved_after_compression` |
 | CM-005 | attribution and trace need stable ids | AC-CM-2 | `test_render_changes_only_patched_values` |
-| CM-006 | H04 | AC-CM-4 | `test_tool_name_resolution_per_protocol` |
-| CM-007 | fail to pass-through | AC-CM-5 | `test_malformed_body_relayed_verbatim` |
+| CM-006 | H04 | AC-CM-4 | `test_tool_name_resolution_per_protocol`, `test_anthropic_tool_name_resolution` |
+| CM-007 | fail to pass-through | AC-CM-5 | `test_malformed_body_relayed_verbatim`, `test_malformed_body_raises_parse_error` |
 | CM-008 | cannot parse encoded bodies | AC-CM-5 | `test_content_encoded_body_relayed_verbatim` |
-| CM-009 | tool schemas, `cache_control` and thinking signatures are validated or cached by providers and must never change | AC-CM-6 | `test_forbidden_parts_never_mutable` |
+| CM-009 | tool schemas, `cache_control` and thinking signatures are validated or cached by providers and must never change | AC-CM-6 | `test_forbidden_parts_never_mutable`, `test_opaque_parts_not_exposed`, `test_mutable_kinds_from_config` |
 | CM-010 | ARCH §5 | AC-CM-7 | `test_import_contracts` |
 | CM-011 | H09 (non-ASCII escaping changes bytes and length) | AC-CM-2 | `test_patched_body_utf8_and_length` |
-| CM-012 | H33 | AC-CM-5 | `test_oversize_body_relayed_verbatim` |
+| CM-012 | H33 | AC-CM-5 | `test_oversize_body_relayed_verbatim`, `test_large_body_not_rejected` |
 | CM-013 | pruning needs tool history without protocol knowledge (SPEC 019) | AC-CM-4 | `test_tool_records_per_protocol` |
 
 ## Proxy (SPEC 002)
 
 | Req | Why | AC | Tests |
 |---|---|---|---|
-| PX-001 | MD-09 | AC-PX-1 | `test_default_bind_is_loopback`, `test_remote_bind_requires_flag` |
+| PX-001 | MD-09 | AC-PX-1 | `test_default_bind_is_loopback`, `test_remote_bind_requires_flag`, `test_serve_remote_bind_needs_flag`, `test_loopback_names` |
 | PX-002 | H32, MD-10 | AC-PX-2 | `test_routing_table`, `test_unknown_prefix_returns_tokli_404` |
 | PX-003 | explicit routing table, no guessing (H32) | AC-PX-2 | `test_routing_table` |
-| PX-004 | RFC 9110 hop-by-hop semantics | AC-PX-2 | `test_headers_forwarded_except_hop_by_hop` |
+| PX-004 | RFC 9110 hop-by-hop semantics | AC-PX-2 | `test_headers_forwarded_except_hop_by_hop`, `test_hop_by_hop_includes_connection_listed` |
 | PX-005 | H30 | AC-PX-3 | `test_response_bytes_identical` |
 | PX-006 | Claude Code always streams; H31 | AC-PX-3 | `test_stream_chunks_identical_and_unbuffered` |
 | PX-007 | H30 | AC-PX-4 | `test_upstream_errors_relayed_verbatim` |
-| PX-008 | clear source of failure | AC-PX-5 | `test_upstream_unreachable_returns_tokli_502` |
+| PX-008 | clear source of failure | AC-PX-5 | `test_upstream_unreachable_returns_tokli_502`, `test_upstream_timeout_returns_tokli_504` |
 | PX-009 | resource hygiene | AC-PX-6 | `test_client_disconnect_cancels_upstream` |
 | PX-010 | fail to pass-through (ARCH §6) | AC-PX-7 | `test_internal_error_forwards_original` |
 | PX-011 | H33 | AC-CM-5 | `test_large_body_not_rejected` |
-| PX-012 | Brief§14 correlation | AC-OB-1 | `test_request_id_header` |
+| PX-012 | Brief§14 correlation | AC-OB-1 | `test_request_id_header`, `test_request_id_header_can_be_disabled` |
 | PX-013 | ops | — (trivial) | `test_health_endpoint` |
 | PX-014 | usage parsing needs plain bodies | AC-AN-3 | `test_headers_forwarded_except_hop_by_hop` (accept-encoding cases) |
 
@@ -64,8 +64,8 @@ Evidence codes:
 
 | Req | Why | AC | Tests |
 |---|---|---|---|
-| AN-001 | Brief§24 example | AC-AN-1 | compat suite `tests/compat/anthropic/*` |
-| AN-002 | tool results nested in user-role `tool_result` blocks must be reachable (SPEC 003 rationale) | AC-AN-1 | `test_anthropic_segment_mapping` |
+| AN-001 | Brief§24 example | AC-AN-1 | compat suite `tests/compat/anthropic/*`, `test_passthrough_forwards_original_bytes`, `test_only_json_tool_results_of_non_verbatim_tools_change`, `test_expected_changes_in_tool_use_fixture`, `test_claude_code_like_reminders_protected` |
+| AN-002 | tool results nested in user-role `tool_result` blocks must be reachable (SPEC 003 rationale) | AC-AN-1 | `test_anthropic_segment_mapping`, `test_system_segments` |
 | AN-003 | H04 | AC-AN-2 | `test_anthropic_tool_name_resolution` |
 | AN-004 | `cache_control` preservation; H05, H07 | AC-AN-1 | `test_anthropic_block_attributes_preserved`, `test_anthropic_cache_control_count_preserved` |
 | AN-005 | H20 | AC-AN-3 | `test_anthropic_usage_non_stream` |
@@ -107,9 +107,9 @@ Evidence codes:
 | UP-003 | Brief§1 OpenAI API key required | AC-UP-2 | `test_inject_replaces_client_credentials` |
 | UP-004 | fail-closed on credentials | AC-UP-3 | `test_missing_inject_credential_returns_503` |
 | UP-005 | H36, MD-06 | AC-UP-2 | `test_no_cross_provider_credentials`, `test_inject_uses_only_configured_source`, `test_inherited_provider_env_is_ignored_unless_configured` |
-| UP-006 | H34 | AC-UP-4 | `test_logs_never_contain_credentials` |
+| UP-006 | H34 | AC-UP-4 | `test_logs_never_contain_credentials`, `test_credential_kind_classification`, `test_header_names_only` |
 | UP-007 | H37, MD-14 | AC-UP-5 | `test_key_file_with_bom_is_accepted`, `test_utf16_key_file_reported` |
-| UP-008 | security hygiene | — | `test_tls_verification_default_on` |
+| UP-008 | security hygiene | — | `test_tls_verification_default_on`, `test_tls_custom_ca_bundle_missing_fails` |
 | UP-009 | long streams | — | `test_read_timeout_between_chunks` |
 | UP-010 | auth ≠ transformation (Brief§4) | AC-UP-6 | `test_body_independent_of_auth_mode` |
 
@@ -123,8 +123,8 @@ Evidence codes:
 | PL-004 | chaining | AC-PL-3 | `test_patches_visible_to_later_stages` |
 | PL-005 | H38: isolation implemented once | AC-PL-2 | `test_stage_exception_isolated`, `test_stage_timeout_isolated` |
 | PL-006 | Brief§14 timings | AC-OB-2 | `test_trace_contains_all_spans` |
-| PL-007 | Brief§16 redaction seam | AC-PL-3 | `test_new_transformer_needs_no_adapter_change` |
-| PL-008 | Claude Code injects `<system-reminder>` blocks (SPEC 003 rationale) | AC-PL-3 | `test_reminder_spans_protected` |
+| PL-007 | Brief§16 redaction seam | AC-PL-3 | `test_new_transformer_needs_no_adapter_change`, `test_new_transformer_through_adapter_end_to_end` |
+| PL-008 | Claude Code injects `<system-reminder>` blocks (SPEC 003 rationale) | AC-PL-3 | `test_reminder_spans_protected`, `test_default_stage_list`, `test_pipeline_runs_compression` |
 
 ## Token measurement (SPEC 008)
 
@@ -135,11 +135,11 @@ Evidence codes:
 | TM-003 | Brief§10 exact vs estimate | AC-AN-3 | `test_anthropic_usage_non_stream` (and per protocol) |
 | TM-004 | H21 | AC-TM-5 | `test_calibration_factor` |
 | TM-005 | Brief§10 "never present an estimate as exact" | AC-TM-4 | `test_every_api_token_field_has_method` |
-| TM-006 | MD-02 | AC-TM-2 | `test_missing_tokenizer_fails_with_actionable_message`, `test_tampered_tokenizer_is_reported` |
+| TM-006 | MD-02 | AC-TM-2 | `test_missing_tokenizer_fails_with_actionable_message`, `test_tampered_tokenizer_is_reported`, `test_serve_missing_tokenizer_fails_clearly`, `test_load_counter_missing_file`, `test_load_counter_refuses_tampered_file` |
 | TM-007 | MD-02, MD-20 | AC-TM-3 | `test_import_has_no_side_effects`, `test_starts_offline_with_provisioned_tokenizer` |
-| TM-008 | Brief§19 | AC-TM-1 | `test_fingerprint_equal_across_os` |
+| TM-008 | Brief§19 | AC-TM-1 | `test_fingerprint_equal_across_os`, `test_token_counts_match_reference_values` |
 | TM-009 | tokenizer drift detection | AC-TM-5 | `test_calibration_outlier_falls_back_to_estimate` |
-| TM-010 | MD-02; Q7 decision (S0 review P2) | AC-TM-6 | `test_setup_tokenizers_verifies_sha256`, `test_setup_tokenizers_from_file`, `test_setup_tokenizers_refuses_tampered_download`, `test_setup_tokenizers_from_file_rejects_unknown_file`, `test_setup_tokenizers_from_file_never_downloads_missing_ones`, `test_required_tokenizers`, `test_catalog_entries_are_pinned`, `test_check_tokenizer_states`, `test_setup_tokenizers_cli_refuses_unknown_file` |
+| TM-010 | MD-02; Q7 decision (S0 review P2) | AC-TM-6 | `test_setup_tokenizers_verifies_sha256`, `test_setup_tokenizers_from_file`, `test_setup_tokenizers_refuses_tampered_download`, `test_setup_tokenizers_from_file_rejects_unknown_file`, `test_setup_tokenizers_from_file_never_downloads_missing_ones`, `test_required_tokenizers`, `test_catalog_entries_are_pinned`, `test_check_tokenizer_states`, `test_setup_tokenizers_cli_refuses_unknown_file`, `test_sha256_hex_matches_hashlib` |
 
 ## Compression core (SPEC 009)
 
@@ -147,15 +147,15 @@ Evidence codes:
 |---|---|---|---|
 | CC-001 | H13 | AC-CC-9 | `test_registry_contract_every_lossless_has_roundtrip_property` |
 | CC-002 | Brief§7; H01, H02 | AC-CC-1 | `test_lossless_only_never_runs_lossy_compressor`, `test_lossy_allowed_runs_selective_and_lossy`, `test_unknown_requires_explicit_enable` |
-| CC-003 | Brief§8 enabled ≠ forced | AC-CC-2 | `test_enabled_compressor_not_applied_when_not_applicable` |
-| CC-004 | Brief§10; tokenizer mismatch margin | AC-CC-3 | `test_longer_output_rejected` |
+| CC-003 | Brief§8 enabled ≠ forced | AC-CC-2 | `test_enabled_compressor_not_applied_when_not_applicable`, `test_disabled_compressor_skipped` |
+| CC-004 | Brief§10; tokenizer mismatch margin | AC-CC-3 | `test_longer_output_rejected`, `test_below_min_gain_rejected` |
 | CC-005 | Brief§10 invariant | AC-CC-3 | `prop_compression_never_increases_tokens` |
 | CC-006 | determinism; H05 | AC-CC-4 | `prop_compression_is_deterministic`, `test_segment_output_independent_of_other_segments` |
-| CC-007 | reminders; future redaction markers | AC-CC-5 | `prop_protected_spans_preserved` |
-| CC-008 | H14, MD-25 | AC-CC-6 | `test_compressor_exception_is_recorded`, `test_compressor_timeout_is_recorded` |
+| CC-007 | reminders; future redaction markers | AC-CC-5 | `prop_protected_spans_preserved`, `test_protected_span_change_rejected`, `test_transformer_patch_breaking_protected_span_is_dropped`, `test_spans_preserved` |
+| CC-008 | H14, MD-25 | AC-CC-6 | `test_compressor_exception_is_recorded`, `test_compressor_timeout_is_recorded`, `test_late_result_discarded_as_timeout` |
 | CC-009 | H13 | AC-CC-8 | `test_chain_order_by_stage_then_id`, `test_terminal_stops_chain` |
 | CC-010 | H14, MD-03 | AC-CC-7 | `test_missing_dependency_marks_compressor_unavailable` |
-| CC-011 | Brief§6 | AC-CC-9 | `test_registry_contract_every_lossless_has_roundtrip_property` |
+| CC-011 | Brief§6 | AC-CC-9 | `test_registry_contract_every_lossless_has_roundtrip_property`, `test_json_minify_is_the_only_registered_compressor_in_s1`, `test_registered_compressors_are_available` |
 | CC-012 | Brief§11 | AC-CC-8 | `test_compressor_stats_expected_fixture`, `prop_marginal_savings_sum_to_total` |
 | CC-013 | Brief§11 skip reasons | AC-CC-8 | `test_compressor_stats_expected_fixture` |
 | CC-014 | Brief§9 cheap before expensive; E9; R01§9 (budget = runtime control, provisional default) | AC-CC-8 | `test_budget_exhaustion_skips` |
@@ -166,6 +166,8 @@ Evidence codes:
 | CC-019 | R01§3, §6: a reference is only as good as its target | AC-CC-10, AC-PR-8 | `test_reference_target_integrity_enforced`, `test_superseded_rejected_on_reference_target` |
 | CC-020 | R01§2, §7: policy eligibility ≠ default enablement; every transformation relies on model behaviour | AC-CC-11 | `test_every_compressor_declares_assumptions`, `test_registry_default_enabled_requires_eval_record` |
 | CC-021 | R01§3: verbatim hazard does not apply where the bytes stay verbatim in the target | AC-CC-12, AC-PR-9 | `test_verbatim_tools_exempt_only_reference_equivalence`, `test_duplicate_pruning_applies_to_verbatim_tools` |
+| CC-022 | S1 review P1 (POLICY, provisional) | AC-CC-3 | `test_min_segment_tokens_default` |
+| CC-023 | H04; S1 review P2 | AC-CC-12 | `test_unresolved_tool_name_treated_as_verbatim` |
 
 ## Tool-history pruning (SPEC 019)
 
@@ -190,9 +192,9 @@ Evidence codes:
 
 | Req | Why | AC (in spec) | Tests |
 |---|---|---|---|
-| CP-JM-001 | pretty-printed JSON is common in tool output; expected range in TOKLI_EVIDENCE §2 | json_minify tests | `prop_json_minify_decode_roundtrip` |
-| CP-JM-002 | H09 | " | `test_json_minify_preserves_number_spelling`, `test_json_minify_preserves_duplicate_keys` |
-| CP-JM-003 | pass-through preference | " | `test_json_minify_not_applicable_on_mixed_text`, `test_json_minify_rejects_nan` |
+| CP-JM-001 | pretty-printed JSON is common in tool output; expected range in TOKLI_EVIDENCE §2 | json_minify tests | `prop_json_minify_decode_roundtrip`, `test_json_minify_basic`, `test_json_minify_applied_through_engine` |
+| CP-JM-002 | H09 | " | `test_json_minify_preserves_number_spelling`, `test_json_minify_preserves_duplicate_keys`, `test_json_minify_preserves_escapes_and_unicode` |
+| CP-JM-003 | pass-through preference | " | `test_json_minify_not_applicable_on_mixed_text`, `test_json_minify_rejects_nan`, `test_json_minify_not_applicable_without_whitespace` |
 | CP-JM-004 | H04 | " | `test_json_minify_skipped_for_verbatim_tool` |
 | CP-JM-005 | correctness constraint: linear time (R01§9) | " | `test_json_minify_linear_time` |
 | CP-SG-001 | grep output repeats the path on every match line | search_group tests | `prop_search_group_decode_roundtrip` |
@@ -216,7 +218,7 @@ Evidence codes:
 
 | Req | Why | AC | Tests |
 |---|---|---|---|
-| RT-001 | cheap structural features; H11 | AC-RT-1 | `test_features_linear_time`, `test_grep_feature_windows_paths` |
+| RT-001 | cheap structural features; H11 (S1: `tokens`, `json_candidate`; `test_grep_feature_windows_paths` arrives with `search_group`, S8) | AC-RT-1 | `test_features_linear_time`, `test_grep_feature_windows_paths`, `test_features_stage_counts_and_json_candidate` |
 | RT-002 | Brief§9 cheap first | AC-RT-2 | `test_cheap_filters_before_applicable` |
 | RT-003 | Brief§9 prefer pass-through | AC-RT-3 | `test_prose_only_request_passthrough` |
 | RT-004 | Brief§9 | AC-RT-2 | `test_cheap_filters_before_applicable` |
@@ -249,7 +251,7 @@ Evidence codes:
 
 | Req | Why | AC | Tests |
 |---|---|---|---|
-| TC-001 | Brief§11/§14 | AC-TC-1 | `test_request_record_persisted_per_outcome` |
+| TC-001 | Brief§11/§14 | AC-TC-1 | `test_request_record_persisted_per_outcome`, `test_records_round_trip`, `test_telemetry_db_created_in_data_dir` |
 | TC-002 | Brief§11 | AC-TC-1 | `test_compressor_stats_only_for_considered` |
 | TC-003 | Brief§11 attribution | AC-TC-2 | `prop_marginal_savings_sum_to_total` |
 | TC-004 | Brief§12; H05, H22 | AC-TC-3 | `test_cost_proportional_estimate_and_bounds` |
@@ -258,9 +260,9 @@ Evidence codes:
 | TC-007 | Brief§12 claim only affected categories | AC-TC-3 | `test_no_output_savings_claimed` |
 | TC-008 | H22 | AC-TC-5 | `test_price_effective_dates` |
 | TC-009 | Brief§12 pricing ≠ compression | AC-CM-7 | `test_import_contracts` |
-| TC-010 | Brief§15 retention | AC-TC-1 | `test_retention_pruning` |
-| TC-011 | telemetry must not break traffic | AC-TC-6 | `test_sink_failure_degrades_not_breaks` |
-| TC-012 | additive migrations keep older data readable | AC-TC-1 | `test_schema_migration_forward` |
+| TC-010 | Brief§15 retention | AC-TC-1 | `test_retention_pruning`, `test_retention_zero_keeps_everything` |
+| TC-011 | telemetry must not break traffic | AC-TC-6 | `test_sink_failure_degrades_not_breaks`, `test_write_failure_counts_and_never_raises` |
+| TC-012 | additive migrations keep older data readable | AC-TC-1 | `test_schema_migration_forward`, `test_schema_version_recorded`, `test_non_ascii_data_dir` |
 | TC-013 | R01§9: measure overhead from the first useful slice; target ≠ gate | AC-TC-7 | `test_overhead_percentiles_by_bucket`, `test_target_is_reference_not_status` |
 | TC-014 | PR-009 flag was not in the record schema (R01§10 consistency pass) | AC-TC-8 | `test_request_record_pruning_fields` |
 
@@ -268,23 +270,24 @@ Evidence codes:
 
 | Req | Why | AC | Tests |
 |---|---|---|---|
-| OB-001 | Brief§14 | AC-OB-1 | `test_request_id_propagates_everywhere` |
-| OB-002 | Brief§14 timings | AC-OB-2 | `test_trace_contains_all_spans` |
+| OB-001 | Brief§14 | AC-OB-1 | `test_request_id_propagates_everywhere`, `test_request_ids_are_ulids_and_sortable` |
+| OB-002 | Brief§14 timings | AC-OB-2 | `test_trace_contains_all_spans`, `test_trace_to_dict` |
 | OB-003 | "diagnose without a debugger" | AC-OB-3 | `test_trace_buffer_bounded` |
-| OB-004 | Brief§14 decisions | AC-RT-2 | `test_reason_codes_closed_set` |
+| OB-004 | Brief§14 decisions | AC-RT-2 | `test_reason_codes_closed_set`, `test_reason_codes_known` |
 | OB-005 | provider support cases | AC-OB-1 | `test_upstream_correlation_ids_recorded` |
 | OB-006 | H31 | AC-OB-4 | `test_upstream_error_logging_respects_content_rule` |
-| OB-007 | H34 | AC-OB-4 | `test_logs_never_contain_credentials` |
+| OB-007 | H34 | AC-OB-4 | `test_logs_never_contain_credentials`, `test_redaction_masks_credentials`, `test_json_log_line_is_structured_and_redacted` |
 | OB-008 | Brief§15 | AC-OB-4 | `test_default_logging_contains_no_prompt_text` |
 | OB-009 | Brief§15 explicit, visible debug | AC-OB-5 | `test_debug_content_requires_both_switches`, `test_debug_content_banner_visible`, `test_debug_content_ttl_and_cap` |
 | OB-010 | ops | AC-OB-1 | `test_request_summary_log_line` |
-| OB-011 | degraded visibility | AC-TC-6 | `test_health_degraded_conditions` |
+| OB-011 | degraded visibility | AC-TC-6 | `test_health_degraded_conditions`, `test_health_endpoint` |
+| OB-012 | E1 needs the header names Claude Code sends; S1 review P6 | AC-OB-4 | `test_trace_records_header_names_only` |
 
 ## Application API (SPEC 015)
 
 | Req | Why | AC | Tests |
 |---|---|---|---|
-| API-001 | Brief§13 no content | AC-API-2 | `test_api_returns_no_content_or_credentials` |
+| API-001 | Brief§13 no content | AC-API-2 | `test_api_returns_no_content_or_credentials`, `test_trace_served_from_db_after_buffer_eviction` |
 | API-002 | Brief§10/§12 labelling | AC-API-1 | `test_every_api_token_field_has_method`, `test_api_contract_schemas` |
 | API-003 | Brief§13 breakdowns | AC-API-1 | `test_metrics_filters_validated` |
 | API-004 | replaceable UI (Brief§4) | AC-API-1 | `test_api_contract_schemas` |
@@ -312,7 +315,7 @@ Evidence codes:
 
 | Req | Why | AC | Tests |
 |---|---|---|---|
-| CF-001 | MD-05 | AC-CF-1 | `test_env_overrides_file_for_every_key`, `test_cli_overrides_env`, `test_ui_override_only_when_not_pinned`, `test_set_flag_overrides_env`, `test_defaults_when_no_layers`, `test_config_file_found_in_config_dir` |
+| CF-001 | MD-05 | AC-CF-1 | `test_env_overrides_file_for_every_key`, `test_cli_overrides_env`, `test_ui_override_only_when_not_pinned`, `test_set_flag_overrides_env`, `test_defaults_when_no_layers`, `test_config_file_found_in_config_dir`, `test_named_flag_source`, `test_nested_keys_and_env_names` |
 | CF-002 | Brief§18 inspectable | AC-CF-1 | `test_config_show_reports_sources` |
 | CF-003 | fail clearly (Brief§18) | AC-CF-2 | `test_unknown_key_rejected_with_layer`, `test_unknown_section_rejected`, `test_invalid_value_names_layer_key_and_expected_type`, `test_explicit_config_file_must_exist`, `test_set_requires_key_equals_value` |
 | CF-004 | MD-04, MD-08 | AC-CF-3 | `test_cwd_config_and_dotenv_ignored` |
@@ -330,13 +333,13 @@ Evidence codes:
 | Req | Why | AC | Tests |
 |---|---|---|---|
 | PT-001 | Brief§19 | AC-PT-1 | `test_fingerprint_equal_across_os` |
-| PT-002 | Brief§24 example; MD-04…MD-08 | AC-PT-1 | `test_behaviour_independent_of_cwd`, `test_temp_home_clean_start`, `test_hostile_environment_ignored` |
+| PT-002 | Brief§24 example; MD-04…MD-08 | AC-PT-1 | `test_behaviour_independent_of_cwd`, `test_temp_home_clean_start`, `test_hostile_environment_ignored`, `test_serve_process_end_to_end` |
 | PT-003 | MD-02, MD-24 | AC-PT-3 | `test_no_outbound_connections_except_upstream` |
 | PT-004 | MD-18 | AC-PT-1 | CI matrix + `test_doctor_reports_python_version` |
 | PT-005 | Brief§20 | AC-PT-2 | `test_doctor_report_fields` |
 | PT-006 | Brief§20 "explain differences" | AC-PT-5 | `test_fingerprint_explain_config_difference`, `test_fingerprint_explain_tokenizer_difference` |
 | PT-007 | Brief§20 never expose secrets | AC-PT-2 | `test_doctor_never_prints_secrets` |
-| PT-008 | fail clearly | AC-PT-4 | `test_port_in_use_fails_clearly`, `test_unwritable_data_dir_fails_clearly`, `test_missing_tokenizer_fails_with_actionable_message`, `test_alternative_port` |
+| PT-008 | fail clearly | AC-PT-4 | `test_port_in_use_fails_clearly`, `test_unwritable_data_dir_fails_clearly`, `test_missing_tokenizer_fails_with_actionable_message`, `test_alternative_port`, `test_serve_port_in_use_fails_clearly` |
 | PT-009 | MD-12 | per-compressor | `test_json_minify_crlf_roundtrip`, `test_search_group_crlf_roundtrip`, … |
 | PT-011 | MD-01…MD-28 (SPEC 018 checklist) | AC-PT-6 | `test_no_dotenv_loading`, `test_cli_output_encodable_cp1252`, `test_daily_rollup_respects_tz_param`, `test_wheel_imports_tokli_in_clean_venv`, `test_no_module_reads_cwd_relative_paths` (+ the tests named per row), `test_machine_dependence_checklist_tests_exist`, `test_starts_offline_with_provisioned_tokenizer` |
 | PT-012 | S0 review X1, M3 (exit criterion, doctor exit code) | AC-PT-7, AC-PT-4 | `test_doctor_normalised_snapshot`, `test_doctor_makes_no_network_calls`, `test_invalid_config_fails_clearly`, `test_doctor_normalised_snapshot_provisioned`, `test_doctor_exit_codes`, `test_unwritable_data_dir_reported` |

@@ -1,6 +1,7 @@
 # SPEC 002 — Transparent proxy and routing
 
 Status: Draft · Slice: S1 · Related: ARCH §6
+Approved for S1 (2026-09-30): PX-001…PX-013 for the `/anthropic` prefix. PX-014 in S2; `/openai` in S5.
 
 ## Purpose
 Accept client traffic on a local port, route it to the correct provider without guessing, and
@@ -19,6 +20,8 @@ Evidence: TOKLI_EVIDENCE.md (hazards and measurements); per-requirement rational
 |---|---|---|
 | `http://127.0.0.1:<port>/anthropic` | `/anthropic/<rest>` | `upstreams.anthropic.base_url` + `/<rest>` |
 | `http://127.0.0.1:<port>/openai` (or `/openai/v1`) | `/openai/<rest>` | `upstreams.openai.base_url` + `/<rest>` |
+
+In S1 only the `/anthropic` prefix is configured; `/openai` answers `tokli_unknown_route` until S5.
 
 Known transformable endpoints (after prefix removal and canonicalisation of trailing slash and
 case; a missing `/v1` is added only for the three known endpoints): `POST /v1/messages`,
@@ -58,7 +61,7 @@ Spans: `route`, `upstream` (TTFB, total, status, upstream request-id header). De
 ## Acceptance criteria
 - AC-PX-1 (PX-001): default bind is `127.0.0.1`; non-loopback without the flag fails to start.
 - AC-PX-2 (PX-002, PX-003): routing table tests incl. `/anthropic/v1/messages/`, `/openai/chat/completions`, `/openai/v1/models`, `/unknown/x`.
-- AC-PX-3 (PX-005, PX-006): the fake upstream emits 10 chunks 50 ms apart. The client receives the same bytes, and chunk arrival times track upstream within 20 ms.
+- AC-PX-3 (PX-005, PX-006): causal relay test. The fake upstream sends chunk *n+1* only after the test client has received chunk *n*, for 10 chunks. The client receives the same bytes, and a buffering proxy makes the test fail (deadlock, 5 s timeout). No absolute timing threshold is used (TOKLI_TEST_STRATEGY §8).
 - AC-PX-4 (PX-007): 400/401/429/529 JSON errors (stream and non-stream) arrive verbatim.
 - AC-PX-5 (PX-008): connect refused → 502 with `source: tokli`.
 - AC-PX-6 (PX-009): upstream observes cancellation after a client disconnect.
@@ -73,4 +76,4 @@ Spans: `route`, `upstream` (TTFB, total, status, upstream request-id header). De
 `test_large_body_not_rejected` · `test_request_id_header` · `test_health_endpoint`
 
 ## Open questions
-- Q2: Does Claude Code accept `ANTHROPIC_BASE_URL` with a path prefix (`/anthropic`)? (E1) Fallback if not: one listener port per provider (config `listeners`).
+- ~~Q2~~ Resolved 2026-10-02 by E1: Claude Code accepts `ANTHROPIC_BASE_URL=http://127.0.0.1:8787/anthropic` and keeps the prefix on every request, including `GET /api/hello`.

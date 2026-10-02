@@ -1,6 +1,7 @@
 # SPEC 013 — Telemetry and cost model
 
 Status: Draft · Slices: S1 (records), S3 (queries), S6 (pricing) · Related: TOKLI_TELEMETRY_AND_COST.md (explanatory, incl. schemas)
+Approved for S1 (2026-09-30): TC-001, TC-002, TC-003, TC-010, TC-011, TC-012, TC-014. TC-013 API in S3; cost in S6.
 
 ## Purpose
 Persist the minimum metadata needed to answer "how much is Tokli saving, by which compressor,

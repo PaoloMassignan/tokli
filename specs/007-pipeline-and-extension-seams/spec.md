@@ -1,6 +1,7 @@
 # SPEC 007 — Analysis / transformation pipeline and extension seams
 
 Status: Draft · Slice: S1 · Related: ARCH §4
+Approved for S1 (2026-09-30): PL-003…PL-008 with a fixed stage list (decision C2). PL-001 user-configured order and PL-002 arrive with stage configurability.
 
 ## Purpose
 Provide one small, ordered mechanism through which every pre-forward analysis and transformation
@@ -59,7 +60,7 @@ trace handle and a remaining time budget. It provides **no** HTTP, auth, storage
 ## Test scenarios
 `test_stage_order_from_config` · `test_invalid_stage_order_fails_startup` ·
 `test_stage_exception_isolated` · `test_stage_timeout_isolated` · `test_patches_visible_to_later_stages` ·
-`test_new_transformer_needs_no_adapter_change` · `test_analyzer_cannot_patch` · `test_reminder_spans_protected`
+`test_new_transformer_needs_no_adapter_change` · `test_analyzer_cannot_patch` · `test_reminder_spans_protected` · `test_default_stage_list`
 
 ## Open questions
 None blocking.
