@@ -1,0 +1,115 @@
+case_set: 2026-10-03.1
+family: reference_verbatim_quote
+assumption: quotes_from_reference_target
+checker: verbatim_line
+request:
+  max_tokens: 400
+  tools:
+  - name: Read
+    description: Reads a file.
+    input_schema:
+      type: object
+      properties:
+        file_path:
+          type: string
+  - name: Glob
+    description: Lists files.
+    input_schema:
+      type: object
+      properties:
+        pattern:
+          type: string
+  messages:
+  - role: user
+    content: Look at src/app/harbor_settings.py and then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKEREF1
+      name: Read
+      input:
+        file_path: src/app/harbor_settings.py
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKEREF1
+      content: "     1\t\"\"\"Synthetic settings module.\"\"\"\n     2\t\n     3\tfrom dataclasses import\
+        \ dataclass\n     4\t\n     5\t\n     6\t@dataclass\n     7\tclass ServerSettings:\n     8\t \
+        \   server_max_items: int = 78257\n     9\t    server_timeout_ms: int = 44453\n    10\t    server_window_s:\
+        \ int = 2328\n    11\t    server_batch_size: int = 58882\n    12\t\n    13\t@dataclass\n    14\t\
+        class QueueSettings:\n    15\t    queue_window_s: int = 45616\n    16\t    queue_timeout_ms: int\
+        \ = 57095\n    17\t    queue_batch_size: int = 55897\n    18\t    queue_token_ttl: int = 26126\n\
+        \    19\t\n    20\t@dataclass\n    21\tclass CacheSettings:\n    22\t    cache_batch_size: int\
+        \ = 8886\n    23\t    cache_timeout_ms: int = 12518\n    24\t    cache_max_items: int = 57815\n\
+        \    25\t    cache_endpoint: str = \"amber-754\"\n    26\t\n    27\t@dataclass\n    28\tclass\
+        \ RetrySettings:\n    29\t    retry_window_s: int = 3550\n    30\t    retry_endpoint: str = \"\
+        amber-229\"\n    31\t    retry_timeout_ms: int = 82574\n    32\t    retry_label: str = \"ember-44\"\
+        \n"
+  - role: assistant
+    content:
+    - type: text
+      text: Let me also see the other files in that folder.
+    - type: tool_use
+      id: toolu_01SMOKEREF2
+      name: Glob
+      input:
+        pattern: src/app/*.py
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKEREF2
+      content: 'src/app/birch_58.py
+
+        src/app/cobalt_26.py
+
+        src/app/cobalt_4.py
+
+        src/app/ember_2.py
+
+        src/app/fjord_57.py
+
+        src/app/garnet_30.py
+
+        src/app/indigo_12.py
+
+        src/app/indigo_15.py
+
+        src/app/kelp_40.py
+
+        src/app/lumen_83.py
+
+        src/app/maple_50.py
+
+        src/app/onyx_2.py
+
+        '
+  - role: assistant
+    content:
+    - type: text
+      text: I will read src/app/harbor_settings.py again to be sure it is current.
+    - type: tool_use
+      id: toolu_01SMOKEREF3
+      name: Read
+      input:
+        file_path: src/app/harbor_settings.py
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKEREF3
+      content: "     1\t\"\"\"Synthetic settings module.\"\"\"\n     2\t\n     3\tfrom dataclasses import\
+        \ dataclass\n     4\t\n     5\t\n     6\t@dataclass\n     7\tclass ServerSettings:\n     8\t \
+        \   server_max_items: int = 78257\n     9\t    server_timeout_ms: int = 44453\n    10\t    server_window_s:\
+        \ int = 2328\n    11\t    server_batch_size: int = 58882\n    12\t\n    13\t@dataclass\n    14\t\
+        class QueueSettings:\n    15\t    queue_window_s: int = 45616\n    16\t    queue_timeout_ms: int\
+        \ = 57095\n    17\t    queue_batch_size: int = 55897\n    18\t    queue_token_ttl: int = 26126\n\
+        \    19\t\n    20\t@dataclass\n    21\tclass CacheSettings:\n    22\t    cache_batch_size: int\
+        \ = 8886\n    23\t    cache_timeout_ms: int = 12518\n    24\t    cache_max_items: int = 57815\n\
+        \    25\t    cache_endpoint: str = \"amber-754\"\n    26\t\n    27\t@dataclass\n    28\tclass\
+        \ RetrySettings:\n    29\t    retry_window_s: int = 3550\n    30\t    retry_endpoint: str = \"\
+        amber-229\"\n    31\t    retry_timeout_ms: int = 82574\n    32\t    retry_label: str = \"ember-44\"\
+        \n"
+    - type: text
+      text: 'I want to change src/app/harbor_settings.py with an exact-match edit. Give me the full line
+        that contains retry_timeout_ms exactly as it appears in the file: keep its leading whitespace
+        and leave out the line-number prefix of the read. Reply with that one line only.'
+expected: '    retry_timeout_ms: int = 82574'

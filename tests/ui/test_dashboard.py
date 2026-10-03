@@ -7,6 +7,7 @@ traffic produced.
 
 from __future__ import annotations
 
+import json
 import os
 from collections.abc import Iterator
 from pathlib import Path
@@ -17,13 +18,14 @@ import pytest
 if os.environ.get("RUN_BROWSER_TESTS") != "1":
     pytest.skip("set RUN_BROWSER_TESTS=1 (needs Playwright and Chromium)", allow_module_level=True)
 
+import httpx
 from playwright.sync_api import Page, sync_playwright
 
 from tests.integration.servers import FakeUpstream, Tokli, make_config, run_tokli, serve
 from tests.integration.test_metrics_api import traffic, usage_upstream
 from tokli.compression.registry import REGISTRY
 
-TABS = ("overview", "compressors", "requests")
+TABS = ("overview", "compressors", "requests", "settings")
 
 
 @pytest.fixture(scope="module")
@@ -148,3 +150,148 @@ def test_ui_assets_load_offline_in_browser(tokli: Tokli, tmp_path: Path) -> None
         page.wait_for_selector("#cards .figure")
         browser.close()
     assert blocked == []
+
+
+# -- S4: settings (UI-003…UI-005, UI-010, AC-UI-3) and savings per compressor -----------------
+
+
+@pytest.fixture
+def fresh(tmp_path: Path) -> Iterator[Tokli]:
+    """A Tokli of its own, so settings changes do not leak into other tests."""
+    upstream = FakeUpstream()
+    usage_upstream(upstream)
+    with serve(upstream.app()) as upstream_url:
+        upstream.url = upstream_url
+        with run_tokli(make_config(tmp_path, upstream_url)) as t:
+            traffic(t)
+            yield t
+
+
+def open_settings(browser: Any, tokli: Tokli) -> Page:
+    page = browser.new_page()
+    page.goto(tokli.url + "/tokli/")
+    page.wait_for_selector("#cards .figure")
+    page.click('[data-tab="settings"]')
+    page.wait_for_selector('section[data-panel="settings"]:not([hidden]) [data-loaded]')
+    return page
+
+
+def test_ui_toggle_patches_config(fresh: Tokli) -> None:
+    """AC-UI-3: a toggle issues PATCH /tokli/api/config and the page re-renders from the
+    response."""
+    with sync_playwright() as p:
+        browser = p.chromium.launch()
+        page = open_settings(browser, fresh)
+        toggle = page.locator('[data-compressor="duplicate_tool_results"] input[type="checkbox"]')
+        assert toggle.is_checked()  # on by default since E11
+        with page.expect_response(
+            lambda r: r.url.endswith("/tokli/api/config") and r.request.method == "PATCH"
+        ) as info:
+            toggle.click()
+        assert info.value.status == 200
+        page.wait_for_selector(
+            '[data-compressor="duplicate_tool_results"] input[type="checkbox"]:not(:checked)'
+        )
+        hash_after = page.locator("#config-hash").inner_text()
+        browser.close()
+    assert (
+        fresh.services.config.reload().values["compressors.duplicate_tool_results.enabled"] is False
+    )
+    assert hash_after.strip() == fresh.services.config.reload().config_hash[:12]
+
+
+def test_ui_shows_equivalence_assumptions_and_eval_status(fresh: Tokli) -> None:
+    """UI-003: kind and equivalence, assumptions, and the evaluation record's status."""
+    with sync_playwright() as p:
+        browser = p.chromium.launch()
+        page = open_settings(browser, fresh)
+        card = page.locator('[data-compressor="json_minify"]').inner_text()
+        browser.close()
+    assert "lossless · structural" in card
+    assert "reads_minified_json" in card
+    assert "smoke · no measurable damage · claude-opus-5-5 · 2026-10-03" in card
+
+
+def test_ui_policy_explanations_text(fresh: Tokli) -> None:
+    """UI-010 (after S4 SCR-001): the kinds explained in these words."""
+    with sync_playwright() as p:
+        browser = p.chromium.launch()
+        page = open_settings(browser, fresh)
+        text = page.locator('section[data-panel="settings"]').inner_text()
+        browser.close()
+    assert (
+        "Keeps all information in the request: exactly, structurally (e.g. JSON whitespace), or "
+        "by reference to an identical earlier tool result. This does not guarantee identical model "
+        "behaviour. Defaults are chosen from evaluations." in text
+    )
+    assert (
+        "Drops information: selective ones keep a declared part verbatim, lossy ones do not. "
+        "Enable them only with evidence that your tasks are not affected." in text
+    )
+
+
+def test_ui_lossless_only_shortcut_switches_off_non_lossless(fresh: Tokli) -> None:
+    """UI-004 after S4 SCR-001. No non-lossless compressor ships yet, so the registry answer
+    is extended in the browser with one (data only, UI-001) and the PATCH is captured."""
+    patches: list[dict[str, Any]] = []
+    with sync_playwright() as p:
+        browser = p.chromium.launch()
+        page = browser.new_page()
+
+        def compressors(route: Any) -> None:
+            response = route.fetch()
+            body = response.json()
+            extra = dict(
+                body["compressors"][0],
+                id="zz_drop",
+                name="Synthetic dropper",
+                kind="LOSSY",
+                equivalence="none",
+                enabled=True,
+                evaluation={"status": "none"},
+            )
+            body["compressors"].append(extra)
+            route.fulfill(response=response, json=body)
+
+        def config(route: Any) -> None:
+            if route.request.method == "PATCH":
+                patches.append(json.loads(route.request.post_data or "{}"))
+                route.fulfill(json=json.loads(httpx.get(fresh.url + "/tokli/api/config").text))
+            else:
+                route.continue_()
+
+        page.route("**/tokli/api/compressors", compressors)
+        page.route("**/tokli/api/config", config)
+        page.goto(fresh.url + "/tokli/")
+        page.wait_for_selector("#cards .figure")
+        page.click('[data-tab="settings"]')
+        page.wait_for_selector('section[data-panel="settings"]:not([hidden]) [data-loaded]')
+        assert "drops information" in page.locator('[data-compressor="zz_drop"]').inner_text()
+        page.click("#lossless-only")
+        page.wait_for_timeout(300)
+        browser.close()
+    assert patches == [{"changes": {"compressors.zz_drop.enabled": False}}]
+
+
+def test_ui_locked_settings_show_source(tmp_path: Path) -> None:
+    """UI-005: a key pinned by env is disabled and shows its source."""
+    upstream = FakeUpstream()
+    with serve(upstream.app()) as upstream_url:
+        config = make_config(
+            tmp_path, upstream_url, env={"TOKLI_COMPRESSORS__JSON_MINIFY__ENABLED": "true"}
+        )
+        with run_tokli(config) as t, sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = open_settings(browser, t)
+            card = page.locator('[data-compressor="json_minify"]')
+            assert card.locator('input[type="checkbox"]').is_disabled()
+            assert "locked by env:TOKLI_COMPRESSORS__JSON_MINIFY__ENABLED" in card.inner_text()
+            browser.close()
+
+
+def test_ui_overview_shows_savings_per_compressor(page: Page) -> None:
+    """S4 (P10 as answered): saved tokens per compressor, each with its method."""
+    rows = page.locator("#per-compressor .figure")
+    assert rows.count() >= 1
+    text = page.locator("#per-compressor").inner_text()
+    assert "JSON minify" in text

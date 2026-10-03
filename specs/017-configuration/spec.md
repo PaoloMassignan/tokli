@@ -3,6 +3,8 @@
 Status: **Approved for S0 (2026-09-29)**: CF-001 (layers 1–4), CF-002 (CLI part), CF-003…CF-006, CF-008, CF-011, CF-012. Other requirements: Draft. · Slice: S0 (loader), S4 (UI overrides)
 Approved for S1 (2026-09-30): the keys in "Keys added in S1" and N-level key paths.
 Approved for S2 (2026-10-02): the keys in "Keys added in S2".
+Changed by S4 SCR-002 (2026-10-03): CF-006 includes the `pruning` section.
+Approved for S4 (2026-10-03): CF-001 layer 5 (UI overrides), CF-002 (`ui` source), CF-009, the keys in "Keys added in S4".
 
 ## Purpose
 Every behaviour-affecting setting has one definition, one precedence rule and a visible source.
@@ -18,11 +20,11 @@ Evidence: TOKLI_EVIDENCE.md (hazards and measurements); per-requirement rational
 1. Built-in defaults (in the schema).
 2. Config file: `--config PATH` → `TOKLI_CONFIG` → `<config dir>/tokli.yaml` (if present), where the config dir is
    `--config-dir` → `TOKLI_CONFIG_DIR` → platform default. **Never CWD.**
-3. Environment variables `TOKLI_<SECTION>__<KEY>` (double underscore = nesting), e.g. `TOKLI_COMPRESSION__POLICY=LOSSY_ALLOWED`.
+3. Environment variables `TOKLI_<SECTION>__<KEY>` (double underscore = nesting), e.g. `TOKLI_COMPRESSION__MIN_SEGMENT_TOKENS=32`.
    Values of list and map keys are JSON; scalars are parsed by the key's type.
 4. CLI flags: the generic, repeatable `--set section.key=value` on every command (value syntax as for
-   environment variables), plus named flags only where a spec names them (e.g. `--port`, `--policy`).
-5. UI overrides (`<data>/ui-overrides.yaml`). Only for keys marked `ui_editable` **and** not pinned by layers 3–4.
+   environment variables), plus named flags only where a spec names them (e.g. `--port`).
+5. UI overrides (`<data>/ui-overrides.yaml`). Only for keys marked `ui_editable` **and** not set by layers 3–4: a UI value replaces layers 1–2, never layers 3–4. A key set by env or CLI is reported as locked, with its source (API-005).
 
 Rationale for UI above file but below env/CLI: operators who pin behaviour (CI, scripts) must not
 be surprised by a UI click, and UI users still see their changes take effect over the file
@@ -75,6 +77,16 @@ defaults.
 | `compression.result_cache_mb` | `64`; `0` disables the cache (CC-024) |
 | `observability.log_file` | `false` (OB-013) |
 
+## Keys added in S4
+
+| Key | Default |
+|---|---|
+| `pruning.duplicate_min_tokens` | `64` (SPEC 019, POLICY provisional) |
+| `pruning.duplicate_require_same_call` | `false` (SPEC 019) |
+| `compressors.duplicate_tool_results.enabled` | `true` (E11 smoke record `no_measurable_damage`, 2026-10-03; CC-020) |
+
+UI-editable (CF-009): `compressors.<id>.enabled`, `telemetry.retention_days`.
+
 ## Requirements
 
 | ID | EARS requirement |
@@ -84,17 +96,17 @@ defaults.
 | CF-003 | IF any layer contains an unknown key, a wrong type or an out-of-range value, THEN THE SYSTEM SHALL refuse to start (or reject the PATCH) with an error naming the layer, key and expected type. |
 | CF-004 | THE SYSTEM SHALL NOT read configuration or `.env` files from the current working directory unless the path is given explicitly. |
 | CF-005 | THE effective configuration SHALL be an immutable snapshot. Changes produce a new snapshot applied to subsequent requests only. |
-| CF-006 | THE SYSTEM SHALL compute `config_hash` over the canonical JSON of behaviour-affecting keys (sections `compression`, `compressors`, `pipeline`, `tokens`, `limits`, where present), excluding paths, ports and credentials. |
+| CF-006 | THE SYSTEM SHALL compute `config_hash` over the canonical JSON of behaviour-affecting keys (sections `compression`, `compressors`, `pipeline`, `pruning`, `tokens`, `limits`, where present), excluding paths, ports and credentials. |
 | CF-007 | WHEN a configured optional capability cannot be provided (missing dependency or file), THE SYSTEM SHALL either fail at startup (if marked `required`) or report it as unavailable, and SHALL NOT substitute a different behaviour silently. |
 | CF-008 | THE SYSTEM SHALL resolve the data dir as `--data-dir` → `TOKLI_DATA_DIR` → platform default, and the config dir as `--config-dir` → `TOKLI_CONFIG_DIR` → platform default (table above), and SHALL print both at startup and in `tokli doctor`. |
-| CF-009 | THE configuration schema SHALL mark each key as `ui_editable` or not. v1 UI-editable keys: `compression.policy`, `compressors.<id>.enabled`, `telemetry.retention_days`. |
+| CF-009 | THE configuration schema SHALL mark each key as `ui_editable` or not. v1 UI-editable keys: `compressors.<id>.enabled`, `telemetry.retention_days`. (S4 SCR-001: there is no policy key.) |
 | CF-010 | Secrets SHALL NOT be configurable by value in the config file. Only references (`key_env`, `key_file`) are allowed. |
 | CF-011 | WHEN an environment variable starting with `TOKLI_` is neither a reserved variable nor the name of a schema key, or its value does not parse for the key's type, THE SYSTEM SHALL refuse to start with an error naming the variable. |
 | CF-012 | THE config file reader SHALL reject duplicate keys and values whose YAML type does not match the schema type, naming the file, key and expected type. |
 
 ## Acceptance criteria
-- AC-CF-1: parametrised test over every schema key: file < env < CLI < UI (when editable) resolves as specified, and the source is reported.
-- AC-CF-2: an unknown key in the file → startup error naming it. The same for env `TOKLI_COMPRESION__POLICY` (typo).
+- AC-CF-1: parametrised test over every schema key: file < env < CLI resolves as specified, and the source is reported. For UI-editable keys: file < UI, and env/CLI always win over UI (the key is reported locked).
+- AC-CF-2: an unknown key in the file → startup error naming it. The same for env `TOKLI_COMPRESION__MIN_SEGMENT_TOKENS` (typo).
 - AC-CF-3: a `tokli.yaml` and `.env` placed in CWD are ignored (test runs from that CWD).
 - AC-CF-4: `config_hash` is stable across OSes and changes when any behaviour key changes.
 - AC-CF-5: a config file containing `api_key: sk-…` → startup error "secrets must be referenced via key_env/key_file".

@@ -1,0 +1,114 @@
+case_set: 2026-10-03.1
+family: reference_fact_lookup
+assumption: resolves_result_reference
+checker: exact_value
+request:
+  max_tokens: 400
+  tools:
+  - name: Read
+    description: Reads a file.
+    input_schema:
+      type: object
+      properties:
+        file_path:
+          type: string
+  - name: Glob
+    description: Lists files.
+    input_schema:
+      type: object
+      properties:
+        pattern:
+          type: string
+  messages:
+  - role: user
+    content: Look at src/app/juniper_settings.py and then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKEREF1
+      name: Read
+      input:
+        file_path: src/app/juniper_settings.py
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKEREF1
+      content: "     1\t\"\"\"Synthetic settings module.\"\"\"\n     2\t\n     3\tfrom dataclasses import\
+        \ dataclass\n     4\t\n     5\t\n     6\t@dataclass\n     7\tclass LoggingSettings:\n     8\t\
+        \    logging_timeout_ms: int = 87838\n     9\t    logging_endpoint: str = \"raven-153\"\n    10\t\
+        \    logging_batch_size: int = 46711\n    11\t    logging_label: str = \"onyx-350\"\n    12\t\n\
+        \    13\t@dataclass\n    14\tclass ServerSettings:\n    15\t    server_batch_size: int = 87529\n\
+        \    16\t    server_endpoint: str = \"pebble-395\"\n    17\t    server_max_items: int = 71176\n\
+        \    18\t    server_timeout_ms: int = 53496\n    19\t\n    20\t@dataclass\n    21\tclass RetrySettings:\n\
+        \    22\t    retry_label: str = \"juniper-956\"\n    23\t    retry_window_s: int = 33005\n   \
+        \ 24\t    retry_max_items: int = 24926\n    25\t    retry_token_ttl: int = 38986\n    26\t\n \
+        \   27\t@dataclass\n    28\tclass StorageSettings:\n    29\t    storage_endpoint: str = \"delta-887\"\
+        \n    30\t    storage_window_s: int = 88160\n    31\t    storage_batch_size: int = 81550\n   \
+        \ 32\t    storage_token_ttl: int = 9622\n"
+  - role: assistant
+    content:
+    - type: text
+      text: Let me also see the other files in that folder.
+    - type: tool_use
+      id: toolu_01SMOKEREF2
+      name: Glob
+      input:
+        pattern: src/app/*.py
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKEREF2
+      content: 'src/app/birch_88.py
+
+        src/app/delta_32.py
+
+        src/app/fjord_3.py
+
+        src/app/fjord_33.py
+
+        src/app/fjord_45.py
+
+        src/app/indigo_54.py
+
+        src/app/juniper_19.py
+
+        src/app/juniper_58.py
+
+        src/app/kelp_84.py
+
+        src/app/onyx_44.py
+
+        src/app/quartz_11.py
+
+        src/app/raven_81.py
+
+        '
+  - role: assistant
+    content:
+    - type: text
+      text: I will read src/app/juniper_settings.py again to be sure it is current.
+    - type: tool_use
+      id: toolu_01SMOKEREF3
+      name: Read
+      input:
+        file_path: src/app/juniper_settings.py
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKEREF3
+      content: "     1\t\"\"\"Synthetic settings module.\"\"\"\n     2\t\n     3\tfrom dataclasses import\
+        \ dataclass\n     4\t\n     5\t\n     6\t@dataclass\n     7\tclass LoggingSettings:\n     8\t\
+        \    logging_timeout_ms: int = 87838\n     9\t    logging_endpoint: str = \"raven-153\"\n    10\t\
+        \    logging_batch_size: int = 46711\n    11\t    logging_label: str = \"onyx-350\"\n    12\t\n\
+        \    13\t@dataclass\n    14\tclass ServerSettings:\n    15\t    server_batch_size: int = 87529\n\
+        \    16\t    server_endpoint: str = \"pebble-395\"\n    17\t    server_max_items: int = 71176\n\
+        \    18\t    server_timeout_ms: int = 53496\n    19\t\n    20\t@dataclass\n    21\tclass RetrySettings:\n\
+        \    22\t    retry_label: str = \"juniper-956\"\n    23\t    retry_window_s: int = 33005\n   \
+        \ 24\t    retry_max_items: int = 24926\n    25\t    retry_token_ttl: int = 38986\n    26\t\n \
+        \   27\t@dataclass\n    28\tclass StorageSettings:\n    29\t    storage_endpoint: str = \"delta-887\"\
+        \n    30\t    storage_window_s: int = 88160\n    31\t    storage_batch_size: int = 81550\n   \
+        \ 32\t    storage_token_ttl: int = 9622\n"
+    - type: text
+      text: According to the latest read of src/app/juniper_settings.py, what is the value of server_endpoint?
+        Answer with only the value, without quotes, nothing else.
+expected: pebble-395

@@ -51,7 +51,7 @@ Decisions that change what is forwarded are always recorded, with a machine-read
 |---|---|
 | Route | `known_endpoint`, `verbatim_path`, `unknown_prefix` |
 | Pass-through (whole request) | `policy_off`, `no_mutable_segments`, `no_applicable_compressor`, `no_gain`, `parse_error`, `content_encoding`, `too_large`, `render_error`, `pipeline_error` |
-| Compressor skipped for a segment | `disabled`, `policy_forbids(kind)`, `unavailable(dep)`, `kind_not_supported`, `too_small`, `verbatim_tool`, `not_applicable(<compressor-specific short code>)`, `after_terminal`, `budget_exhausted` |
+| Compressor skipped for a segment | `disabled`, `unavailable(dep)`, `kind_not_supported`, `too_small`, `verbatim_tool`, `not_applicable(<compressor-specific short code>)`, `after_terminal`, `budget_exhausted` |
 | Compressor result rejected | `no_gain`, `below_min_gain`, `protected_span_changed`, `reference_target_modified`, `exception`, `timeout`, `decode_mismatch` (debug verification mode) |
 | Stage failure | `stage_exception(<stage id>)` |
 | Upstream | `upstream_status(<code>)`, `upstream_unreachable`, `upstream_timeout`, `client_disconnected` |

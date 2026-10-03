@@ -1,0 +1,115 @@
+case_set: 2026-10-03.1
+family: reference_verbatim_quote
+assumption: quotes_from_reference_target
+checker: verbatim_line
+request:
+  max_tokens: 400
+  tools:
+  - name: Read
+    description: Reads a file.
+    input_schema:
+      type: object
+      properties:
+        file_path:
+          type: string
+  - name: Glob
+    description: Lists files.
+    input_schema:
+      type: object
+      properties:
+        pattern:
+          type: string
+  messages:
+  - role: user
+    content: Look at src/app/pebble_settings.py and then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKEREF1
+      name: Read
+      input:
+        file_path: src/app/pebble_settings.py
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKEREF1
+      content: "     1\t\"\"\"Synthetic settings module.\"\"\"\n     2\t\n     3\tfrom dataclasses import\
+        \ dataclass\n     4\t\n     5\t\n     6\t@dataclass\n     7\tclass StorageSettings:\n     8\t\
+        \    storage_batch_size: int = 51170\n     9\t    storage_label: str = \"indigo-173\"\n    10\t\
+        \    storage_timeout_ms: int = 70571\n    11\t    storage_token_ttl: int = 26493\n    12\t\n \
+        \   13\t@dataclass\n    14\tclass LoggingSettings:\n    15\t    logging_token_ttl: int = 4440\n\
+        \    16\t    logging_window_s: int = 16399\n    17\t    logging_endpoint: str = \"cobalt-182\"\
+        \n    18\t    logging_label: str = \"kelp-541\"\n    19\t\n    20\t@dataclass\n    21\tclass CacheSettings:\n\
+        \    22\t    cache_endpoint: str = \"delta-593\"\n    23\t    cache_window_s: int = 88439\n  \
+        \  24\t    cache_timeout_ms: int = 9182\n    25\t    cache_token_ttl: int = 5299\n    26\t\n \
+        \   27\t@dataclass\n    28\tclass QueueSettings:\n    29\t    queue_token_ttl: int = 50735\n \
+        \   30\t    queue_timeout_ms: int = 18268\n    31\t    queue_label: str = \"harbor-448\"\n   \
+        \ 32\t    queue_endpoint: str = \"delta-312\"\n"
+  - role: assistant
+    content:
+    - type: text
+      text: Let me also see the other files in that folder.
+    - type: tool_use
+      id: toolu_01SMOKEREF2
+      name: Glob
+      input:
+        pattern: src/app/*.py
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKEREF2
+      content: 'src/app/ember_37.py
+
+        src/app/fjord_92.py
+
+        src/app/garnet_79.py
+
+        src/app/garnet_96.py
+
+        src/app/harbor_2.py
+
+        src/app/harbor_27.py
+
+        src/app/kelp_9.py
+
+        src/app/lumen_25.py
+
+        src/app/lumen_38.py
+
+        src/app/nimbus_79.py
+
+        src/app/pebble_66.py
+
+        src/app/raven_96.py
+
+        '
+  - role: assistant
+    content:
+    - type: text
+      text: I will read src/app/pebble_settings.py again to be sure it is current.
+    - type: tool_use
+      id: toolu_01SMOKEREF3
+      name: Read
+      input:
+        file_path: src/app/pebble_settings.py
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKEREF3
+      content: "     1\t\"\"\"Synthetic settings module.\"\"\"\n     2\t\n     3\tfrom dataclasses import\
+        \ dataclass\n     4\t\n     5\t\n     6\t@dataclass\n     7\tclass StorageSettings:\n     8\t\
+        \    storage_batch_size: int = 51170\n     9\t    storage_label: str = \"indigo-173\"\n    10\t\
+        \    storage_timeout_ms: int = 70571\n    11\t    storage_token_ttl: int = 26493\n    12\t\n \
+        \   13\t@dataclass\n    14\tclass LoggingSettings:\n    15\t    logging_token_ttl: int = 4440\n\
+        \    16\t    logging_window_s: int = 16399\n    17\t    logging_endpoint: str = \"cobalt-182\"\
+        \n    18\t    logging_label: str = \"kelp-541\"\n    19\t\n    20\t@dataclass\n    21\tclass CacheSettings:\n\
+        \    22\t    cache_endpoint: str = \"delta-593\"\n    23\t    cache_window_s: int = 88439\n  \
+        \  24\t    cache_timeout_ms: int = 9182\n    25\t    cache_token_ttl: int = 5299\n    26\t\n \
+        \   27\t@dataclass\n    28\tclass QueueSettings:\n    29\t    queue_token_ttl: int = 50735\n \
+        \   30\t    queue_timeout_ms: int = 18268\n    31\t    queue_label: str = \"harbor-448\"\n   \
+        \ 32\t    queue_endpoint: str = \"delta-312\"\n"
+    - type: text
+      text: 'I want to change src/app/pebble_settings.py with an exact-match edit. Give me the full line
+        that contains cache_timeout_ms exactly as it appears in the file: keep its leading whitespace
+        and leave out the line-number prefix of the read. Reply with that one line only.'
+expected: '    cache_timeout_ms: int = 9182'

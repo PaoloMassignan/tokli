@@ -1,6 +1,7 @@
 # SPEC 019 — Tool-history pruning
 
 Status: Draft (revised in Phase 0.1) · Slices: S4 (`duplicate_tool_results`, LOSSLESS by reference), S8 (`superseded_tool_results`, SELECTIVE)
+Approved for S4 (2026-10-03): PR-001…PR-005, PR-009 (never set by duplicates), PR-010…PR-013, PR-015. PR-006…PR-008, PR-014 in S8.
 Related: SPEC 001 (canonical model), 009 (compression core, preservation model), 010 (catalogue), 012 (evaluation), PHASE0_1_REVIEW.md
 
 ## Purpose
@@ -9,7 +10,7 @@ out of date: the same file read twice, a file read before it was rewritten. Prun
 redundancy at the level of tool calls rather than text. Duplicate results are replaced
 **losslessly by reference** (the information stays in the request, provably). Whether the model
 uses the reference correctly is a behavioural assumption that is evaluated before the pruner is
-enabled by default. Superseded results are removed **selectively**, under LOSSY_ALLOWED.
+enabled by default. Superseded results are removed **selectively**, only when the user enables that pruner.
 
 ## Rationale
 - Agent conversations resend the whole tool history. Repeated and outdated tool results are a large share of it (TOKLI_EVIDENCE §2, E5a, gives an upper reference measured on real traffic).
@@ -48,7 +49,7 @@ Evidence: TOKLI_EVIDENCE.md (hazards and measurements); per-requirement rational
 ## `duplicate_tool_results` — LOSSLESS (equivalence: reference)
 
 Rule: a TOOL_RESULT segment S_j is a duplicate if an earlier TOOL_RESULT segment in the same
-request has byte-identical original text and `tokens(S_j) ≥ pruning.duplicate_min_tokens`
+request has byte-identical original text (compared on the client's bytes, before any compressor) and `tokens(S_j) ≥ pruning.duplicate_min_tokens`
 (default 64). S_i is the **earliest** such segment. Stubs always name S_i, never another stub.
 With `pruning.duplicate_require_same_call: true`, the two calls must also have the same tool name
 and canonically equal arguments. The default is `false`, which is still lossless.
@@ -59,6 +60,14 @@ Stub (single line, prefix-stable):
 ```
 Decoder: `decode(stub) = text of the segment whose call id is named`. The property test decodes the
 whole request.
+
+**Protected spans (S4).** When the replaced text contains protected spans (e.g. `<system-reminder>`
+blocks), the stub is the line above followed by each protected span, verbatim and in order, each
+on its own line. The decoder ignores them: the target holds the same text.
+
+**Whole results only (S4).** Both the stubbed segment and its target must each be the entire
+content of their tool result (a string, or a list holding exactly one text block). Results with
+several blocks are never stubbed and never targets.
 
 Claims:
 
@@ -76,7 +85,7 @@ exemption is exactly what the assumption `quotes_from_reference_target` covers.
 
 **Default enablement (POLICY).** `default_enabled: true` only if the smoke evaluation record for
 both assumptions has verdict `no_measurable_damage` at the end of S4 (CC-020). Otherwise it ships
-available but off, and the result is recorded. It is eligible under LOSSLESS_ONLY either way.
+available but off, and the result is recorded. The "Lossless only" shortcut keeps it on either way.
 
 ## `superseded_tool_results` — SELECTIVE (S8)
 
@@ -114,6 +123,7 @@ saving is at least `pruning.superseded_min_saving_tokens` (default 8,000).
 | PR-011 | WHEN a stubbed result block carries `cache_control` or `is_error`, THE SYSTEM SHALL preserve those attributes (CM-009, AN-004). |
 | PR-012 | THE `duplicate_tool_results` stub SHALL name the earliest byte-identical earlier result, and THE pruner SHALL be subject to reference integrity (CC-019). A later pruner that would stub or otherwise non-equivalently change that earlier result SHALL be rejected for that segment. |
 | PR-013 | THE `duplicate_tool_results` pruner SHALL consider TOOL_RESULT segments of tools listed in `verbatim_tools` (CC-021). |
+| PR-015 | THE `duplicate_tool_results` stub SHALL keep every protected span of the replaced text, verbatim and in order, after the stub line, AND the pruner SHALL consider only tool results whose whole content is one text segment, as stub and as target. `reference_stubs` (TC-014) SHALL count the accepted stubs of the forwarded request. (S4 review P6, P7, A5.) |
 | PR-014 | THE shell-command classification for Codex tools SHALL be exactly the rules in "Shell-command classification" below. A command that matches no rule SHALL get `action: other`. New rules SHALL be added only by a spec change with a test case per rule. |
 
 ## Default tool semantics (config data, revisable)
@@ -156,10 +166,10 @@ superseding.
 - AC-PR-2 (PR-004): turn N and turn N+1 bodies (N+1 = N + new duplicate read) → the shared prefix is byte-identical after pruning.
 - AC-PR-3 (PR-005): for all compat fixtures with pruning on, block/item counts, ids and argument JSON are unchanged.
 - AC-PR-4 (PR-006/008): an unknown tool with a `file_path` argument is never superseded. The latest full read of every file is verbatim.
-- AC-PR-5 (PR-007): read(F) → edit(F) → read(F) with an age of ≥ 4 turns → the first read is stubbed (SELECTIVE, only under LOSSY_ALLOWED). read(F) → edit(F) with no later read → nothing is stubbed.
+- AC-PR-5 (PR-007): read(F) → edit(F) → read(F) with an age of ≥ 4 turns → the first read is stubbed (SELECTIVE, only when enabled). read(F) → edit(F) with no later read → nothing is stubbed.
 - AC-PR-6 (PR-009): a superseding stub on an earlier segment sets `history_rewritten: true`; duplicate stubs never do.
-- AC-PR-7: under LOSSLESS_ONLY, `superseded_tool_results` never runs (CC-002).
-- AC-PR-8 (PR-012): read(F) → read(F) identical → full read(F) with different content, under LOSSY_ALLOWED with both pruners on: the second read is a duplicate stub naming the first; `superseded_tool_results` is rejected on the first read with `reference_target_modified`; the whole-request decode restores every original text.
+- AC-PR-7: `superseded_tool_results` runs only when enabled, is never enabled by default, and the "Lossless only" shortcut switches it off (CC-002).
+- AC-PR-8 (PR-012): read(F) → read(F) identical → full read(F) with different content, with both pruners on: the second read is a duplicate stub naming the first; `superseded_tool_results` is rejected on the first read with `reference_target_modified`; the whole-request decode restores every original text.
 - AC-PR-9 (PR-013): a duplicate `Read` result (a tool in `verbatim_tools`) is stubbed.
 - AC-PR-10 (PR-014): a table-driven test covers every rule row, each rejection in step 2, and argv vs string forms (bash/PowerShell wrappers, Windows and POSIX paths).
 
@@ -174,7 +184,8 @@ superseding.
 `test_lossless_only_never_runs_lossy_compressor` (with pruners registered) ·
 `test_shell_command_classification_rules` · `test_path_normalisation` ·
 `test_duplicate_stub_names_earliest_copy` · `test_superseded_rejected_on_reference_target` ·
-`test_duplicate_pruning_applies_to_verbatim_tools` · `test_reference_target_integrity_enforced`
+`test_duplicate_pruning_applies_to_verbatim_tools` · `test_reference_target_integrity_enforced` ·
+`test_duplicate_stub_keeps_protected_spans` · `test_multi_block_results_not_pruned` · `test_reference_stubs_counted`
 
 ## Open questions
 - Q14: How much of the pruning saving measured in E5a (TOKLI_EVIDENCE §2) came from Edit/Write **arguments** rather than results? It needs a per-part count. E5b records tokens by segment kind, including TOOL_CALL_ARGS (read-only).

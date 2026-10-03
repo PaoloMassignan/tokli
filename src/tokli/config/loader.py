@@ -1,16 +1,17 @@
-"""Layered configuration loading (SPEC 017): defaults < file < environment < CLI.
+"""Layered configuration loading (SPEC 017): defaults < file < UI overrides < env < CLI.
 
-The UI-override layer arrives in S4 (S0 review A1). A layer that sets a key replaces the key's
-whole value. The merged document is validated once, in strict JSON mode, so the only accepted
-types are the schema's (CF-003, CF-012).
+UI overrides (`<data dir>/ui-overrides.yaml`, S4, ADR 0009) may set only UI-editable keys; a key
+that env or the CLI sets is locked and its override is ignored. A layer that sets a key replaces
+the key's whole value. The merged document is validated once, in strict JSON mode, so the only
+accepted types are the schema's (CF-003, CF-012).
 """
 
 from __future__ import annotations
 
 import hashlib
 import json
-from collections.abc import Mapping
-from dataclasses import dataclass
+from collections.abc import Callable, Mapping
+from dataclasses import dataclass, field
 from pathlib import Path
 from types import MappingProxyType
 from typing import Any
@@ -34,6 +35,7 @@ RESERVED_ENV: frozenset[str] = frozenset(
 )
 
 CONFIG_FILE_NAME = "tokli.yaml"
+UI_OVERRIDES_FILE = "ui-overrides.yaml"
 _KEYS_CACHE = frozenset(schema_keys())
 _SHOW_FIX = "run 'tokli config show' to list valid settings"
 
@@ -58,6 +60,18 @@ class EffectiveConfig:
     config_file_source: str | None
     dirs: ResolvedDirs
     config_hash: str
+    locked: Mapping[str, str] = field(default_factory=lambda: MappingProxyType({}))
+    reloader: Callable[[], EffectiveConfig] | None = field(default=None, compare=False, repr=False)
+
+    def reload(self) -> EffectiveConfig:
+        """A new snapshot from the same CLI and environment, reading the files again."""
+        if self.reloader is None:
+            raise RuntimeError("this snapshot cannot be reloaded")
+        return self.reloader()
+
+    @property
+    def ui_overrides_path(self) -> Path:
+        return self.dirs.data_dir / UI_OVERRIDES_FILE
 
 
 @dataclass(frozen=True)
@@ -88,8 +102,10 @@ def _parse_text_value(info: KeyInfo, raw: str, origin: str) -> object:
         ) from exc
 
 
-def _file_layer(path: Path, keys: Mapping[str, KeyInfo]) -> dict[str, _Setting]:
-    source = f"file:{path}"
+def _file_layer(
+    path: Path, keys: Mapping[str, KeyInfo], *, source: str | None = None
+) -> dict[str, _Setting]:
+    source = source or f"file:{path}"
     try:
         text = path.read_text(encoding="utf-8")
     except OSError as exc:
@@ -249,6 +265,48 @@ def _config_hash(settings: TokliSettings) -> str:
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
+def _ui_layer(path: Path, keys: Mapping[str, KeyInfo]) -> dict[str, _Setting]:
+    if not path.is_file():
+        return {}
+    layer = _file_layer(path, keys, source="ui")
+    for key in layer:
+        if not keys[key].ui_editable:
+            raise ConfigError(
+                cause=f"ui ({path}): '{key}' cannot be set from the UI",
+                fix=f"remove it from {path.name}; set it in the config file instead",
+            )
+    return layer
+
+
+def ui_document(values: Mapping[str, object]) -> dict[str, Any]:
+    """Flat ``{key: value}`` → the nested mapping written to ``ui-overrides.yaml``."""
+    document: dict[str, Any] = {}
+    for key in sorted(values):
+        *parents, name = key.split(".")
+        node = document
+        for part in parents:
+            node = node.setdefault(part, {})
+        node[name] = values[key]
+    return document
+
+
+def validate_values(values: Mapping[str, object]) -> dict[str, str]:
+    """Per key, why its value is invalid for the schema (empty when all are valid)."""
+    errors: dict[str, str] = {}
+    defaults = TokliSettings()
+    for key, value in values.items():
+        try:
+            _validate({key: _Setting(value, "ui")}, defaults)
+        except ConfigError as exc:
+            errors[key] = exc.cause
+    return errors
+
+
+def read_ui_overrides(path: Path) -> dict[str, object]:
+    """The overrides file as flat ``{key: value}`` (validated like any layer)."""
+    return {k: s.value for k, s in _ui_layer(path, schema_keys()).items()}
+
+
 def load_config(cli: CliOverrides, env: Mapping[str, str], platform: str) -> EffectiveConfig:
     """Resolve every setting by precedence and return an immutable snapshot."""
     keys = schema_keys()
@@ -260,8 +318,11 @@ def load_config(cli: CliOverrides, env: Mapping[str, str], platform: str) -> Eff
     merged: dict[str, _Setting] = {}
     if config_file is not None:
         merged.update(_file_layer(config_file, keys))
-    merged.update(_env_layer(env, keys))
-    merged.update(_cli_layer(cli.sets, cli.named, keys))
+    ui = _ui_layer(dirs.data_dir / UI_OVERRIDES_FILE, keys)
+    pinned = {**_env_layer(env, keys), **_cli_layer(cli.sets, cli.named, keys)}
+    merged.update({key: setting for key, setting in ui.items() if key not in pinned})
+    merged.update(pinned)
+    locked = {key: pinned[key].source for key in sorted(pinned) if keys[key].ui_editable}
 
     defaults = TokliSettings()
     settings = _validate(merged, defaults)
@@ -276,4 +337,6 @@ def load_config(cli: CliOverrides, env: Mapping[str, str], platform: str) -> Eff
         config_file_source=config_file_source,
         dirs=dirs,
         config_hash=_config_hash(settings),
+        locked=MappingProxyType(locked),
+        reloader=lambda: load_config(cli, env, platform),
     )

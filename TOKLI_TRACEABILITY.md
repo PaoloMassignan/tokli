@@ -39,7 +39,7 @@ Evidence codes:
 | CM-010 | ARCH §5 | AC-CM-7 | `test_import_contracts` |
 | CM-011 | H09 (non-ASCII escaping changes bytes and length) | AC-CM-2 | `test_patched_body_utf8_and_length` |
 | CM-012 | H33 | AC-CM-5 | `test_oversize_body_relayed_verbatim`, `test_large_body_not_rejected` |
-| CM-013 | pruning needs tool history without protocol knowledge (SPEC 019) | AC-CM-4 | `test_tool_records_per_protocol` |
+| CM-013 | pruners need tool history without protocol knowledge | AC-PR-1 | `test_tool_records_exposed_read_only` |
 
 ## Proxy (SPEC 002)
 
@@ -147,14 +147,14 @@ Evidence codes:
 | Req | Why | AC | Tests |
 |---|---|---|---|
 | CC-001 | H13 | AC-CC-9 | `test_registry_contract_every_lossless_has_roundtrip_property` |
-| CC-002 | Brief§7; H01, H02 | AC-CC-1 | `test_lossless_only_never_runs_lossy_compressor`, `test_lossy_allowed_runs_selective_and_lossy`, `test_unknown_requires_explicit_enable` |
+| CC-002 | S4 SCR-001: enabling is the only gate; the policy is derived | AC-CC-1 | `test_disabled_non_lossless_compressors_never_run`, `test_non_lossless_compressors_run_only_when_enabled`, `test_policy_field_derived_from_enabled_kinds`, `test_policy_forbids_removed_from_closed_set`, `test_ui_lossless_only_shortcut_switches_off_non_lossless` |
 | CC-003 | Brief§8 enabled ≠ forced | AC-CC-2 | `test_enabled_compressor_not_applied_when_not_applicable`, `test_disabled_compressor_skipped` |
 | CC-004 | Brief§10; tokenizer mismatch margin | AC-CC-3 | `test_longer_output_rejected`, `test_below_min_gain_rejected` |
 | CC-005 | Brief§10 invariant | AC-CC-3 | `prop_compression_never_increases_tokens` |
 | CC-006 | determinism; H05 | AC-CC-4 | `prop_compression_is_deterministic`, `test_segment_output_independent_of_other_segments` |
 | CC-007 | reminders; future redaction markers | AC-CC-5 | `prop_protected_spans_preserved`, `test_protected_span_change_rejected`, `test_transformer_patch_breaking_protected_span_is_dropped`, `test_spans_preserved` |
 | CC-008 | H14, MD-25 | AC-CC-6 | `test_compressor_exception_is_recorded`, `test_compressor_timeout_is_recorded`, `test_late_result_discarded_as_timeout` |
-| CC-009 | H13 | AC-CC-8 | `test_chain_order_by_stage_then_id`, `test_terminal_stops_chain` |
+| CC-009 | deterministic chains | — | `test_terminal_stops_chain`, `test_chain_order_by_stage_then_id` |
 | CC-010 | H14, MD-03 | AC-CC-7 | `test_missing_dependency_marks_compressor_unavailable` |
 | CC-011 | Brief§6 | AC-CC-9 | `test_registry_contract_every_lossless_has_roundtrip_property`, `test_json_minify_is_the_only_registered_compressor_in_s1`, `test_registered_compressors_are_available` |
 | CC-012 | Brief§11 | AC-CC-8 | `test_compressor_stats_expected_fixture`, `prop_marginal_savings_sum_to_total` |
@@ -164,9 +164,9 @@ Evidence codes:
 | CC-016 | defence in depth | AC-CC-9 | `test_verify_lossless_rejects_decode_mismatch` |
 | CC-017 | ARCH §5 | AC-CM-7 | `test_import_contracts` |
 | CC-018 | superseding rewrites sent history (SPEC 019) | AC-PR-6 | `test_history_rewritten_flag` |
-| CC-019 | R01§3, §6: a reference is only as good as its target | AC-CC-10, AC-PR-8 | `test_reference_target_integrity_enforced`, `test_superseded_rejected_on_reference_target` |
+| CC-019 | reference targets keep their content | AC-CC-10 | `test_reference_target_integrity_enforced` |
 | CC-020 | R01§2, §7: policy eligibility ≠ default enablement; every transformation relies on model behaviour | AC-CC-11 | `test_every_compressor_declares_assumptions`, `test_registry_default_enabled_requires_eval_record` |
-| CC-021 | R01§3: verbatim hazard does not apply where the bytes stay verbatim in the target | AC-CC-12, AC-PR-9 | `test_verbatim_tools_exempt_only_reference_equivalence`, `test_duplicate_pruning_applies_to_verbatim_tools` |
+| CC-021 | the bytes stay verbatim in the target | AC-CC-12 | `test_duplicate_pruning_applies_to_verbatim_tools` |
 | CC-022 | S1 review P1 (POLICY, provisional) | AC-CC-3 | `test_min_segment_tokens_default` |
 | CC-023 | H04; S1 review P2 | AC-CC-12 | `test_unresolved_tool_name_treated_as_verbatim` |
 | CC-024 | S1 E9 large-request overhead; S1 Gate 2 decision 2 | AC-CC-13 | `test_result_cache_hit_gives_identical_output`, `test_result_cache_also_caches_not_applicable_and_no_gain`, `test_result_cache_key_includes_view_and_config`, `test_result_cache_still_checks_invariants`, `test_result_cache_bounded`, `test_result_cache_off`, `test_failed_result_is_not_cached` |
@@ -175,19 +175,20 @@ Evidence codes:
 
 | Req | Why | AC | Tests |
 |---|---|---|---|
-| PR-001 | E5a: pruning reached 38.9 % as an upper reference (TOKLI_EVIDENCE §2); request-level reasoning needed | AC-PR-1 | `test_request_scope_runs_before_segment_scope`, `test_duplicate_results_stub_later_copies` |
-| PR-002 | E5a: exact duplicates ≈ 1.1 %; product owner: duplicates must be lossless | AC-PR-1 | `test_duplicate_results_stub_later_copies`, `test_duplicate_require_same_call_option` |
-| PR-003 | lossless by reference (CC classification) | AC-PR-1 | `prop_duplicate_pruning_decodes_whole_request`, `test_duplicate_pruning_never_stubs_first_occurrence` |
-| PR-004 | H05 | AC-PR-2 | `test_duplicate_pruning_prefix_stable_across_turns` |
-| PR-005 | H07, H08 | AC-PR-3 | `test_pruning_preserves_structure_and_arguments` |
+| PR-001 | pruners are compressors (ADR 0010) | — | `test_pruning_runs_before_segment_compressors`, `test_duplicate_results_stub_later_copies` |
+| PR-002 | repeated tool output | AC-PR-1 | `test_duplicate_results_stub_later_copies`, `test_small_duplicates_not_stubbed`, `test_duplicate_pruning_end_to_end` |
+| PR-003 | lossless by reference | AC-PR-1 | `test_duplicate_pruning_never_stubs_first_occurrence`, `prop_duplicate_pruning_decodes_whole_request` |
+| PR-004 | provider prefix caching | AC-PR-2 | `test_duplicate_pruning_prefix_stable_across_turns` |
+| PR-005 | protocol pairing rules | AC-PR-3 | `test_pruning_preserves_structure_and_arguments` |
 | PR-006 | client-specific tool meaning is data, not code | AC-PR-4 | `test_tool_semantics_from_config_only`, `test_unknown_tool_never_superseded`, `test_shell_command_classification_rules`, `test_path_normalisation` |
 | PR-007 | E5a: 75 % of pruned entries touched a re-touched file | AC-PR-5 | `test_superseded_read_stubbed_after_full_reread`, `test_edit_never_supersedes`, `test_partial_read_ranges`, `test_superseded_respects_age_and_min_saving` |
 | PR-008 | keep the current state visible | AC-PR-4 | `test_unknown_tool_never_superseded`, `test_edit_never_supersedes` |
-| PR-009 | H05 | AC-PR-6 | `test_history_rewritten_flag` |
-| PR-010 | avoid wasted work: prune before compressing text | AC-PR-1 | `test_pruning_runs_before_segment_compressors` |
-| PR-011 | CM-009 / AN-004 | AC-PR-3 | `test_stub_preserves_cache_control_and_is_error` |
-| PR-012 | R01§3 reference integrity; stubs never chain | AC-PR-8 | `test_duplicate_stub_names_earliest_copy`, `test_superseded_rejected_on_reference_target` |
-| PR-013 | R01§3; E5a: 75 % of pruned entries touched a re-read file | AC-PR-9 | `test_duplicate_pruning_applies_to_verbatim_tools` |
+| PR-009 | cache invalidation visible | AC-PR-6 | `test_history_rewritten_flag` (duplicates never set it) |
+| PR-010 | no work on stubbed content | — | `test_pruning_runs_before_segment_compressors` |
+| PR-011 | block attributes | — | `test_stub_preserves_cache_control_and_is_error` |
+| PR-012 | reference integrity | AC-PR-8 | `test_reference_target_integrity_enforced`, `test_duplicate_stub_names_earliest_copy` |
+| PR-013 | verbatim tools | AC-PR-9 | `test_duplicate_pruning_applies_to_verbatim_tools` |
+| PR-015 | Claude Code reminders inside results; ambiguous multi-block results (S4 review P6, P7, A5) | — | `test_duplicate_stub_keeps_protected_spans`, `test_multi_block_results_not_pruned`, `test_reference_stubs_counted`, `test_duplicate_require_same_call_option`, `test_pruner_records_why_it_did_not_stub` |
 | PR-014 | shell-command classification defined in the spec; Codex Windows/Unix shapes (MD-13) | AC-PR-10 | `test_shell_command_classification_rules` |
 
 ## Compressors (SPEC 010)
@@ -247,10 +248,10 @@ Evidence codes:
 | QE-014 | R01§8 deterministic recording of configuration, saving and outcome | AC-QE-3 | `test_harness_report_provenance` |
 | QE-015 | R01§8: explicit, honest verdict rule | AC-QE-5 | `test_smoke_verdict_rule`, `test_smoke_insufficient_data` |
 | QE-016 | R01§7: CC-020 needs a machine-readable record | AC-QE-7 | `test_eval_record_schema_and_provisional_rule`, `test_eval_record_invalidated_by_version_bump`, `test_harness_report_provenance`, `test_registry_default_enabled_requires_eval_record` |
-| QE-017 | the harness must prove it can detect damage | AC-QE-2 | `test_smoke_harness_self_test` |
+| QE-017 | the harness must prove it can detect damage | AC-QE-2 | `test_smoke_harness_self_test`, `test_smoke_harness_self_test_reference_families`, `test_reference_families_exist_for_the_pruner` |
 | QE-018 | no price book before S6; S2.5 review X1, P2 | AC-QE-8 | `test_eval_requires_max_calls_without_pricing`, `test_eval_requires_confirmation_or_yes`, `test_eval_stops_at_call_cap` |
 | QE-019 | the proxy never holds credentials; S2.5 review X2, P3; ADR 0008 | AC-QE-8 | `test_eval_api_key_from_named_env_only`, `test_eval_never_writes_the_key`, `test_eval_sends_key_only_as_header` |
-| QE-020 | H23: checkers that cannot hide removed content; S2.5 review A5 | AC-QE-8 | `test_checker_exact_value`, `test_checker_json_structural` |
+| QE-020 | H23: checkers that cannot hide removed content; S2.5 review A5; S4 P9 | AC-QE-8 | `test_checker_exact_value`, `test_checker_json_structural`, `test_checker_verbatim_line` |
 
 ## Telemetry & cost (SPEC 013)
 
@@ -299,9 +300,9 @@ Evidence codes:
 | API-002 | Brief§10/§12 labelling | AC-API-1 | `test_every_api_token_field_has_method`, `test_every_api_token_field_has_method_s3`, `test_api_contract_schemas`, `test_api_contract_schemas_s3` |
 | API-003 | Brief§13 breakdowns | AC-API-1 | `test_metrics_filters_validated`, `test_metrics_filters_validated_over_http`, `test_filters_default_to_last_seven_days` |
 | API-004 | replaceable UI (Brief§4) | AC-API-1 | `test_api_contract_schemas`, `test_api_contract_schemas_s3` |
-| API-005 | config ownership (ARCH §7) | AC-API-3 | `test_patch_pinned_key_conflict`, `test_patch_unknown_key_rejected` |
-| API-006 | H40 | AC-API-4 | `test_mutation_rejects_foreign_origin` |
-| API-007 | atomic config | AC-API-5 | `test_config_change_atomic_snapshot` |
+| API-005 | config ownership | AC-API-3 | `test_patch_pinned_key_conflict`, `test_patch_unknown_key_rejected`, `test_patch_rejects_malformed_body` |
+| API-006 | browser-origin mutations | AC-API-4 | `test_mutation_rejects_foreign_origin` |
+| API-007 | atomic, persisted changes; ADR 0009 | AC-API-5 | `test_config_change_atomic_snapshot`, `test_patch_persists_to_ui_overrides_file`, `test_patch_noop_returns_same_hash`, `test_ui_toggle_changes_next_config_hash_and_attribution`, `test_config_reload_reads_new_overrides` |
 | API-008 | UI ↛ internals; ADR 0006 | AC-CM-7 | `test_import_contracts` (contract "API routes reach storage only through tokli.app use cases") |
 | API-009 | DNS rebinding; S3 review M4, P7 | AC-API-6 | `test_tokli_routes_reject_foreign_host`, `test_proxy_routes_ignore_host_check` |
 | API-010 | S3 review A5, A6 | AC-API-7 | `test_summary_compressor_filter`, `test_timeseries_hour_and_day_buckets`, `test_timeseries_buckets_follow_tz_across_dst`, `test_metrics_filters_validated` |
@@ -314,15 +315,15 @@ Evidence codes:
 |---|---|---|---|
 | UI-001 | Brief§8, §13 | AC-UI-1 | `test_ui_has_no_compressor_specific_code` |
 | UI-002 | Brief§10/§12 | AC-UI-2 | `test_ui_renders_method_labels`, `test_ui_money_shows_dash_with_reason` |
-| UI-003 | Brief§8 kind visibility; R01§3 equivalence and assumptions visible | AC-UI-2 | `test_ui_shows_kind_equivalence_and_assumptions`, `test_compressors_endpoint_read_only_metadata` (evaluation status from S4) |
-| UI-004 | Brief§7/§8 policy semantics | AC-UI-3 | `test_ui_policy_marks_non_lossless_not_permitted`, `test_ui_toggle_patches_config` |
+| UI-003 | Brief§8 kind visibility; R01§3 equivalence and assumptions visible | AC-UI-2 | `test_ui_shows_kind_equivalence_and_assumptions`, `test_ui_shows_equivalence_assumptions_and_eval_status`, `test_compressors_endpoint_shows_locks_and_evaluation`, `test_current_record`, `test_outdated_record_shown_as_outdated`, `test_wheel_contains_eval_records` |
+| UI-004 | S4 SCR-001: toggles plus the Lossless only shortcut | AC-UI-3 | `test_ui_lossless_only_shortcut_switches_off_non_lossless`, `test_ui_toggle_patches_config` |
 | UI-005 | config ownership | AC-UI-3 | `test_ui_locked_settings_show_source` |
 | UI-006 | H41, MD-21 | AC-UI-4 | `test_wheel_contains_ui_assets`, `test_ui_assets_load_offline`, `test_ui_assets_load_offline_in_browser` |
 | UI-007 | Brief§15 | AC-OB-5 | `test_debug_content_banner_visible` |
 | UI-008 | usability | AC-UI-2 | `test_ui_usable_at_360px` |
 | UI-009 | R01§9: expensive compressors visible and controllable | AC-UI-2 | `test_ui_overhead_target_is_reference_line`, `test_compressor_aggregates_hand_computed` (cost class, average latency, budget-skip rate, `budget_ms`) |
 | UI-011 | S3 review M3, P8; Windows file-type registry | AC-UI-5 | `test_dashboard_served_at_tokli_root`, `test_ui_assets_served_with_explicit_content_types`, `test_serve_prints_dashboard_address` |
-| UI-010 | R01§5: exact meaning of the user-facing policies | AC-UI-2 | `test_ui_policy_explanations_text` |
+| UI-010 | honest wording (S4 SCR-001) | — | `test_ui_policy_explanations_text` |
 
 ## Configuration (SPEC 017)
 
@@ -333,10 +334,10 @@ Evidence codes:
 | CF-003 | fail clearly (Brief§18) | AC-CF-2 | `test_keys_added_in_s2_defaults`, `test_keys_added_in_s2_reject_out_of_range`, `test_unknown_key_rejected_with_layer`, `test_unknown_section_rejected`, `test_invalid_value_names_layer_key_and_expected_type`, `test_explicit_config_file_must_exist`, `test_set_requires_key_equals_value` |
 | CF-004 | MD-04, MD-08 | AC-CF-3 | `test_cwd_config_and_dotenv_ignored` |
 | CF-005 | mid-request consistency | AC-API-5 | `test_config_snapshot_immutable` |
-| CF-006 | fingerprint + telemetry | AC-CF-4 | `test_config_hash_stable_and_sensitive` |
+| CF-006 | fingerprint + telemetry; S4 SCR-002 (`pruning`) | AC-CF-4 | `test_config_hash_stable_and_sensitive`, `test_config_hash_changes_with_pruning_options`, `test_ui_override_changes_config_hash` |
 | CF-007 | H12, H14: no silent substitution | AC-CC-7 | `test_optional_capability_never_silently_substituted` |
 | CF-008 | MD-04, MD-07 | AC-PT-2 | `test_data_dir_resolution_per_platform`, `test_config_dir_resolution_per_platform`, `test_linux_xdg_fallbacks_use_home`, `test_missing_home_fails_clearly` |
-| CF-009 | Brief§8 UI | AC-API-3 | `test_patch_unknown_key_rejected` |
+| CF-009 | Brief§8 UI; S4 SCR-001 | AC-API-3 | `test_keys_marked_ui_editable`, `test_patch_unknown_key_rejected` |
 | CF-010 | credential hygiene | AC-CF-5 | `test_secret_values_rejected_in_config` |
 | CF-011 | MD-05; S0 review M2, X2 | AC-CF-6 | `test_env_json_value_errors_name_variable`, `test_reserved_env_vars_only` |
 | CF-012 | S0 review M1 (YAML implicit types, duplicate keys) | AC-CF-7 | `test_duplicate_yaml_key_rejected`, `test_yaml_implicit_types_rejected`, `test_empty_config_file_is_an_empty_layer` |

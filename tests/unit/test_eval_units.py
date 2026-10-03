@@ -67,7 +67,7 @@ def test_checker_json_structural(answer: str, ok: bool) -> None:
 
 
 def test_checker_registry_is_closed() -> None:
-    assert set(CHECKERS) == {"exact_value", "json_structural"}
+    assert set(CHECKERS) == {"exact_value", "json_structural", "verbatim_line"}
 
 
 # -- cases (QE-013, AC-QE-6) -------------------------------------------------------------------
@@ -109,7 +109,7 @@ def test_cases_load_by_assumption() -> None:
     families = {c.family for c in cases}
     assert families == {"json_fact_lookup", "json_verbatim_quote"}
     assert sum(1 for c in cases if c.family == "json_fact_lookup") >= 20
-    assert load_cases(CASES, ("resolves_result_reference",)) == []
+    assert load_cases(CASES, ("an_assumption_without_cases",)) == []
     assert all(c.case_id.startswith(f"{c.family}/") for c in cases)
 
 
@@ -221,3 +221,34 @@ def test_all_errors_is_insufficient_data_not_a_pass() -> None:
     assert verdict.n == 0 and verdict.errors_baseline == 22
     mostly = results(20) + errored[:5]
     assert family_verdict(mostly).verdict == "no_measurable_damage"  # 20 good cases suffice
+
+
+# -- S4: verbatim_line (QE-020) and the reference families --------------------------------------
+
+
+@pytest.mark.parametrize(
+    "answer, ok",
+    [
+        ("    timeout = 30", True),
+        ("Here is the line:\n\n    timeout = 30", True),
+        ("```\n    timeout = 30\n```", True),  # fences are not lines
+        ("```toml\n    timeout = 30\n```", True),
+        ("`    timeout = 30`", True),
+        ("    timeout = 30\r", True),  # a CR line ending is not content
+        ("timeout = 30", False),  # leading whitespace lost: not an edit anchor
+        ("     timeout = 30", False),
+        ("    timeout = 30 ", False),
+        ("    12\t    timeout = 30", False),  # the line-number prefix is not part of the file
+        ("", False),
+    ],
+)
+def test_checker_verbatim_line(answer: str, ok: bool) -> None:
+    assert CHECKERS["verbatim_line"](answer, "    timeout = 30") is ok
+
+
+def test_reference_families_exist_for_the_pruner() -> None:
+    spec = next(c.spec for c in REGISTRY if c.spec.id == "duplicate_tool_results")
+    cases = load_cases(CASES, spec.assumptions)
+    counts = {f: sum(1 for c in cases if c.family == f) for f in {c.family for c in cases}}
+    assert counts == {"reference_fact_lookup": 22, "reference_verbatim_quote": 22}
+    assert {c.checker for c in cases} == {"exact_value", "verbatim_line"}

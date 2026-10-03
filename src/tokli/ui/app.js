@@ -4,7 +4,7 @@
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 const TZ = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
-const TABS = ["overview", "compressors", "requests"];
+const TABS = ["overview", "compressors", "requests", "settings"];
 const SIZE_BUCKETS = [
   ["lt_10k", "small (< 10k tokens)"],
   ["10k_50k", "medium (10k–50k)"],
@@ -43,6 +43,21 @@ function svg(tag, attrs = {}, text = null) {
 
 function fmt(value, digits = 0) {
   return Number(value).toLocaleString("en-US", { maximumFractionDigits: digits });
+}
+
+async function apiPatch(changes) {
+  const response = await fetch(new URL("/tokli/api/config", window.location.origin), {
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ changes }),
+  });
+  const body = await response.json();
+  if (!response.ok) {
+    const error = body.error || {};
+    const detail = error.source ? ` (locked by ${error.source})` : error.fields ? `: ${Object.values(error.fields).join("; ")}` : "";
+    throw new Error((error.type || `HTTP ${response.status}`) + detail);
+  }
+  return body;
 }
 
 async function api(path, params = {}) {
@@ -204,10 +219,26 @@ function overheadChart(overhead, width) {
 
 async function loadOverview() {
   const { days, params } = filterParams();
-  const [summary, series] = await Promise.all([
+  const [summary, series, perCompressor, registry] = await Promise.all([
     api("/tokli/api/metrics/summary", params),
     api("/tokli/api/metrics/timeseries", { ...params, bucket: days > 2 ? "day" : "hour" }),
+    api("/tokli/api/metrics/compressors", params),
+    api("/tokli/api/compressors"),
   ]);
+  const names = Object.fromEntries(registry.compressors.map((c) => [c.id, c]));
+  document.getElementById("per-compressor").replaceChildren(
+    el("thead", {}, el("tr", {}, ["Compressor", "Kind", "Tokens saved", "Share of all savings"].map((h) => el("th", {}, h)))),
+    el("tbody", {}, perCompressor.compressors.length
+      ? perCompressor.compressors.map((m) => {
+        const c = names[m.compressor_id];
+        return el("tr", {},
+          el("td", {}, c ? c.name : m.compressor_id),
+          el("td", {}, c ? kindBadge(c) : m.kind.toLowerCase()),
+          el("td", { class: "n" }, figure(m.marginal_saved)),
+          el("td", { class: "n" }, rate(m.share_of_saving, { percent: true })));
+      })
+      : [el("tr", {}, el("td", { colspan: "4" }, figure({ value: null, reason: "no_data" })))]),
+  );
   const t = summary.tokens;
   const requests = summary.requests;
   document.getElementById("cards").replaceChildren(
@@ -350,7 +381,102 @@ async function showDetail(requestId) {
 
 // -- tabs, filters, startup --------------------------------------------------------------------
 
-const LOADERS = { overview: loadOverview, compressors: loadCompressors, requests: () => loadRequests(false) };
+// -- settings (UI-003…UI-005, UI-010; S4 SCR-001: enabling is the only control) -------------
+
+const settingsState = { registry: null, config: null };
+
+function settingOf(config, key) {
+  return config.settings.find((s) => s.key === key) || null;
+}
+
+function evaluationText(e) {
+  if (!e || e.status === "none") return "not evaluated";
+  const text = [e.tier, (e.verdict || "").replaceAll("_", " "), e.model, e.date].filter(Boolean).join(" · ");
+  return e.status === "outdated" ? `evaluation outdated (${text})` : text;
+}
+
+function isOn(c, config) {
+  const s = settingOf(config, `compressors.${c.id}.enabled`);
+  return s ? Boolean(s.value) : Boolean(c.enabled);
+}
+
+function renderSettings() {
+  const { registry, config } = settingsState;
+  document.getElementById("config-hash").textContent = config.config_hash.slice(0, 12);
+  const cards = registry.compressors.map((c) => {
+    const key = `compressors.${c.id}.enabled`;
+    const s = settingOf(config, key);
+    const locked = (s && s.locked_by) || c.locked_by;
+    const input = el("input", { type: "checkbox", "aria-label": `${c.name} on/off` });
+    input.checked = isOn(c, config);
+    input.disabled = Boolean(locked);
+    input.addEventListener("change", () => changeSettings({ [key]: input.checked }));
+    return el("div", { class: "compressor-card", "data-compressor": c.id },
+      el("h3", {}, el("span", {}, c.name, " ", el("span", { class: "note" }, `v${c.version}`)),
+        el("label", { class: "switch" }, input, input.checked ? "on" : "off")),
+      el("div", {}, kindBadge(c), " ", el("span", { class: "meta" }, c.availability)),
+      c.kind !== "LOSSLESS" ? el("div", { class: "warn" }, "drops information") : null,
+      el("div", { class: "meta" }, "Evaluation: ", evaluationText(c.evaluation)),
+      el("div", { class: "meta" }, "Assumptions:"),
+      el("ul", { class: "assumptions" }, c.assumptions.map((a) => el("li", {}, a))),
+      locked ? el("div", { class: "lock" }, `locked by ${locked}`) : null);
+  });
+  document.getElementById("compressor-cards").replaceChildren(...cards);
+  const retention = settingOf(config, "telemetry.retention_days");
+  const input = document.getElementById("retention");
+  input.value = retention ? retention.value : "";
+  input.disabled = Boolean(retention && retention.locked_by);
+  document.getElementById("retention-lock").textContent = retention && retention.locked_by ? `locked by ${retention.locked_by}` : "";
+}
+
+async function changeSettings(changes) {
+  const status = document.getElementById("settings-status");
+  try {
+    settingsState.config = await apiPatch(changes);
+    status.textContent = "Saved. The next request uses the new settings.";
+    state.version += 1;
+    state.loaded = { settings: state.version };
+  } catch (error) {
+    status.textContent = `Not saved: ${error.message}`;
+  }
+  renderSettings();
+}
+
+async function loadSettings() {
+  const [registry, config] = await Promise.all([api("/tokli/api/compressors"), api("/tokli/api/config")]);
+  settingsState.registry = registry;
+  settingsState.config = config;
+  renderSettings();
+}
+
+document.getElementById("lossless-only").addEventListener("click", () => {
+  const { registry, config } = settingsState;
+  if (!registry) return;
+  const changes = {};
+  for (const c of registry.compressors) {
+    const s = settingOf(config, `compressors.${c.id}.enabled`);
+    const locked = (s && s.locked_by) || c.locked_by;
+    if (c.kind !== "LOSSLESS" && isOn(c, config) && !locked) changes[`compressors.${c.id}.enabled`] = false;
+  }
+  if (Object.keys(changes).length) {
+    changeSettings(changes);
+  } else {
+    document.getElementById("settings-status").textContent = "Every compressor that is on is already lossless.";
+  }
+});
+
+document.getElementById("retention-form").addEventListener("submit", (event) => {
+  event.preventDefault();
+  const value = Number(document.getElementById("retention").value);
+  changeSettings({ "telemetry.retention_days": value });
+});
+
+const LOADERS = {
+  overview: loadOverview,
+  compressors: loadCompressors,
+  requests: () => loadRequests(false),
+  settings: loadSettings,
+};
 
 async function show(tab) {
   state.tab = tab;

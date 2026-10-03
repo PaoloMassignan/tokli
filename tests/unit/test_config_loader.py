@@ -35,6 +35,9 @@ EXAMPLES: dict[str, tuple[str, str, object]] = {
     "compression.per_call_timeout_ms": ("10", "20", 20),
     "compression.verify_lossless": ("true", "false", False),
     "compressors.json_minify.enabled": ("false", "true", True),
+    "compressors.duplicate_tool_results.enabled": ("false", "true", True),
+    "pruning.duplicate_min_tokens": ("10", "20", 20),
+    "pruning.duplicate_require_same_call": ("true", "false", False),
     "tokens.default": ("cl100k_base", "o200k_base", "o200k_base"),
     "tokens.model_map": (
         '[{pattern: "x-*", tokenizer: cl100k_base}]',
@@ -67,6 +70,9 @@ FILE_EXPECTED: dict[str, object] = {
     "compression.per_call_timeout_ms": 10,
     "compression.verify_lossless": True,
     "compressors.json_minify.enabled": False,
+    "compressors.duplicate_tool_results.enabled": False,
+    "pruning.duplicate_min_tokens": 10,
+    "pruning.duplicate_require_same_call": True,
     "tokens.default": "cl100k_base",
     "tokens.model_map": ({"pattern": "x-*", "tokenizer": "cl100k_base"},),
     "observability.trace_buffer": 10,
@@ -89,8 +95,9 @@ DEFAULT_BEHAVIOUR_JSON = {
         "verify_lossless": False,
         "result_cache_mb": 64,
     },
-    "compressors": {"json_minify": {"enabled": True}},
+    "compressors": {"duplicate_tool_results": {"enabled": True}, "json_minify": {"enabled": True}},
     "limits": {"max_transform_bytes": 33554432, "usage_parser_buffer": 1048576},
+    "pruning": {"duplicate_min_tokens": 64, "duplicate_require_same_call": False},
     "tokens": {
         "default": "o200k_base",
         "model_map": [
@@ -352,3 +359,12 @@ def test_keys_added_in_s2_defaults(env: dict[str, str]) -> None:
 def test_keys_added_in_s2_reject_out_of_range(env: dict[str, str], setting: str) -> None:
     with pytest.raises(ConfigError):
         load_config(CliOverrides(sets=(setting,)), env, platform_name())
+
+
+def test_config_hash_changes_with_pruning_options(env: dict[str, str]) -> None:
+    """S4 SCR-002: the `pruning` section is behaviour-affecting (CF-006)."""
+    base = load_config(CliOverrides(), env, platform_name()).config_hash
+    changed = load_config(
+        CliOverrides(sets=("pruning.duplicate_min_tokens=128",)), env, platform_name()
+    ).config_hash
+    assert base != changed

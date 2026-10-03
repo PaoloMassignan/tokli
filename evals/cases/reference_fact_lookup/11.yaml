@@ -1,0 +1,114 @@
+case_set: 2026-10-03.1
+family: reference_fact_lookup
+assumption: resolves_result_reference
+checker: exact_value
+request:
+  max_tokens: 400
+  tools:
+  - name: Read
+    description: Reads a file.
+    input_schema:
+      type: object
+      properties:
+        file_path:
+          type: string
+  - name: Glob
+    description: Lists files.
+    input_schema:
+      type: object
+      properties:
+        pattern:
+          type: string
+  messages:
+  - role: user
+    content: Look at src/app/quartz_settings.py and then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKEREF1
+      name: Read
+      input:
+        file_path: src/app/quartz_settings.py
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKEREF1
+      content: "     1\t\"\"\"Synthetic settings module.\"\"\"\n     2\t\n     3\tfrom dataclasses import\
+        \ dataclass\n     4\t\n     5\t\n     6\t@dataclass\n     7\tclass ServerSettings:\n     8\t \
+        \   server_max_items: int = 21266\n     9\t    server_timeout_ms: int = 21030\n    10\t    server_endpoint:\
+        \ str = \"garnet-782\"\n    11\t    server_token_ttl: int = 4735\n    12\t\n    13\t@dataclass\n\
+        \    14\tclass QueueSettings:\n    15\t    queue_window_s: int = 47561\n    16\t    queue_endpoint:\
+        \ str = \"indigo-286\"\n    17\t    queue_batch_size: int = 83084\n    18\t    queue_token_ttl:\
+        \ int = 55062\n    19\t\n    20\t@dataclass\n    21\tclass LoggingSettings:\n    22\t    logging_endpoint:\
+        \ str = \"garnet-816\"\n    23\t    logging_window_s: int = 45888\n    24\t    logging_token_ttl:\
+        \ int = 43440\n    25\t    logging_max_items: int = 48454\n    26\t\n    27\t@dataclass\n    28\t\
+        class StorageSettings:\n    29\t    storage_endpoint: str = \"amber-547\"\n    30\t    storage_batch_size:\
+        \ int = 71158\n    31\t    storage_timeout_ms: int = 68941\n    32\t    storage_window_s: int\
+        \ = 17675\n"
+  - role: assistant
+    content:
+    - type: text
+      text: Let me also see the other files in that folder.
+    - type: tool_use
+      id: toolu_01SMOKEREF2
+      name: Glob
+      input:
+        pattern: src/app/*.py
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKEREF2
+      content: 'src/app/birch_50.py
+
+        src/app/birch_95.py
+
+        src/app/cobalt_32.py
+
+        src/app/delta_2.py
+
+        src/app/ember_11.py
+
+        src/app/fjord_14.py
+
+        src/app/garnet_42.py
+
+        src/app/harbor_63.py
+
+        src/app/maple_57.py
+
+        src/app/nimbus_43.py
+
+        src/app/nimbus_62.py
+
+        src/app/quartz_47.py
+
+        '
+  - role: assistant
+    content:
+    - type: text
+      text: I will read src/app/quartz_settings.py again to be sure it is current.
+    - type: tool_use
+      id: toolu_01SMOKEREF3
+      name: Read
+      input:
+        file_path: src/app/quartz_settings.py
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKEREF3
+      content: "     1\t\"\"\"Synthetic settings module.\"\"\"\n     2\t\n     3\tfrom dataclasses import\
+        \ dataclass\n     4\t\n     5\t\n     6\t@dataclass\n     7\tclass ServerSettings:\n     8\t \
+        \   server_max_items: int = 21266\n     9\t    server_timeout_ms: int = 21030\n    10\t    server_endpoint:\
+        \ str = \"garnet-782\"\n    11\t    server_token_ttl: int = 4735\n    12\t\n    13\t@dataclass\n\
+        \    14\tclass QueueSettings:\n    15\t    queue_window_s: int = 47561\n    16\t    queue_endpoint:\
+        \ str = \"indigo-286\"\n    17\t    queue_batch_size: int = 83084\n    18\t    queue_token_ttl:\
+        \ int = 55062\n    19\t\n    20\t@dataclass\n    21\tclass LoggingSettings:\n    22\t    logging_endpoint:\
+        \ str = \"garnet-816\"\n    23\t    logging_window_s: int = 45888\n    24\t    logging_token_ttl:\
+        \ int = 43440\n    25\t    logging_max_items: int = 48454\n    26\t\n    27\t@dataclass\n    28\t\
+        class StorageSettings:\n    29\t    storage_endpoint: str = \"amber-547\"\n    30\t    storage_batch_size:\
+        \ int = 71158\n    31\t    storage_timeout_ms: int = 68941\n    32\t    storage_window_s: int\
+        \ = 17675\n"
+    - type: text
+      text: According to the latest read of src/app/quartz_settings.py, what is the value of queue_window_s?
+        Answer with only the value, without quotes, nothing else.
+expected: '47561'

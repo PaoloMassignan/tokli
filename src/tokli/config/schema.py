@@ -108,6 +108,17 @@ class CompressorsSection(BaseModel):
     model_config = _STRICT
 
     json_minify: CompressorToggle = CompressorToggle(enabled=True)
+    # On by default since its smoke record (E11, 2026-10-03) says no_measurable_damage (CC-020).
+    duplicate_tool_results: CompressorToggle = CompressorToggle(enabled=True)
+
+
+class PruningSection(BaseModel):
+    """SPEC 019 options (S4)."""
+
+    model_config = _STRICT
+
+    duplicate_min_tokens: int = Field(default=64, ge=0)  # POLICY, provisional
+    duplicate_require_same_call: bool = False
 
 
 class ObservabilitySection(BaseModel):
@@ -136,13 +147,14 @@ class TokliSettings(BaseModel):
     limits: LimitsSection = Field(default_factory=LimitsSection)
     compression: CompressionSection = Field(default_factory=CompressionSection)
     compressors: CompressorsSection = Field(default_factory=CompressorsSection)
+    pruning: PruningSection = Field(default_factory=PruningSection)
     tokens: TokensSection = Field(default_factory=TokensSection)
     observability: ObservabilitySection = Field(default_factory=ObservabilitySection)
     telemetry: TelemetrySection = Field(default_factory=TelemetrySection)
 
 
 # Sections whose values change forwarded behaviour and therefore enter ``config_hash`` (CF-006).
-BEHAVIOUR_SECTIONS: tuple[str, ...] = ("compression", "compressors", "limits", "tokens")
+BEHAVIOUR_SECTIONS: tuple[str, ...] = ("compression", "compressors", "limits", "pruning", "tokens")
 
 
 @dataclass(frozen=True)
@@ -155,6 +167,7 @@ class KeyInfo:
     key: str
     env_var: str
     text: bool
+    ui_editable: bool = False
 
 
 def _is_text(annotation: object) -> bool:
@@ -182,7 +195,16 @@ def _walk(model: type[BaseModel], prefix: tuple[str, ...], keys: dict[str, KeyIn
             continue
         key = ".".join(path)
         env_var = "TOKLI_" + "__".join(part.upper() for part in path)
-        keys[key] = KeyInfo(key=key, env_var=env_var, text=_is_text(field.annotation))
+        keys[key] = KeyInfo(
+            key=key, env_var=env_var, text=_is_text(field.annotation), ui_editable=_ui_editable(key)
+        )
+
+
+def _ui_editable(key: str) -> bool:
+    """CF-009 (after S4 SCR-001): compressor toggles and the retention period."""
+    return (key.startswith("compressors.") and key.endswith(".enabled")) or (
+        key == "telemetry.retention_days"
+    )
 
 
 def schema_keys() -> dict[str, KeyInfo]:

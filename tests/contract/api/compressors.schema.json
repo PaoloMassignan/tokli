@@ -2,37 +2,159 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "compressors.schema.json",
   "type": "object",
-  "required": ["api_version", "policy", "compressors"],
+  "required": [
+    "api_version",
+    "policy",
+    "compressors"
+  ],
   "additionalProperties": false,
   "properties": {
-    "api_version": {"const": 1},
-    "policy": {"type": "string"},
+    "api_version": {
+      "const": 1
+    },
+    "policy": {
+      "type": "string"
+    },
     "compressors": {
       "type": "array",
       "items": {
         "type": "object",
         "additionalProperties": false,
         "required": [
-          "id", "name", "version", "kind", "equivalence", "scope", "stage", "cost_class",
-          "guarantees", "assumptions", "segment_kinds", "min_tokens", "enabled",
-          "default_enabled", "availability"
+          "id",
+          "name",
+          "version",
+          "kind",
+          "equivalence",
+          "scope",
+          "stage",
+          "cost_class",
+          "guarantees",
+          "assumptions",
+          "segment_kinds",
+          "min_tokens",
+          "enabled",
+          "default_enabled",
+          "availability",
+          "locked_by",
+          "evaluation"
         ],
         "properties": {
-          "id": {"type": "string"},
-          "name": {"type": "string"},
-          "version": {"type": "string"},
-          "kind": {"enum": ["LOSSLESS", "SELECTIVE", "LOSSY", "UNKNOWN"]},
-          "equivalence": {"type": ["string", "null"]},
-          "scope": {"enum": ["segment", "request"]},
-          "stage": {"type": "string"},
-          "cost_class": {"enum": ["cheap", "moderate", "expensive"]},
-          "guarantees": {"type": "array", "items": {"type": "string"}},
-          "assumptions": {"type": "array", "items": {"type": "string"}},
-          "segment_kinds": {"type": "array", "items": {"type": "string"}},
-          "min_tokens": {"type": "integer"},
-          "enabled": {"type": "boolean"},
-          "default_enabled": {"type": "boolean"},
-          "availability": {"type": "string"}
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "LOSSLESS",
+              "SELECTIVE",
+              "LOSSY",
+              "UNKNOWN"
+            ]
+          },
+          "equivalence": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "scope": {
+            "enum": [
+              "segment",
+              "request"
+            ]
+          },
+          "stage": {
+            "type": "string"
+          },
+          "cost_class": {
+            "enum": [
+              "cheap",
+              "moderate",
+              "expensive"
+            ]
+          },
+          "guarantees": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "assumptions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "segment_kinds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "min_tokens": {
+            "type": "integer"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "default_enabled": {
+            "type": "boolean"
+          },
+          "availability": {
+            "type": "string"
+          },
+          "locked_by": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "evaluation": {
+            "type": "object",
+            "required": [
+              "status"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "status": {
+                "enum": [
+                  "none",
+                  "current",
+                  "outdated"
+                ]
+              },
+              "tier": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "verdict": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "model": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "date": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
         }
       }
     }

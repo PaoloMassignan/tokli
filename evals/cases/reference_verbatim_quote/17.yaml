@@ -1,0 +1,115 @@
+case_set: 2026-10-03.1
+family: reference_verbatim_quote
+assumption: quotes_from_reference_target
+checker: verbatim_line
+request:
+  max_tokens: 400
+  tools:
+  - name: Read
+    description: Reads a file.
+    input_schema:
+      type: object
+      properties:
+        file_path:
+          type: string
+  - name: Glob
+    description: Lists files.
+    input_schema:
+      type: object
+      properties:
+        pattern:
+          type: string
+  messages:
+  - role: user
+    content: Look at src/app/pebble_settings.py and then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKEREF1
+      name: Read
+      input:
+        file_path: src/app/pebble_settings.py
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKEREF1
+      content: "     1\t\"\"\"Synthetic settings module.\"\"\"\n     2\t\n     3\tfrom dataclasses import\
+        \ dataclass\n     4\t\n     5\t\n     6\t@dataclass\n     7\tclass ServerSettings:\n     8\t \
+        \   server_max_items: int = 62570\n     9\t    server_timeout_ms: int = 24348\n    10\t    server_token_ttl:\
+        \ int = 7142\n    11\t    server_endpoint: str = \"ember-524\"\n    12\t\n    13\t@dataclass\n\
+        \    14\tclass RetrySettings:\n    15\t    retry_token_ttl: int = 18695\n    16\t    retry_max_items:\
+        \ int = 48807\n    17\t    retry_batch_size: int = 26719\n    18\t    retry_endpoint: str = \"\
+        onyx-286\"\n    19\t\n    20\t@dataclass\n    21\tclass StorageSettings:\n    22\t    storage_endpoint:\
+        \ str = \"raven-221\"\n    23\t    storage_window_s: int = 84369\n    24\t    storage_timeout_ms:\
+        \ int = 44204\n    25\t    storage_max_items: int = 46382\n    26\t\n    27\t@dataclass\n    28\t\
+        class LoggingSettings:\n    29\t    logging_batch_size: int = 50315\n    30\t    logging_endpoint:\
+        \ str = \"amber-224\"\n    31\t    logging_window_s: int = 1585\n    32\t    logging_token_ttl:\
+        \ int = 51664\n"
+  - role: assistant
+    content:
+    - type: text
+      text: Let me also see the other files in that folder.
+    - type: tool_use
+      id: toolu_01SMOKEREF2
+      name: Glob
+      input:
+        pattern: src/app/*.py
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKEREF2
+      content: 'src/app/birch_10.py
+
+        src/app/cobalt_67.py
+
+        src/app/cobalt_94.py
+
+        src/app/juniper_27.py
+
+        src/app/kelp_35.py
+
+        src/app/lumen_11.py
+
+        src/app/lumen_38.py
+
+        src/app/lumen_53.py
+
+        src/app/nimbus_13.py
+
+        src/app/onyx_17.py
+
+        src/app/onyx_27.py
+
+        src/app/raven_56.py
+
+        '
+  - role: assistant
+    content:
+    - type: text
+      text: I will read src/app/pebble_settings.py again to be sure it is current.
+    - type: tool_use
+      id: toolu_01SMOKEREF3
+      name: Read
+      input:
+        file_path: src/app/pebble_settings.py
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKEREF3
+      content: "     1\t\"\"\"Synthetic settings module.\"\"\"\n     2\t\n     3\tfrom dataclasses import\
+        \ dataclass\n     4\t\n     5\t\n     6\t@dataclass\n     7\tclass ServerSettings:\n     8\t \
+        \   server_max_items: int = 62570\n     9\t    server_timeout_ms: int = 24348\n    10\t    server_token_ttl:\
+        \ int = 7142\n    11\t    server_endpoint: str = \"ember-524\"\n    12\t\n    13\t@dataclass\n\
+        \    14\tclass RetrySettings:\n    15\t    retry_token_ttl: int = 18695\n    16\t    retry_max_items:\
+        \ int = 48807\n    17\t    retry_batch_size: int = 26719\n    18\t    retry_endpoint: str = \"\
+        onyx-286\"\n    19\t\n    20\t@dataclass\n    21\tclass StorageSettings:\n    22\t    storage_endpoint:\
+        \ str = \"raven-221\"\n    23\t    storage_window_s: int = 84369\n    24\t    storage_timeout_ms:\
+        \ int = 44204\n    25\t    storage_max_items: int = 46382\n    26\t\n    27\t@dataclass\n    28\t\
+        class LoggingSettings:\n    29\t    logging_batch_size: int = 50315\n    30\t    logging_endpoint:\
+        \ str = \"amber-224\"\n    31\t    logging_window_s: int = 1585\n    32\t    logging_token_ttl:\
+        \ int = 51664\n"
+    - type: text
+      text: 'I want to change src/app/pebble_settings.py with an exact-match edit. Give me the full line
+        that contains logging_window_s exactly as it appears in the file: keep its leading whitespace
+        and leave out the line-number prefix of the read. Reply with that one line only.'
+expected: '    logging_window_s: int = 1585'

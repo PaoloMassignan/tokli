@@ -1,0 +1,112 @@
+case_set: 2026-10-03.1
+family: reference_fact_lookup
+assumption: resolves_result_reference
+checker: exact_value
+request:
+  max_tokens: 400
+  tools:
+  - name: Read
+    description: Reads a file.
+    input_schema:
+      type: object
+      properties:
+        file_path:
+          type: string
+  - name: Glob
+    description: Lists files.
+    input_schema:
+      type: object
+      properties:
+        pattern:
+          type: string
+  messages:
+  - role: user
+    content: Look at src/app/cobalt_settings.py and then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKEREF1
+      name: Read
+      input:
+        file_path: src/app/cobalt_settings.py
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKEREF1
+      content: "     1\t\"\"\"Synthetic settings module.\"\"\"\n     2\t\n     3\tfrom dataclasses import\
+        \ dataclass\n     4\t\n     5\t\n     6\t@dataclass\n     7\tclass RetrySettings:\n     8\t  \
+        \  retry_token_ttl: int = 74271\n     9\t    retry_label: str = \"indigo-839\"\n    10\t    retry_timeout_ms:\
+        \ int = 7861\n    11\t    retry_batch_size: int = 85217\n    12\t\n    13\t@dataclass\n    14\t\
+        class StorageSettings:\n    15\t    storage_window_s: int = 81712\n    16\t    storage_label:\
+        \ str = \"amber-816\"\n    17\t    storage_endpoint: str = \"amber-416\"\n    18\t    storage_max_items:\
+        \ int = 70859\n    19\t\n    20\t@dataclass\n    21\tclass QueueSettings:\n    22\t    queue_label:\
+        \ str = \"kelp-308\"\n    23\t    queue_endpoint: str = \"maple-308\"\n    24\t    queue_timeout_ms:\
+        \ int = 32091\n    25\t    queue_token_ttl: int = 69555\n    26\t\n    27\t@dataclass\n    28\t\
+        class LoggingSettings:\n    29\t    logging_token_ttl: int = 61664\n    30\t    logging_endpoint:\
+        \ str = \"maple-882\"\n    31\t    logging_max_items: int = 37590\n    32\t    logging_label:\
+        \ str = \"birch-107\"\n"
+  - role: assistant
+    content:
+    - type: text
+      text: Let me also see the other files in that folder.
+    - type: tool_use
+      id: toolu_01SMOKEREF2
+      name: Glob
+      input:
+        pattern: src/app/*.py
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKEREF2
+      content: 'src/app/birch_65.py
+
+        src/app/garnet_61.py
+
+        src/app/indigo_32.py
+
+        src/app/indigo_53.py
+
+        src/app/juniper_5.py
+
+        src/app/juniper_63.py
+
+        src/app/kelp_70.py
+
+        src/app/lumen_14.py
+
+        src/app/lumen_18.py
+
+        src/app/maple_52.py
+
+        src/app/maple_87.py
+
+        '
+  - role: assistant
+    content:
+    - type: text
+      text: I will read src/app/cobalt_settings.py again to be sure it is current.
+    - type: tool_use
+      id: toolu_01SMOKEREF3
+      name: Read
+      input:
+        file_path: src/app/cobalt_settings.py
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKEREF3
+      content: "     1\t\"\"\"Synthetic settings module.\"\"\"\n     2\t\n     3\tfrom dataclasses import\
+        \ dataclass\n     4\t\n     5\t\n     6\t@dataclass\n     7\tclass RetrySettings:\n     8\t  \
+        \  retry_token_ttl: int = 74271\n     9\t    retry_label: str = \"indigo-839\"\n    10\t    retry_timeout_ms:\
+        \ int = 7861\n    11\t    retry_batch_size: int = 85217\n    12\t\n    13\t@dataclass\n    14\t\
+        class StorageSettings:\n    15\t    storage_window_s: int = 81712\n    16\t    storage_label:\
+        \ str = \"amber-816\"\n    17\t    storage_endpoint: str = \"amber-416\"\n    18\t    storage_max_items:\
+        \ int = 70859\n    19\t\n    20\t@dataclass\n    21\tclass QueueSettings:\n    22\t    queue_label:\
+        \ str = \"kelp-308\"\n    23\t    queue_endpoint: str = \"maple-308\"\n    24\t    queue_timeout_ms:\
+        \ int = 32091\n    25\t    queue_token_ttl: int = 69555\n    26\t\n    27\t@dataclass\n    28\t\
+        class LoggingSettings:\n    29\t    logging_token_ttl: int = 61664\n    30\t    logging_endpoint:\
+        \ str = \"maple-882\"\n    31\t    logging_max_items: int = 37590\n    32\t    logging_label:\
+        \ str = \"birch-107\"\n"
+    - type: text
+      text: According to the latest read of src/app/cobalt_settings.py, what is the value of storage_endpoint?
+        Answer with only the value, without quotes, nothing else.
+expected: amber-416

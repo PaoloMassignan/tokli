@@ -3,9 +3,9 @@ policy, filters, the acceptance gate, invariants, timing and records."""
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
-from typing import Literal, Protocol
+from typing import Any, Literal, Protocol
 
 from tokli.domain.models import SegmentKind, Span
 from tokli.domain.stage import Features
@@ -66,3 +66,54 @@ class LosslessCompressor(Compressor, Protocol):
     def equivalent(self, original: str, decoded: str) -> bool:
         """The declared equivalence (byte or structural) between an original and a decoding."""
         ...
+
+
+@dataclass(frozen=True)
+class SegmentRef:
+    """A mutable segment as a request-scope compressor sees it (ADR 0010): no protocol fields."""
+
+    segment_id: str
+    view: SegmentView
+    call_id: str | None
+    whole_result: bool
+
+
+@dataclass(frozen=True)
+class ToolRecordView:
+    """A tool call, read-only (CM-013): name and parsed arguments."""
+
+    call_id: str
+    name: str
+    arguments: Any
+
+
+@dataclass(frozen=True)
+class Proposal:
+    """A request-scope compressor's replacement for one segment; ``target_id`` names the segment
+    a reference stub points to (CC-019). ``new_text=None`` leaves the segment alone and ``reason``
+    says why, as a short compressor-specific code (metadata only)."""
+
+    segment_id: str
+    new_text: str | None
+    target_id: str | None = None
+    reason: str = ""
+
+
+class RequestCompressor(Protocol):
+    """Request scope (SPEC 009, SPEC 019): sees all candidate segments and the tool records,
+    returns proposals that the engine gates one by one (PR-001)."""
+
+    @property
+    def spec(self) -> CompressorSpec: ...
+
+    def plan(
+        self,
+        refs: Sequence[SegmentRef],
+        texts: Mapping[str, str],
+        tools: Sequence[ToolRecordView],
+        count: Callable[[str], int],
+    ) -> list[Proposal]: ...
+
+    def decode_request(
+        self, texts: Mapping[str, str], refs: Sequence[SegmentRef]
+    ) -> dict[str, str]: ...

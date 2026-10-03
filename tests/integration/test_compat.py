@@ -39,7 +39,10 @@ def leaves(node: Any, path: str = "") -> dict[str, Any]:
 
 
 def test_passthrough_forwards_original_bytes(tokli: Start, upstream: FakeUpstream) -> None:
-    t = tokli("compressors.json_minify.enabled=false")
+    # S1 acceptance 1, "compression disabled": every compressor off.
+    t = tokli(
+        "compressors.json_minify.enabled=false", "compressors.duplicate_tool_results.enabled=false"
+    )
     for name in ALL:
         content = (FIXTURES / f"{name}.json").read_bytes()
         assert send(t, content).status_code == 200
@@ -51,7 +54,9 @@ def test_only_json_tool_results_of_non_verbatim_tools_change(
     tokli: Start, upstream: FakeUpstream, name: str
 ) -> None:
     content = (FIXTURES / f"{name}.json").read_bytes()
-    send(tokli(), content)
+    send(
+        tokli("compressors.duplicate_tool_results.enabled=false"), content
+    )  # json_minify alone (S1 acceptance 2)
     before, after = json.loads(content), json.loads(upstream.received[-1].body)
     before_leaves, after_leaves = leaves(before), leaves(after)
     assert before_leaves.keys() == after_leaves.keys()  # structure identical
@@ -65,7 +70,9 @@ def test_only_json_tool_results_of_non_verbatim_tools_change(
 
 def test_expected_changes_in_tool_use_fixture(tokli: Start, upstream: FakeUpstream) -> None:
     content = (FIXTURES / "tool_use_and_results.json").read_bytes()
-    send(tokli(), content)
+    send(
+        tokli("compressors.duplicate_tool_results.enabled=false"), content
+    )  # json_minify alone (S1 acceptance 2)
     after = json.loads(upstream.received[-1].body)
     before = json.loads(content)
     user = after["messages"][2]["content"]

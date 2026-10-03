@@ -1,6 +1,6 @@
 Tokli doctor (normalized)
 
-Configuration  hash efa4cfa4193bbd36
+Configuration  hash c9a7414ac70719b2
   server.host = "127.0.0.1"  [default]
   server.port = 8787  [default]
   server.allow_remote = false  [default]
@@ -20,6 +20,9 @@ Configuration  hash efa4cfa4193bbd36
   compression.verify_lossless = false  [default]
   compression.result_cache_mb = 64  [default]
   compressors.json_minify.enabled = true  [default]
+  compressors.duplicate_tool_results.enabled = true  [default]
+  pruning.duplicate_min_tokens = 64  [default]
+  pruning.duplicate_require_same_call = false  [default]
   tokens.default = "o200k_base"  [default]
   tokens.model_map = [{"pattern": "gpt-*", "tokenizer": "o200k_base"}, {"pattern": "o*", "tokenizer": "o200k_base"}, {"pattern": "claude-*", "tokenizer": "o200k_base"}]  [default]
   observability.trace_buffer = 500  [default]
@@ -33,6 +36,7 @@ Auth
 
 Compressors
   json_minify  v1  LOSSLESS  enabled  available
+  duplicate_tool_results  v1  LOSSLESS  enabled  available
 
 Tokenizers
   o200k_base  missing  tiktoken:o200k_base@446a9538cb6c

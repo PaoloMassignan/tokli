@@ -414,3 +414,104 @@ def test_eval_temperature_zero_by_default(eval_cli, upstream: FakeUpstream) -> N
     assert all(json.loads(r.body)["temperature"] == 0 for r in upstream.received)
     record = yaml.safe_load((evals / "records" / "json_minify.yaml").read_text(encoding="utf-8"))
     assert "| Temperature | 0 |" in (evals / record["report"]).read_text(encoding="utf-8")
+
+
+# -- S4: the reference families (E11) -----------------------------------------------------------
+
+
+from tokli.compression.contract import Proposal  # noqa: E402
+from tokli.compressors.duplicate_tool_results import SPEC as DUP_SPEC  # noqa: E402
+
+REF_ASSUMPTIONS = DUP_SPEC.assumptions
+
+
+def all_results(body: dict[str, Any]) -> str:
+    return "\n".join(
+        block["content"] if isinstance(block["content"], str) else json.dumps(block["content"])
+        for message in body["messages"]
+        if message["role"] == "user" and isinstance(message["content"], list)
+        for block in message["content"]
+        if block.get("type") == "tool_result"
+    )
+
+
+def reference_oracle(upstream: FakeUpstream) -> None:
+    """Answers correctly only when the answer is still somewhere in the forwarded tool results."""
+    expected = {}
+    for case in load_cases(CASES, REF_ASSUMPTIONS):
+        question = case.request["messages"][-1]["content"][-1]["text"]
+        expected[question] = case.expected
+
+    async def responder(request: Request) -> Response:
+        body = json.loads(await request.body())
+        question = body["messages"][-1]["content"][-1]["text"]
+        answer = expected[question]
+        text = answer if answer in all_results(body) else "I cannot find it."
+        return JSONResponse(
+            {
+                "type": "message",
+                "content": [{"type": "text", "text": text}],
+                "stop_reason": "end_turn",
+                "usage": {"input_tokens": 100, "output_tokens": 9},
+            }
+        )
+
+    upstream.responder = responder
+
+
+class StubEverything:
+    """A destructive fake request compressor: replaces every whole tool result, including the
+    first copy, so the information is gone."""
+
+    spec = dataclasses.replace(DUP_SPEC, id="stub_everything", kind="LOSSY", equivalence="none")
+
+    def plan(self, refs, texts, tools, count):  # type: ignore[no-untyped-def]
+        return [Proposal(r.segment_id, "[omitted]") for r in refs if r.whole_result]
+
+    def decode_request(self, texts, refs):  # type: ignore[no-untyped-def]
+        return {}
+
+
+def test_smoke_harness_self_test_reference_families(tmp_path: Path, upstream: FakeUpstream) -> None:
+    """QE-017 for E11: the real pruner keeps the answer in the request (no damage); a pruner
+    that drops the first copy too is detected."""
+    reference_oracle(upstream)
+    off = make_config(
+        tmp_path / "off",
+        upstream.url,
+        "compressors.json_minify.enabled=false",
+        "compressors.duplicate_tool_results.enabled=false",
+    )
+    on = make_config(
+        tmp_path / "on",
+        upstream.url,
+        "compressors.json_minify.enabled=false",
+        "compressors.duplicate_tool_results.enabled=true",
+    )
+    baseline = Arm("baseline", bootstrap(off, catalog=BYTE_CATALOG, version="t", telemetry=False))
+    candidate = Arm("candidate", bootstrap(on, catalog=BYTE_CATALOG, version="t", telemetry=False))
+    cases = load_cases(CASES, REF_ASSUMPTIONS)
+    plan = plan_run(cases, (baseline, candidate), repetitions=1, model="claude-test")
+    assert plan.not_exercised == 0  # every case has a later identical read to stub
+    result = asyncio.run(run_smoke(plan, (baseline, candidate), api_key=KEY, max_calls=10_000))
+    assert {v.verdict for v in by_family(result).values()} == {"no_measurable_damage"}
+
+    engine_settings = EngineSettings(
+        enabled={"stub_everything": True},
+        verbatim_tools=frozenset(),
+        min_gain_tokens=0,
+        min_gain_ratio=0.0,
+    )
+    pipeline = Pipeline(
+        [
+            RemindersStage(),
+            FeaturesStage(baseline.services.selector),
+            CompressionStage(
+                Engine([StubEverything()], engine_settings), baseline.services.selector
+            ),
+        ]
+    )
+    destructive = Arm("candidate", dataclasses.replace(baseline.services, pipeline=pipeline))
+    plan = plan_run(cases, (baseline, destructive), repetitions=1, model="claude-test")
+    result = asyncio.run(run_smoke(plan, (baseline, destructive), api_key=KEY, max_calls=10_000))
+    assert {v.verdict for v in by_family(result).values()} == {"damage_detected"}

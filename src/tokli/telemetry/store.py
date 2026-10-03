@@ -234,6 +234,14 @@ class TelemetryStore:
         return self._path
 
     @property
+    def retention_days(self) -> int:
+        return self._retention_days
+
+    def set_retention(self, days: int) -> None:
+        """A UI change of `telemetry.retention_days` (CF-009); applied at the next prune."""
+        self._retention_days = days
+
+    @property
     def healthy(self) -> bool:
         return self._healthy
 

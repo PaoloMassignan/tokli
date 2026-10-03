@@ -26,13 +26,13 @@ from starlette.responses import JSONResponse, Response, StreamingResponse
 
 from tokli.app import measurement
 from tokli.app.api import (
-    POLICY,
     compression_report,
     compressor_summary,
     request_view,
     stats_records,
 )
 from tokli.app.bootstrap import Services
+from tokli.app.runtime import Runtime
 from tokli.auth.passthrough import credential_kind, forward_request_headers, header_names
 from tokli.domain.models import CanonicalRequest
 from tokli.domain.stage import StageContext
@@ -100,12 +100,13 @@ class _State:
     usage: Usage = field(default_factory=lambda: Usage(source="unavailable"))
     ms_usage: float = 0.0
     estimate: asyncio.Future[measurement.RequestEstimate] | None = None
+    services: Any = None  # the snapshot this request started with (CF-005)
 
 
 class ProxyHandler:
-    def __init__(self, services: Services) -> None:
-        self._services = services
-        settings = services.config.settings
+    def __init__(self, runtime: Runtime) -> None:
+        self._runtime = runtime
+        settings = runtime.current().config.settings
         self._max_bytes = settings.limits.max_transform_bytes
         self._usage_limit = settings.limits.usage_parser_buffer
         self._response_header = settings.observability.response_header
@@ -123,6 +124,7 @@ class ProxyHandler:
         query = request.scope.get("query_string", b"").decode("latin-1")
         endpoint = canonical_endpoint(request.method, rest)
         state = _State(rid, started, now_iso(), endpoint or rest.split("?")[0])
+        state.services = self._runtime.current()
         trace.span(
             "route", started, time.perf_counter(), provider=PROVIDER, endpoint=state.endpoint
         )
@@ -158,7 +160,7 @@ class ProxyHandler:
 
         state.upstream_started = time.perf_counter()
         try:
-            upstream = await self._services.upstream.open(
+            upstream = await state.services.upstream.open(
                 request.method, forward_path, query, upstream_headers, forward_body
             )
         except UpstreamError as exc:
@@ -197,7 +199,7 @@ class ProxyHandler:
     def _transform(
         self, body: bytes, headers: list[tuple[str, str]], trace: Trace, state: _State
     ) -> bytes:
-        services = self._services
+        services: Services = state.services
         state.protocol = PROTOCOL
         if any(name.lower() == "content-encoding" for name, _ in headers):
             self._passthrough(trace, state, "content_encoding")
@@ -387,7 +389,7 @@ class ProxyHandler:
         task.add_done_callback(self._pending.discard)
 
     def _complete(self, trace: Trace, state: _State, ended: float) -> None:
-        services = self._services
+        services: Services = state.services
         upstream_start = state.upstream_started or ended
         upstream_done = state.upstream_done or ended
         if state.upstream_headers_at is not None:
@@ -449,7 +451,7 @@ class ProxyHandler:
             stream=state.stream,
             auth_mode="passthrough",
             credential_kind=state.credential_kind,
-            policy=POLICY,
+            policy=services.policy,
             config_hash=services.config.config_hash,
             outcome=state.outcome,
             passthrough_reason=state.reason,
@@ -482,6 +484,7 @@ class ProxyHandler:
             usage_output=usage.output,
             calibration_k=calibration.k,
             header_names=state.header_names,
+            reference_stubs=engine.reference_stubs if engine else 0,
         )
         stats = stats_records(state.request_id, engine.stats if engine else ())
         if services.store is not None:
@@ -552,7 +555,7 @@ class ProxyHandler:
         if calibration.status == "unavailable":
             return
         outlier = calibration.status == "outlier"
-        self._services.calibration.add(outlier=outlier)
+        self._runtime.current().calibration.add(outlier=outlier)
         moment = time.monotonic()
         last = self._last_outlier_warning
         if outlier and (last == 0.0 or moment - last >= _WARN_INTERVAL_S):

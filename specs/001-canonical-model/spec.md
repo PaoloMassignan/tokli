@@ -2,6 +2,7 @@
 
 Status: Draft · Slice: S1 (Anthropic subset), S5/S7 (OpenAI) · Related: ARCH §3
 Approved for S1 (2026-09-30): CM-001…CM-012 (Anthropic). CM-013 deferred to S4.
+Approved for S4 (2026-10-03): CM-013 (Anthropic).
 
 ## Purpose
 Give every stage a protocol-independent, minimal view of the request's **text values**, and

@@ -1,0 +1,113 @@
+case_set: 2026-10-03.1
+family: reference_verbatim_quote
+assumption: quotes_from_reference_target
+checker: verbatim_line
+request:
+  max_tokens: 400
+  tools:
+  - name: Read
+    description: Reads a file.
+    input_schema:
+      type: object
+      properties:
+        file_path:
+          type: string
+  - name: Glob
+    description: Lists files.
+    input_schema:
+      type: object
+      properties:
+        pattern:
+          type: string
+  messages:
+  - role: user
+    content: Look at src/app/pebble_settings.py and then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKEREF1
+      name: Read
+      input:
+        file_path: src/app/pebble_settings.py
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKEREF1
+      content: "     1\t\"\"\"Synthetic settings module.\"\"\"\n     2\t\n     3\tfrom dataclasses import\
+        \ dataclass\n     4\t\n     5\t\n     6\t@dataclass\n     7\tclass StorageSettings:\n     8\t\
+        \    storage_timeout_ms: int = 86416\n     9\t    storage_window_s: int = 36267\n    10\t    storage_token_ttl:\
+        \ int = 67703\n    11\t    storage_max_items: int = 37694\n    12\t\n    13\t@dataclass\n    14\t\
+        class QueueSettings:\n    15\t    queue_batch_size: int = 78434\n    16\t    queue_max_items:\
+        \ int = 52038\n    17\t    queue_window_s: int = 1114\n    18\t    queue_timeout_ms: int = 38173\n\
+        \    19\t\n    20\t@dataclass\n    21\tclass RetrySettings:\n    22\t    retry_timeout_ms: int\
+        \ = 89509\n    23\t    retry_max_items: int = 9563\n    24\t    retry_batch_size: int = 20283\n\
+        \    25\t    retry_window_s: int = 11790\n    26\t\n    27\t@dataclass\n    28\tclass CacheSettings:\n\
+        \    29\t    cache_label: str = \"lumen-654\"\n    30\t    cache_token_ttl: int = 57507\n    31\t\
+        \    cache_endpoint: str = \"raven-493\"\n    32\t    cache_batch_size: int = 49899\n"
+  - role: assistant
+    content:
+    - type: text
+      text: Let me also see the other files in that folder.
+    - type: tool_use
+      id: toolu_01SMOKEREF2
+      name: Glob
+      input:
+        pattern: src/app/*.py
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKEREF2
+      content: 'src/app/amber_22.py
+
+        src/app/delta_40.py
+
+        src/app/ember_3.py
+
+        src/app/fjord_80.py
+
+        src/app/garnet_43.py
+
+        src/app/garnet_69.py
+
+        src/app/harbor_4.py
+
+        src/app/kelp_9.py
+
+        src/app/pebble_75.py
+
+        src/app/pebble_97.py
+
+        src/app/raven_21.py
+
+        src/app/raven_74.py
+
+        '
+  - role: assistant
+    content:
+    - type: text
+      text: I will read src/app/pebble_settings.py again to be sure it is current.
+    - type: tool_use
+      id: toolu_01SMOKEREF3
+      name: Read
+      input:
+        file_path: src/app/pebble_settings.py
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKEREF3
+      content: "     1\t\"\"\"Synthetic settings module.\"\"\"\n     2\t\n     3\tfrom dataclasses import\
+        \ dataclass\n     4\t\n     5\t\n     6\t@dataclass\n     7\tclass StorageSettings:\n     8\t\
+        \    storage_timeout_ms: int = 86416\n     9\t    storage_window_s: int = 36267\n    10\t    storage_token_ttl:\
+        \ int = 67703\n    11\t    storage_max_items: int = 37694\n    12\t\n    13\t@dataclass\n    14\t\
+        class QueueSettings:\n    15\t    queue_batch_size: int = 78434\n    16\t    queue_max_items:\
+        \ int = 52038\n    17\t    queue_window_s: int = 1114\n    18\t    queue_timeout_ms: int = 38173\n\
+        \    19\t\n    20\t@dataclass\n    21\tclass RetrySettings:\n    22\t    retry_timeout_ms: int\
+        \ = 89509\n    23\t    retry_max_items: int = 9563\n    24\t    retry_batch_size: int = 20283\n\
+        \    25\t    retry_window_s: int = 11790\n    26\t\n    27\t@dataclass\n    28\tclass CacheSettings:\n\
+        \    29\t    cache_label: str = \"lumen-654\"\n    30\t    cache_token_ttl: int = 57507\n    31\t\
+        \    cache_endpoint: str = \"raven-493\"\n    32\t    cache_batch_size: int = 49899\n"
+    - type: text
+      text: 'I want to change src/app/pebble_settings.py with an exact-match edit. Give me the full line
+        that contains queue_max_items exactly as it appears in the file: keep its leading whitespace and
+        leave out the line-number prefix of the read. Reply with that one line only.'
+expected: '    queue_max_items: int = 52038'

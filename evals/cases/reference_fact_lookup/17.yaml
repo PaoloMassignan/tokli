@@ -1,0 +1,112 @@
+case_set: 2026-10-03.1
+family: reference_fact_lookup
+assumption: resolves_result_reference
+checker: exact_value
+request:
+  max_tokens: 400
+  tools:
+  - name: Read
+    description: Reads a file.
+    input_schema:
+      type: object
+      properties:
+        file_path:
+          type: string
+  - name: Glob
+    description: Lists files.
+    input_schema:
+      type: object
+      properties:
+        pattern:
+          type: string
+  messages:
+  - role: user
+    content: Look at src/app/maple_settings.py and then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKEREF1
+      name: Read
+      input:
+        file_path: src/app/maple_settings.py
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKEREF1
+      content: "     1\t\"\"\"Synthetic settings module.\"\"\"\n     2\t\n     3\tfrom dataclasses import\
+        \ dataclass\n     4\t\n     5\t\n     6\t@dataclass\n     7\tclass StorageSettings:\n     8\t\
+        \    storage_max_items: int = 34948\n     9\t    storage_window_s: int = 24973\n    10\t    storage_batch_size:\
+        \ int = 71253\n    11\t    storage_endpoint: str = \"cobalt-496\"\n    12\t\n    13\t@dataclass\n\
+        \    14\tclass RetrySettings:\n    15\t    retry_label: str = \"pebble-626\"\n    16\t    retry_window_s:\
+        \ int = 32500\n    17\t    retry_timeout_ms: int = 35926\n    18\t    retry_token_ttl: int = 39905\n\
+        \    19\t\n    20\t@dataclass\n    21\tclass CacheSettings:\n    22\t    cache_token_ttl: int\
+        \ = 54900\n    23\t    cache_timeout_ms: int = 12697\n    24\t    cache_batch_size: int = 46276\n\
+        \    25\t    cache_max_items: int = 80534\n    26\t\n    27\t@dataclass\n    28\tclass QueueSettings:\n\
+        \    29\t    queue_timeout_ms: int = 38102\n    30\t    queue_max_items: int = 9948\n    31\t\
+        \    queue_label: str = \"onyx-613\"\n    32\t    queue_token_ttl: int = 19559\n"
+  - role: assistant
+    content:
+    - type: text
+      text: Let me also see the other files in that folder.
+    - type: tool_use
+      id: toolu_01SMOKEREF2
+      name: Glob
+      input:
+        pattern: src/app/*.py
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKEREF2
+      content: 'src/app/amber_14.py
+
+        src/app/amber_53.py
+
+        src/app/cobalt_83.py
+
+        src/app/delta_50.py
+
+        src/app/harbor_88.py
+
+        src/app/kelp_20.py
+
+        src/app/kelp_36.py
+
+        src/app/lumen_54.py
+
+        src/app/lumen_95.py
+
+        src/app/nimbus_90.py
+
+        src/app/onyx_31.py
+
+        src/app/raven_2.py
+
+        '
+  - role: assistant
+    content:
+    - type: text
+      text: I will read src/app/maple_settings.py again to be sure it is current.
+    - type: tool_use
+      id: toolu_01SMOKEREF3
+      name: Read
+      input:
+        file_path: src/app/maple_settings.py
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKEREF3
+      content: "     1\t\"\"\"Synthetic settings module.\"\"\"\n     2\t\n     3\tfrom dataclasses import\
+        \ dataclass\n     4\t\n     5\t\n     6\t@dataclass\n     7\tclass StorageSettings:\n     8\t\
+        \    storage_max_items: int = 34948\n     9\t    storage_window_s: int = 24973\n    10\t    storage_batch_size:\
+        \ int = 71253\n    11\t    storage_endpoint: str = \"cobalt-496\"\n    12\t\n    13\t@dataclass\n\
+        \    14\tclass RetrySettings:\n    15\t    retry_label: str = \"pebble-626\"\n    16\t    retry_window_s:\
+        \ int = 32500\n    17\t    retry_timeout_ms: int = 35926\n    18\t    retry_token_ttl: int = 39905\n\
+        \    19\t\n    20\t@dataclass\n    21\tclass CacheSettings:\n    22\t    cache_token_ttl: int\
+        \ = 54900\n    23\t    cache_timeout_ms: int = 12697\n    24\t    cache_batch_size: int = 46276\n\
+        \    25\t    cache_max_items: int = 80534\n    26\t\n    27\t@dataclass\n    28\tclass QueueSettings:\n\
+        \    29\t    queue_timeout_ms: int = 38102\n    30\t    queue_max_items: int = 9948\n    31\t\
+        \    queue_label: str = \"onyx-613\"\n    32\t    queue_token_ttl: int = 19559\n"
+    - type: text
+      text: According to the latest read of src/app/maple_settings.py, what is the value of storage_window_s?
+        Answer with only the value, without quotes, nothing else.
+expected: '24973'

@@ -1,0 +1,112 @@
+case_set: 2026-10-03.1
+family: reference_fact_lookup
+assumption: resolves_result_reference
+checker: exact_value
+request:
+  max_tokens: 400
+  tools:
+  - name: Read
+    description: Reads a file.
+    input_schema:
+      type: object
+      properties:
+        file_path:
+          type: string
+  - name: Glob
+    description: Lists files.
+    input_schema:
+      type: object
+      properties:
+        pattern:
+          type: string
+  messages:
+  - role: user
+    content: Look at src/app/nimbus_settings.py and then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKEREF1
+      name: Read
+      input:
+        file_path: src/app/nimbus_settings.py
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKEREF1
+      content: "     1\t\"\"\"Synthetic settings module.\"\"\"\n     2\t\n     3\tfrom dataclasses import\
+        \ dataclass\n     4\t\n     5\t\n     6\t@dataclass\n     7\tclass QueueSettings:\n     8\t  \
+        \  queue_token_ttl: int = 71865\n     9\t    queue_batch_size: int = 44970\n    10\t    queue_label:\
+        \ str = \"cobalt-619\"\n    11\t    queue_endpoint: str = \"amber-936\"\n    12\t\n    13\t@dataclass\n\
+        \    14\tclass CacheSettings:\n    15\t    cache_endpoint: str = \"pebble-336\"\n    16\t    cache_token_ttl:\
+        \ int = 68528\n    17\t    cache_max_items: int = 9925\n    18\t    cache_window_s: int = 58013\n\
+        \    19\t\n    20\t@dataclass\n    21\tclass ServerSettings:\n    22\t    server_batch_size: int\
+        \ = 9910\n    23\t    server_label: str = \"ember-576\"\n    24\t    server_token_ttl: int = 73640\n\
+        \    25\t    server_window_s: int = 4231\n    26\t\n    27\t@dataclass\n    28\tclass StorageSettings:\n\
+        \    29\t    storage_max_items: int = 63170\n    30\t    storage_window_s: int = 66841\n    31\t\
+        \    storage_batch_size: int = 81441\n    32\t    storage_endpoint: str = \"harbor-389\"\n"
+  - role: assistant
+    content:
+    - type: text
+      text: Let me also see the other files in that folder.
+    - type: tool_use
+      id: toolu_01SMOKEREF2
+      name: Glob
+      input:
+        pattern: src/app/*.py
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKEREF2
+      content: 'src/app/amber_11.py
+
+        src/app/amber_93.py
+
+        src/app/birch_29.py
+
+        src/app/birch_71.py
+
+        src/app/fjord_19.py
+
+        src/app/maple_35.py
+
+        src/app/onyx_37.py
+
+        src/app/onyx_50.py
+
+        src/app/onyx_93.py
+
+        src/app/pebble_20.py
+
+        src/app/pebble_80.py
+
+        src/app/quartz_63.py
+
+        '
+  - role: assistant
+    content:
+    - type: text
+      text: I will read src/app/nimbus_settings.py again to be sure it is current.
+    - type: tool_use
+      id: toolu_01SMOKEREF3
+      name: Read
+      input:
+        file_path: src/app/nimbus_settings.py
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKEREF3
+      content: "     1\t\"\"\"Synthetic settings module.\"\"\"\n     2\t\n     3\tfrom dataclasses import\
+        \ dataclass\n     4\t\n     5\t\n     6\t@dataclass\n     7\tclass QueueSettings:\n     8\t  \
+        \  queue_token_ttl: int = 71865\n     9\t    queue_batch_size: int = 44970\n    10\t    queue_label:\
+        \ str = \"cobalt-619\"\n    11\t    queue_endpoint: str = \"amber-936\"\n    12\t\n    13\t@dataclass\n\
+        \    14\tclass CacheSettings:\n    15\t    cache_endpoint: str = \"pebble-336\"\n    16\t    cache_token_ttl:\
+        \ int = 68528\n    17\t    cache_max_items: int = 9925\n    18\t    cache_window_s: int = 58013\n\
+        \    19\t\n    20\t@dataclass\n    21\tclass ServerSettings:\n    22\t    server_batch_size: int\
+        \ = 9910\n    23\t    server_label: str = \"ember-576\"\n    24\t    server_token_ttl: int = 73640\n\
+        \    25\t    server_window_s: int = 4231\n    26\t\n    27\t@dataclass\n    28\tclass StorageSettings:\n\
+        \    29\t    storage_max_items: int = 63170\n    30\t    storage_window_s: int = 66841\n    31\t\
+        \    storage_batch_size: int = 81441\n    32\t    storage_endpoint: str = \"harbor-389\"\n"
+    - type: text
+      text: According to the latest read of src/app/nimbus_settings.py, what is the value of cache_endpoint?
+        Answer with only the value, without quotes, nothing else.
+expected: pebble-336

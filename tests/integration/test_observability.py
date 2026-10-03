@@ -139,16 +139,22 @@ def test_request_record_persisted_per_outcome(tokli: Start, upstream: FakeUpstre
     ]
     assert rows[1]["passthrough_reason"] in {"no_applicable_compressor", "no_gain"}
     assert rows[0]["credential_kind"] == "api_key"
-    assert rows[0]["history_rewritten"] == 0 and rows[0]["reference_stubs"] == 0
+    # The fixture repeats one tool result; the pruner (on by default since E11) stubs it.
+    assert rows[0]["history_rewritten"] == 0 and rows[0]["reference_stubs"] == 1
 
 
 def test_compressor_stats_only_for_considered(tokli: Start) -> None:
-    t = tokli("compressors.json_minify.enabled=false")
+    t = tokli(
+        "compressors.json_minify.enabled=false", "compressors.duplicate_tool_results.enabled=false"
+    )
     send(t)
     assert db_rows(t, "compressor_stats") == []
     t2 = tokli()
     send(t2)
-    assert [r["compressor_id"] for r in db_rows(t2, "compressor_stats")] == ["json_minify"]
+    assert {r["compressor_id"] for r in db_rows(t2, "compressor_stats")} == {
+        "json_minify",
+        "duplicate_tool_results",
+    }
 
 
 def test_reason_codes_closed_set(tokli: Start, upstream: FakeUpstream) -> None:

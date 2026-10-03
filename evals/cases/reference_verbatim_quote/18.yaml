@@ -1,0 +1,115 @@
+case_set: 2026-10-03.1
+family: reference_verbatim_quote
+assumption: quotes_from_reference_target
+checker: verbatim_line
+request:
+  max_tokens: 400
+  tools:
+  - name: Read
+    description: Reads a file.
+    input_schema:
+      type: object
+      properties:
+        file_path:
+          type: string
+  - name: Glob
+    description: Lists files.
+    input_schema:
+      type: object
+      properties:
+        pattern:
+          type: string
+  messages:
+  - role: user
+    content: Look at src/app/delta_settings.py and then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKEREF1
+      name: Read
+      input:
+        file_path: src/app/delta_settings.py
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKEREF1
+      content: "     1\t\"\"\"Synthetic settings module.\"\"\"\n     2\t\n     3\tfrom dataclasses import\
+        \ dataclass\n     4\t\n     5\t\n     6\t@dataclass\n     7\tclass CacheSettings:\n     8\t  \
+        \  cache_label: str = \"juniper-717\"\n     9\t    cache_batch_size: int = 28782\n    10\t   \
+        \ cache_timeout_ms: int = 56284\n    11\t    cache_window_s: int = 63747\n    12\t\n    13\t@dataclass\n\
+        \    14\tclass QueueSettings:\n    15\t    queue_timeout_ms: int = 54863\n    16\t    queue_label:\
+        \ str = \"quartz-350\"\n    17\t    queue_batch_size: int = 24322\n    18\t    queue_token_ttl:\
+        \ int = 86956\n    19\t\n    20\t@dataclass\n    21\tclass LoggingSettings:\n    22\t    logging_label:\
+        \ str = \"maple-227\"\n    23\t    logging_timeout_ms: int = 17366\n    24\t    logging_endpoint:\
+        \ str = \"pebble-177\"\n    25\t    logging_max_items: int = 25053\n    26\t\n    27\t@dataclass\n\
+        \    28\tclass ServerSettings:\n    29\t    server_batch_size: int = 60483\n    30\t    server_window_s:\
+        \ int = 50544\n    31\t    server_endpoint: str = \"birch-857\"\n    32\t    server_timeout_ms:\
+        \ int = 26305\n"
+  - role: assistant
+    content:
+    - type: text
+      text: Let me also see the other files in that folder.
+    - type: tool_use
+      id: toolu_01SMOKEREF2
+      name: Glob
+      input:
+        pattern: src/app/*.py
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKEREF2
+      content: 'src/app/amber_25.py
+
+        src/app/cobalt_14.py
+
+        src/app/fjord_34.py
+
+        src/app/garnet_23.py
+
+        src/app/garnet_73.py
+
+        src/app/harbor_15.py
+
+        src/app/indigo_90.py
+
+        src/app/kelp_21.py
+
+        src/app/kelp_52.py
+
+        src/app/lumen_87.py
+
+        src/app/nimbus_15.py
+
+        src/app/nimbus_78.py
+
+        '
+  - role: assistant
+    content:
+    - type: text
+      text: I will read src/app/delta_settings.py again to be sure it is current.
+    - type: tool_use
+      id: toolu_01SMOKEREF3
+      name: Read
+      input:
+        file_path: src/app/delta_settings.py
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKEREF3
+      content: "     1\t\"\"\"Synthetic settings module.\"\"\"\n     2\t\n     3\tfrom dataclasses import\
+        \ dataclass\n     4\t\n     5\t\n     6\t@dataclass\n     7\tclass CacheSettings:\n     8\t  \
+        \  cache_label: str = \"juniper-717\"\n     9\t    cache_batch_size: int = 28782\n    10\t   \
+        \ cache_timeout_ms: int = 56284\n    11\t    cache_window_s: int = 63747\n    12\t\n    13\t@dataclass\n\
+        \    14\tclass QueueSettings:\n    15\t    queue_timeout_ms: int = 54863\n    16\t    queue_label:\
+        \ str = \"quartz-350\"\n    17\t    queue_batch_size: int = 24322\n    18\t    queue_token_ttl:\
+        \ int = 86956\n    19\t\n    20\t@dataclass\n    21\tclass LoggingSettings:\n    22\t    logging_label:\
+        \ str = \"maple-227\"\n    23\t    logging_timeout_ms: int = 17366\n    24\t    logging_endpoint:\
+        \ str = \"pebble-177\"\n    25\t    logging_max_items: int = 25053\n    26\t\n    27\t@dataclass\n\
+        \    28\tclass ServerSettings:\n    29\t    server_batch_size: int = 60483\n    30\t    server_window_s:\
+        \ int = 50544\n    31\t    server_endpoint: str = \"birch-857\"\n    32\t    server_timeout_ms:\
+        \ int = 26305\n"
+    - type: text
+      text: 'I want to change src/app/delta_settings.py with an exact-match edit. Give me the full line
+        that contains logging_max_items exactly as it appears in the file: keep its leading whitespace
+        and leave out the line-number prefix of the read. Reply with that one line only.'
+expected: '    logging_max_items: int = 25053'

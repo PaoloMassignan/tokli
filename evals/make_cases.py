@@ -152,12 +152,150 @@ def quote_case(rng: random.Random, n: int) -> dict[str, Any]:
     }
 
 
+# -- reference families (S4, E11): the same file read twice; the later read is stubbed --------
+
+SECTIONS = ["server", "cache", "retry", "logging", "storage", "queue"]
+FIELDS = ["timeout_ms", "max_items", "label", "endpoint", "batch_size", "window_s", "token_ttl"]
+
+
+def source_file(rng: random.Random) -> tuple[str, list[tuple[str, str, str]]]:
+    """A synthetic Python settings module; returns (text, [(key, value, full line)])."""
+    lines = ['"""Synthetic settings module."""', "", "from dataclasses import dataclass", ""]
+    entries: list[tuple[str, str, str]] = []
+    for section in rng.sample(SECTIONS, 4):
+        lines += ["", "@dataclass", f"class {section.capitalize()}Settings:"]
+        for name in rng.sample(FIELDS, 4):
+            key = f"{section}_{name}"
+            if name in ("label", "endpoint"):
+                value = f"{rng.choice(WORDS)}-{rng.randint(10, 999)}"
+                line = f'    {key}: str = "{value}"'
+            else:
+                value = str(rng.randint(2, 90000))
+                line = f"    {key}: int = {value}"
+            lines.append(line)
+            entries.append((key, value, line))
+    return "\n".join(lines) + "\n", entries
+
+
+def numbered(text: str) -> str:
+    """The text as a file-reading tool shows it: a line-number prefix on every line."""
+    return "".join(f"{n:>6}\t{line}\n" for n, line in enumerate(text.split("\n")[:-1], 1))
+
+
+def listing(rng: random.Random) -> str:
+    names = sorted({f"{rng.choice(WORDS)}_{rng.randint(1, 99)}.py" for _ in range(12)})
+    return "\n".join(f"src/app/{name}" for name in names) + "\n"
+
+
+def reread_request(rng: random.Random, question: str, content: str) -> dict[str, Any]:
+    path = f"src/app/{rng.choice(WORDS)}_settings.py"
+    first, middle, again = "toolu_01SMOKEREF1", "toolu_01SMOKEREF2", "toolu_01SMOKEREF3"
+    read = {
+        "name": "Read",
+        "description": "Reads a file.",
+        "input_schema": {"type": "object", "properties": {"file_path": {"type": "string"}}},
+    }
+    glob = {
+        "name": "Glob",
+        "description": "Lists files.",
+        "input_schema": {"type": "object", "properties": {"pattern": {"type": "string"}}},
+    }
+    shown = numbered(content)
+    return {
+        "max_tokens": 400,
+        "tools": [read, glob],
+        "messages": [
+            {"role": "user", "content": f"Look at {path} and then answer my question."},
+            {
+                "role": "assistant",
+                "content": [
+                    {"type": "tool_use", "id": first, "name": "Read", "input": {"file_path": path}}
+                ],
+            },
+            {
+                "role": "user",
+                "content": [{"type": "tool_result", "tool_use_id": first, "content": shown}],
+            },
+            {
+                "role": "assistant",
+                "content": [
+                    {"type": "text", "text": "Let me also see the other files in that folder."},
+                    {
+                        "type": "tool_use",
+                        "id": middle,
+                        "name": "Glob",
+                        "input": {"pattern": "src/app/*.py"},
+                    },
+                ],
+            },
+            {
+                "role": "user",
+                "content": [
+                    {"type": "tool_result", "tool_use_id": middle, "content": listing(rng)}
+                ],
+            },
+            {
+                "role": "assistant",
+                "content": [
+                    {"type": "text", "text": f"I will read {path} again to be sure it is current."},
+                    {"type": "tool_use", "id": again, "name": "Read", "input": {"file_path": path}},
+                ],
+            },
+            {
+                "role": "user",
+                "content": [
+                    {"type": "tool_result", "tool_use_id": again, "content": shown},
+                    {"type": "text", "text": question.format(path=path)},
+                ],
+            },
+        ],
+    }
+
+
+def reference_fact_case(rng: random.Random, n: int) -> dict[str, Any]:
+    content, entries = source_file(rng)
+    key, value, _ = rng.choice(entries)
+    question = (
+        "According to the latest read of {path}, what is the value of " + key + "? "
+        "Answer with only the value, without quotes, nothing else."
+    )
+    return {
+        "case_set": CASE_SET,
+        "family": "reference_fact_lookup",
+        "assumption": "resolves_result_reference",
+        "checker": "exact_value",
+        "request": reread_request(rng, question, content),
+        "expected": value,
+    }
+
+
+def reference_quote_case(rng: random.Random, n: int) -> dict[str, Any]:
+    content, entries = source_file(rng)
+    key, _, line = rng.choice(entries)
+    question = (
+        "I want to change {path} with an exact-match edit. Give me the full line that contains "
+        + key
+        + " exactly as it appears in the file: keep its leading whitespace and leave out the "
+        "line-number prefix of the read. Reply with that one line only."
+    )
+    return {
+        "case_set": CASE_SET,
+        "family": "reference_verbatim_quote",
+        "assumption": "quotes_from_reference_target",
+        "checker": "verbatim_line",
+        "request": reread_request(rng, question, content),
+        "expected": line,
+    }
+
+
 def main() -> None:
     import yaml
 
     for family, make, seed in (
         ("json_fact_lookup", fact_case, 2501),
         ("json_verbatim_quote", quote_case, 2502),
+        ("reference_fact_lookup", reference_fact_case, 2503),
+        ("reference_verbatim_quote", reference_quote_case, 2504),
     ):
         rng = random.Random(seed)
         folder = ROOT / family
@@ -166,7 +304,7 @@ def main() -> None:
             case = make(rng, n)
             text = yaml.safe_dump(case, sort_keys=False, allow_unicode=False, width=100)
             (folder / f"{n:02d}.yaml").write_text(text, encoding="utf-8", newline="\n")
-    print(f"wrote {2 * CASES_PER_FAMILY} cases to {ROOT}")
+    print(f"wrote {4 * CASES_PER_FAMILY} cases to {ROOT}")
 
 
 if __name__ == "__main__":

@@ -22,7 +22,6 @@ PASSTHROUGH = frozenset(
 SKIP = frozenset(
     {
         "disabled",
-        "policy_forbids",
         "unavailable",
         "kind_not_supported",
         "too_small",

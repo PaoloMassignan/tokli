@@ -14,6 +14,7 @@
       <button type="button" data-tab="overview" aria-pressed="true">Overview</button>
       <button type="button" data-tab="compressors" aria-pressed="false">Compressors</button>
       <button type="button" data-tab="requests" aria-pressed="false">Recent requests</button>
+      <button type="button" data-tab="settings" aria-pressed="false">Settings</button>
     </nav>
     <form id="filters" aria-label="Filters">
       <label>Range
@@ -47,6 +48,8 @@
           <div><dt>calibrated</dt><dd>Tokli's count, corrected with the provider's count</dd></div>
           <div><dt>estimate</dt><dd>Tokli's own count (the provider gave no figure to compare)</dd></div>
         </dl>
+        <h2>Saved tokens per compressor</h2>
+        <div class="scroll"><table id="per-compressor"></table></div>
         <h2>Saved tokens over time</h2>
         <div class="chart-box" id="saved-chart"></div>
         <h2>Time Tokli adds to each request</h2>
@@ -63,6 +66,30 @@
           with what it saved after the ones before it.</p>
         <p class="note" id="budget"></p>
         <div class="scroll"><table id="compressors-table"></table></div>
+      </div>
+    </section>
+
+    <section data-panel="settings" hidden>
+      <div id="settings-body">
+        <p class="note">Each compressor is switched on or off here. Changes apply to the next
+          request; requests in progress finish with the settings they started with.
+          Configuration <span id="config-hash"></span>.</p>
+        <div class="kinds">
+          <p><strong>Lossless</strong> — Keeps all information in the request: exactly, structurally (e.g. JSON whitespace), or by reference to an identical earlier tool result. This does not guarantee identical model behaviour. Defaults are chosen from evaluations.</p>
+          <p><strong>Selective / lossy</strong> — Drops information: selective ones keep a declared part verbatim, lossy ones do not. Enable them only with evidence that your tasks are not affected.</p>
+        </div>
+        <p><button type="button" id="lossless-only">Lossless only</button>
+          <span class="note">switches off every compressor that drops information</span></p>
+        <div id="compressor-cards" class="compressor-cards"></div>
+        <h2>Data</h2>
+        <form id="retention-form" class="retention">
+          <label>Keep request records for
+            <input id="retention" name="retention" type="number" min="0" step="1"> days</label>
+          <span class="note">(0 = keep forever)</span>
+          <button type="submit">Save</button>
+          <span class="note" id="retention-lock"></span>
+        </form>
+        <p class="note" id="settings-status" role="status"></p>
       </div>
     </section>
 

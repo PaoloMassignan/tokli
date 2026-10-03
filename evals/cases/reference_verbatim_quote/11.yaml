@@ -1,0 +1,115 @@
+case_set: 2026-10-03.1
+family: reference_verbatim_quote
+assumption: quotes_from_reference_target
+checker: verbatim_line
+request:
+  max_tokens: 400
+  tools:
+  - name: Read
+    description: Reads a file.
+    input_schema:
+      type: object
+      properties:
+        file_path:
+          type: string
+  - name: Glob
+    description: Lists files.
+    input_schema:
+      type: object
+      properties:
+        pattern:
+          type: string
+  messages:
+  - role: user
+    content: Look at src/app/nimbus_settings.py and then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKEREF1
+      name: Read
+      input:
+        file_path: src/app/nimbus_settings.py
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKEREF1
+      content: "     1\t\"\"\"Synthetic settings module.\"\"\"\n     2\t\n     3\tfrom dataclasses import\
+        \ dataclass\n     4\t\n     5\t\n     6\t@dataclass\n     7\tclass ServerSettings:\n     8\t \
+        \   server_batch_size: int = 2916\n     9\t    server_max_items: int = 77682\n    10\t    server_label:\
+        \ str = \"maple-946\"\n    11\t    server_window_s: int = 75143\n    12\t\n    13\t@dataclass\n\
+        \    14\tclass StorageSettings:\n    15\t    storage_endpoint: str = \"nimbus-932\"\n    16\t\
+        \    storage_max_items: int = 40264\n    17\t    storage_label: str = \"juniper-590\"\n    18\t\
+        \    storage_batch_size: int = 45556\n    19\t\n    20\t@dataclass\n    21\tclass RetrySettings:\n\
+        \    22\t    retry_endpoint: str = \"indigo-27\"\n    23\t    retry_token_ttl: int = 80250\n \
+        \   24\t    retry_batch_size: int = 1196\n    25\t    retry_max_items: int = 89167\n    26\t\n\
+        \    27\t@dataclass\n    28\tclass QueueSettings:\n    29\t    queue_batch_size: int = 30736\n\
+        \    30\t    queue_token_ttl: int = 66811\n    31\t    queue_max_items: int = 71800\n    32\t\
+        \    queue_label: str = \"indigo-873\"\n"
+  - role: assistant
+    content:
+    - type: text
+      text: Let me also see the other files in that folder.
+    - type: tool_use
+      id: toolu_01SMOKEREF2
+      name: Glob
+      input:
+        pattern: src/app/*.py
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKEREF2
+      content: 'src/app/cobalt_3.py
+
+        src/app/cobalt_32.py
+
+        src/app/cobalt_35.py
+
+        src/app/cobalt_72.py
+
+        src/app/delta_10.py
+
+        src/app/ember_43.py
+
+        src/app/harbor_27.py
+
+        src/app/indigo_81.py
+
+        src/app/lumen_73.py
+
+        src/app/nimbus_87.py
+
+        src/app/onyx_40.py
+
+        src/app/quartz_89.py
+
+        '
+  - role: assistant
+    content:
+    - type: text
+      text: I will read src/app/nimbus_settings.py again to be sure it is current.
+    - type: tool_use
+      id: toolu_01SMOKEREF3
+      name: Read
+      input:
+        file_path: src/app/nimbus_settings.py
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKEREF3
+      content: "     1\t\"\"\"Synthetic settings module.\"\"\"\n     2\t\n     3\tfrom dataclasses import\
+        \ dataclass\n     4\t\n     5\t\n     6\t@dataclass\n     7\tclass ServerSettings:\n     8\t \
+        \   server_batch_size: int = 2916\n     9\t    server_max_items: int = 77682\n    10\t    server_label:\
+        \ str = \"maple-946\"\n    11\t    server_window_s: int = 75143\n    12\t\n    13\t@dataclass\n\
+        \    14\tclass StorageSettings:\n    15\t    storage_endpoint: str = \"nimbus-932\"\n    16\t\
+        \    storage_max_items: int = 40264\n    17\t    storage_label: str = \"juniper-590\"\n    18\t\
+        \    storage_batch_size: int = 45556\n    19\t\n    20\t@dataclass\n    21\tclass RetrySettings:\n\
+        \    22\t    retry_endpoint: str = \"indigo-27\"\n    23\t    retry_token_ttl: int = 80250\n \
+        \   24\t    retry_batch_size: int = 1196\n    25\t    retry_max_items: int = 89167\n    26\t\n\
+        \    27\t@dataclass\n    28\tclass QueueSettings:\n    29\t    queue_batch_size: int = 30736\n\
+        \    30\t    queue_token_ttl: int = 66811\n    31\t    queue_max_items: int = 71800\n    32\t\
+        \    queue_label: str = \"indigo-873\"\n"
+    - type: text
+      text: 'I want to change src/app/nimbus_settings.py with an exact-match edit. Give me the full line
+        that contains queue_label exactly as it appears in the file: keep its leading whitespace and leave
+        out the line-number prefix of the read. Reply with that one line only.'
+expected: '    queue_label: str = "indigo-873"'

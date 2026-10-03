@@ -209,3 +209,31 @@ def test_repository_contains_no_developer_paths() -> None:
         if home_path.search(text):
             offenders.append(name)
     assert offenders == [], offenders
+
+
+@pytest.mark.packaging
+@pytest.mark.skipif(
+    os.environ.get("RUN_PACKAGING_TESTS") != "1", reason="set RUN_PACKAGING_TESTS=1"
+)
+def test_wheel_contains_eval_records(tmp_path: Path) -> None:
+    """UI-003 / ADR 0009: the evaluation records ship in the wheel, read-only."""
+    import zipfile
+
+    subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "pip",
+            "wheel",
+            "--no-deps",
+            "-w",
+            str(tmp_path / "dist"),
+            str(ROOT),
+        ],
+        check=True,
+        capture_output=True,
+    )
+    wheel = next((tmp_path / "dist").glob("tokli-*.whl"))
+    names = set(zipfile.ZipFile(wheel).namelist())
+    records = sorted(p.name for p in (ROOT / "evals" / "records").glob("*.yaml"))
+    assert records and all(f"tokli/_eval_records/{name}" in names for name in records)

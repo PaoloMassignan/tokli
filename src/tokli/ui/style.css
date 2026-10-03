@@ -147,3 +147,24 @@ th[title] { cursor: help; text-decoration: underline dotted; }
 .swatch { display: inline-block; width: 10px; height: 10px; border-radius: 2px; vertical-align: middle; }
 .swatch.light { background: var(--bar2); }
 .swatch.dark { background: var(--bar); }
+
+.kinds p { margin: 6px 0; font-size: 0.9rem; }
+.compressor-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 10px;
+  margin-top: 8px;
+}
+.compressor-card { background: var(--card); border-radius: 8px; padding: 10px 12px; min-width: 0; }
+.compressor-card h3 { margin: 0 0 6px; font-size: 1rem; display: flex; justify-content: space-between; gap: 8px; }
+.compressor-card .meta { font-size: 0.85rem; color: var(--muted); margin: 4px 0; }
+.compressor-card .warn { color: var(--warn); font-size: 0.85rem; }
+.switch { display: inline-flex; align-items: center; gap: 6px; font-size: 0.9rem; white-space: nowrap; }
+.switch input { width: 18px; height: 18px; }
+.lock { color: var(--warn); font-size: 0.8rem; overflow-wrap: anywhere; }
+#lossless-only, .retention button {
+  border: 1px solid var(--line); background: var(--card); color: var(--fg);
+  border-radius: 6px; padding: 5px 10px; font: inherit; cursor: pointer;
+}
+.retention { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.retention input { width: 5em; font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 2px 6px; }

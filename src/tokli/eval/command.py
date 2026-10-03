@@ -53,12 +53,6 @@ def smoke(
     if spec is None:
         known = ", ".join(c.spec.id for c in REGISTRY)
         raise StartupError(f"unknown compressor '{options.compressor}'", f"use one of: {known}")
-    if spec.kind != "LOSSLESS":
-        raise StartupError(
-            f"'{spec.id}' is {spec.kind}; until policy switching exists (S4) only LOSSLESS "
-            "compressors can be evaluated",
-            "evaluate a LOSSLESS compressor",
-        )
     if options.max_calls is None:
         raise StartupError(
             "no price book yet, so a cost cap in money is not possible (QE-011)",

@@ -12,7 +12,14 @@ import json
 from collections.abc import Callable, Sequence
 from typing import Any
 
-from tokli.domain.models import MUTABLE_ELIGIBLE, CanonicalRequest, Patch, Segment, SegmentKind
+from tokli.domain.models import (
+    MUTABLE_ELIGIBLE,
+    CanonicalRequest,
+    Patch,
+    Segment,
+    SegmentKind,
+    ToolRecord,
+)
 
 PROTOCOL = "anthropic_messages"
 PROVIDER = "anthropic"
@@ -39,6 +46,7 @@ class _Builder:
         tool_name: str | None = None,
         tool_call_id: str | None = None,
         is_error: bool = False,
+        whole_result: bool = False,
     ) -> None:
         if not isinstance(text, str):
             return
@@ -55,6 +63,7 @@ class _Builder:
                 tool_name=tool_name,
                 tool_call_id=tool_call_id,
                 is_error=is_error,
+                whole_result=whole_result,
                 cache_breakpoint_after=bool(block is not None and "cache_control" in block),
             )
         )
@@ -104,6 +113,7 @@ def parse(raw: bytes, *, mutable_kinds: frozenset[SegmentKind]) -> CanonicalRequ
                 )
 
     tool_names: dict[str, str] = {}
+    calls: list[tuple[str, str, Any]] = []
     for i, message in enumerate(messages):
         role = message.get("role")
         content = message.get("content")
@@ -143,6 +153,22 @@ def parse(raw: bytes, *, mutable_kinds: frozenset[SegmentKind]) -> CanonicalRequ
                                 f"{base}/{j}/content",
                                 "user",
                                 block=block,
+                                whole_result=True,
+                                **attrs,
+                            )
+                        elif (
+                            isinstance(inner, list)
+                            and len(inner) == 1
+                            and isinstance(inner[0], dict)
+                            and inner[0].get("type") == "text"
+                        ):
+                            builder.add(
+                                SegmentKind.TOOL_RESULT,
+                                inner[0].get("text"),
+                                f"{base}/{j}/content/0/text",
+                                "user",
+                                block=inner[0],  # its own cache_control, as for any text block
+                                whole_result=True,
                                 **attrs,
                             )
                         elif isinstance(inner, list):
@@ -172,9 +198,18 @@ def parse(raw: bytes, *, mutable_kinds: frozenset[SegmentKind]) -> CanonicalRequ
                     and isinstance(block.get("name"), str)
                 ):
                     tool_names[block["id"]] = block["name"]
+                    calls.append((block["id"], block["name"], block.get("input")))
         elif role == "assistant" and isinstance(content, str):
             builder.add(SegmentKind.ASSISTANT_TEXT, content, base, "assistant")
 
+    results: dict[str, list[str]] = {}
+    for segment in builder.segments:
+        if segment.tool_call_id is not None:
+            results.setdefault(segment.tool_call_id, []).append(segment.id)
+    tools = tuple(
+        ToolRecord(call_id, name, arguments, index, tuple(results.get(call_id, ())))
+        for index, (call_id, name, arguments) in enumerate(calls)
+    )
     model = body.get("model")
     return CanonicalRequest(
         protocol=PROTOCOL,
@@ -185,6 +220,7 @@ def parse(raw: bytes, *, mutable_kinds: frozenset[SegmentKind]) -> CanonicalRequ
         segments=tuple(builder.segments),
         original_json=body,
         original_bytes=raw,
+        tools=tools,
     )
 
 

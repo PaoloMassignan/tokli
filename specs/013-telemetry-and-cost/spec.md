@@ -4,6 +4,7 @@ Status: Draft · Slices: S1 (records), S3 (queries), S6 (pricing) · Related: TO
 Approved for S1 (2026-09-30): TC-001, TC-002, TC-003, TC-010, TC-011, TC-012, TC-014. TC-013 API in S3; cost in S6.
 Approved for S2 (2026-10-02): TC-001 usage, calibration and whole-request estimate fields; TC-012 schema v2.
 Approved for S3 (2026-10-03): TC-013, TC-015, TC-016.
+Approved for S4 (2026-10-03): TC-014 `reference_stubs` filled.
 
 ## Purpose
 Persist the minimum metadata needed to answer "how much is Tokli saving, by which compressor,

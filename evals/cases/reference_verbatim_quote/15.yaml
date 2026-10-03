@@ -1,0 +1,115 @@
+case_set: 2026-10-03.1
+family: reference_verbatim_quote
+assumption: quotes_from_reference_target
+checker: verbatim_line
+request:
+  max_tokens: 400
+  tools:
+  - name: Read
+    description: Reads a file.
+    input_schema:
+      type: object
+      properties:
+        file_path:
+          type: string
+  - name: Glob
+    description: Lists files.
+    input_schema:
+      type: object
+      properties:
+        pattern:
+          type: string
+  messages:
+  - role: user
+    content: Look at src/app/delta_settings.py and then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKEREF1
+      name: Read
+      input:
+        file_path: src/app/delta_settings.py
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKEREF1
+      content: "     1\t\"\"\"Synthetic settings module.\"\"\"\n     2\t\n     3\tfrom dataclasses import\
+        \ dataclass\n     4\t\n     5\t\n     6\t@dataclass\n     7\tclass CacheSettings:\n     8\t  \
+        \  cache_max_items: int = 26064\n     9\t    cache_window_s: int = 65522\n    10\t    cache_token_ttl:\
+        \ int = 26133\n    11\t    cache_label: str = \"kelp-711\"\n    12\t\n    13\t@dataclass\n   \
+        \ 14\tclass LoggingSettings:\n    15\t    logging_max_items: int = 20654\n    16\t    logging_endpoint:\
+        \ str = \"harbor-577\"\n    17\t    logging_token_ttl: int = 60243\n    18\t    logging_timeout_ms:\
+        \ int = 20347\n    19\t\n    20\t@dataclass\n    21\tclass RetrySettings:\n    22\t    retry_endpoint:\
+        \ str = \"harbor-321\"\n    23\t    retry_label: str = \"juniper-333\"\n    24\t    retry_token_ttl:\
+        \ int = 55365\n    25\t    retry_max_items: int = 38264\n    26\t\n    27\t@dataclass\n    28\t\
+        class QueueSettings:\n    29\t    queue_batch_size: int = 59364\n    30\t    queue_endpoint: str\
+        \ = \"amber-30\"\n    31\t    queue_max_items: int = 84878\n    32\t    queue_window_s: int =\
+        \ 59219\n"
+  - role: assistant
+    content:
+    - type: text
+      text: Let me also see the other files in that folder.
+    - type: tool_use
+      id: toolu_01SMOKEREF2
+      name: Glob
+      input:
+        pattern: src/app/*.py
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKEREF2
+      content: 'src/app/amber_70.py
+
+        src/app/amber_81.py
+
+        src/app/amber_88.py
+
+        src/app/cobalt_43.py
+
+        src/app/ember_31.py
+
+        src/app/fjord_71.py
+
+        src/app/indigo_29.py
+
+        src/app/indigo_69.py
+
+        src/app/juniper_70.py
+
+        src/app/kelp_20.py
+
+        src/app/onyx_84.py
+
+        src/app/raven_50.py
+
+        '
+  - role: assistant
+    content:
+    - type: text
+      text: I will read src/app/delta_settings.py again to be sure it is current.
+    - type: tool_use
+      id: toolu_01SMOKEREF3
+      name: Read
+      input:
+        file_path: src/app/delta_settings.py
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKEREF3
+      content: "     1\t\"\"\"Synthetic settings module.\"\"\"\n     2\t\n     3\tfrom dataclasses import\
+        \ dataclass\n     4\t\n     5\t\n     6\t@dataclass\n     7\tclass CacheSettings:\n     8\t  \
+        \  cache_max_items: int = 26064\n     9\t    cache_window_s: int = 65522\n    10\t    cache_token_ttl:\
+        \ int = 26133\n    11\t    cache_label: str = \"kelp-711\"\n    12\t\n    13\t@dataclass\n   \
+        \ 14\tclass LoggingSettings:\n    15\t    logging_max_items: int = 20654\n    16\t    logging_endpoint:\
+        \ str = \"harbor-577\"\n    17\t    logging_token_ttl: int = 60243\n    18\t    logging_timeout_ms:\
+        \ int = 20347\n    19\t\n    20\t@dataclass\n    21\tclass RetrySettings:\n    22\t    retry_endpoint:\
+        \ str = \"harbor-321\"\n    23\t    retry_label: str = \"juniper-333\"\n    24\t    retry_token_ttl:\
+        \ int = 55365\n    25\t    retry_max_items: int = 38264\n    26\t\n    27\t@dataclass\n    28\t\
+        class QueueSettings:\n    29\t    queue_batch_size: int = 59364\n    30\t    queue_endpoint: str\
+        \ = \"amber-30\"\n    31\t    queue_max_items: int = 84878\n    32\t    queue_window_s: int =\
+        \ 59219\n"
+    - type: text
+      text: 'I want to change src/app/delta_settings.py with an exact-match edit. Give me the full line
+        that contains queue_batch_size exactly as it appears in the file: keep its leading whitespace
+        and leave out the line-number prefix of the read. Reply with that one line only.'
+expected: '    queue_batch_size: int = 59364'

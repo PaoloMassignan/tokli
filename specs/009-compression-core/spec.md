@@ -3,6 +3,8 @@
 Status: Draft (revised in Phase 0.1) · Slice: S1 (engine + one compressor, fixed policy), S4 (policy + registry UI) · Related: ARCH §4, PHASE0_1_REVIEW.md
 Approved for S1 (2026-09-30): CC-001…CC-008, CC-010…CC-017, CC-020 (provisional record). CC-009 in S4 (decision C3); CC-018 in S8; CC-019, CC-021 and request scope in S4.
 Approved for S2 (2026-10-02): CC-024.
+Changed by S4 SCR-001 (2026-10-03): CC-002 (the policy is a shortcut, not a gate), AC-CC-1, AC-CC-11, the eligibility column.
+Approved for S4 (2026-10-03): CC-002 (SCR-001), CC-003, CC-009, CC-015 and CC-016 for `reference`, CC-019, CC-021, the request scope.
 
 ## Purpose
 Define what a compressor is, what "lossless" means in Tokli, how the global policy constrains
@@ -22,20 +24,20 @@ Tokli keeps two questions apart:
 
 1. **Information preservation.** Can Tokli *prove mechanically* that the forwarded request still
    contains the original information? This is the compressor's `kind` plus `equivalence`. It is
-   the **only** input to policy eligibility (CC-002).
+   the **only** input to the "Lossless only" shortcut (CC-002, S4 SCR-001).
 2. **Task behaviour.** Does the model do the task as well with the transformed request? No
    transformation can prove this, not even whitespace removal. It is stated as declared
    `assumptions`, measured by evaluation (SPEC 012), and it gates **default enablement** (CC-020),
-   not policy eligibility.
+   not whether a compressor may run.
 
-| kind | equivalence | What is proven (mechanically, on every commit) | Decoder | Policy eligibility |
+| kind | equivalence | What is proven (mechanically, on every commit) | Decoder | "Lossless only" shortcut |
 |---|---|---|---|---|
-| **LOSSLESS** | **byte** | `decode(compress(x)) == x` byte-for-byte, using the segment alone | segment `decode()` | LOSSLESS_ONLY and LOSSY_ALLOWED |
-| **LOSSLESS** | **structural** | `P(compress(x)) == P(x)` for a declared parser `P`. The bytes that differ are, by the definition of `P`, insignificant (e.g. JSON whitespace outside strings). `decode()` is the identity. | identity | LOSSLESS_ONLY and LOSSY_ALLOWED |
-| **LOSSLESS** | **reference** | Request scope only. Every replaced text is still present in an **earlier** segment of the **same forwarded request**, which the replacement names unambiguously. Decoding the whole request restores every original text (under the target's own equivalence). Runtime reference integrity (CC-019), prefix stability (CC-006) and structure preservation (PR-005) hold. | `decode_request()` | LOSSLESS_ONLY and LOSSY_ALLOWED |
-| **SELECTIVE** | none | A declared retention rule: the named content is kept verbatim, and everything else may be removed. Not invertible. | — | LOSSY_ALLOWED only |
-| **LOSSY** | none | Only the engine invariants (token non-increase, protected spans, structure). | — | LOSSY_ALLOWED only |
-| **UNKNOWN** | none | Nothing. | — | Only under LOSSY_ALLOWED **and** explicitly enabled by the user (never on by default) |
+| **LOSSLESS** | **byte** | `decode(compress(x)) == x` byte-for-byte, using the segment alone | segment `decode()` | kept on |
+| **LOSSLESS** | **structural** | `P(compress(x)) == P(x)` for a declared parser `P`. The bytes that differ are, by the definition of `P`, insignificant (e.g. JSON whitespace outside strings). `decode()` is the identity. | identity | kept on |
+| **LOSSLESS** | **reference** | Request scope only. Every replaced text is still present in an **earlier** segment of the **same forwarded request**, which the replacement names unambiguously. Decoding the whole request restores every original text (under the target's own equivalence). Runtime reference integrity (CC-019), prefix stability (CC-006) and structure preservation (PR-005) hold. | `decode_request()` | kept on |
+| **SELECTIVE** | none | A declared retention rule: the named content is kept verbatim, and everything else may be removed. Not invertible. | — | switched off |
+| **LOSSY** | none | Only the engine invariants (token non-increase, protected spans, structure). | — | switched off |
+| **UNKNOWN** | none | Nothing. | — | switched off; never on by default (only an explicit user choice enables it) |
 
 What LOSSLESS does **not** mean: that the model behaves identically, or that the agent can still
 quote the original bytes at the original position (the verbatim-quoting hazard). Those are
@@ -110,7 +112,7 @@ for segment in mutable segments (document order):
     text = segment.working_text
     for c in registry ordered by (stage, id):
         filter in order → first failing filter is the skip reason:
-            enabled(c)? policy permits c.spec.kind? available(c)? kind ∈ c.segment_kinds?
+            enabled(c)? available(c)? kind ∈ c.segment_kinds?
             tokens(text) ≥ max(c.min_tokens, config.min_segment_tokens)?
             tool_name resolved and not in config.verbatim_tools (when kind == TOOL_RESULT and
                 c.spec.equivalence != "reference")?        # CC-021
@@ -136,7 +138,7 @@ for segment in mutable segments (document order):
 | ID | EARS requirement |
 |---|---|
 | CC-001 | THE SYSTEM SHALL represent every compressor by a `CompressorSpec` plus `applicable()` and `compress()`, and every LOSSLESS compressor additionally by `decode()`. |
-| CC-002 | WHILE the policy is `LOSSLESS_ONLY`, THE SYSTEM SHALL run only compressors whose kind is LOSSLESS (equivalence `byte`, `structural` or `reference`) and whose declared equivalence is backed by the contract test of CC-015; WHILE it is `LOSSY_ALLOWED`, THE SYSTEM SHALL also run SELECTIVE and LOSSY compressors, and UNKNOWN compressors only if the user explicitly enabled them. |
+| CC-002 | THE SYSTEM SHALL run a compressor only when it is enabled (`compressors.<id>.enabled`) and available; its kind and equivalence SHALL NOT gate execution, and SHALL be shown with the compressor (UI-003). A compressor whose kind is not LOSSLESS (or whose LOSSLESS equivalence is not backed by the contract test of CC-015) SHALL never be enabled by default. THE dashboard SHALL offer the shortcut "Lossless only", which switches off every enabled compressor whose kind is not LOSSLESS (UI-004). THE request's `policy` field SHALL record `LOSSLESS_ONLY` when every enabled compressor is LOSSLESS, and `LOSSY_ALLOWED` otherwise. (S4 SCR-001.) |
 | CC-003 | THE SYSTEM SHALL apply an enabled and permitted compressor to a segment only if all filters pass, `applicable()` returns true, and the acceptance gate passes (enabled ≠ forced). |
 | CC-004 | WHEN a compressor's output does not reduce the segment's estimated tokens by at least `max(min_gain_tokens, ceil(t_in × min_gain_ratio))` (defaults 4 and 0.01), THE SYSTEM SHALL retain the previous text. |
 | CC-005 | THE SYSTEM SHALL ensure that the estimated tokens of every forwarded segment, and of the request as a whole, are less than or equal to the original. |
@@ -157,7 +159,7 @@ for segment in mutable segments (document order):
 | CC-016 | WHEN `compression.verify_lossless` is true (default true in tests and debug, false in normal serving), THE SYSTEM SHALL decode each accepted LOSSLESS output and reject mismatches. |
 | CC-017 | THE compression packages SHALL NOT import protocol, upstream, auth, HTTP, pricing, telemetry-storage or UI modules. |
 | CC-019 | WHILE a reference stub is part of the forwarded request, THE SYSTEM SHALL ensure that the named target segment precedes the stub in the same request and that the target's forwarded text equals its original text under byte or structural equivalence. IF any later transformation would violate this, THEN THE SYSTEM SHALL reject that transformation with `rejected_invariant(reference_target_modified)`. This check SHALL always run, independent of `verify_lossless`. |
-| CC-020 | EVERY compressor SHALL declare its behavioural `assumptions`. A compressor with `default_enabled: true` SHALL have an evaluation record (SPEC 012, QE-016) that covers every declared assumption with verdict `no_measurable_damage`, or a `provisional` record permitted by QE-016. Policy eligibility SHALL NOT depend on evaluation records. |
+| CC-020 | EVERY compressor SHALL declare its behavioural `assumptions`. A compressor with `default_enabled: true` SHALL have an evaluation record (SPEC 012, QE-016) that covers every declared assumption with verdict `no_measurable_damage`, or a `provisional` record permitted by QE-016. Whether the user may enable a compressor SHALL NOT depend on evaluation records. |
 | CC-021 | THE engine SHALL apply the `verbatim_tools` filter to every compressor except those with equivalence `reference`, because a reference stub leaves the original bytes verbatim in the target segment. Such compressors SHALL declare the assumption `quotes_from_reference_target`. |
 
 ## Invariants (property-tested)
@@ -173,7 +175,7 @@ Per-compressor aggregates in the `transform.compression` span. With `telemetry.d
 each invocation is logged as `(segment_id, kind, compressor, decision, t_in, t_out, ms, reason)` — no text.
 
 ## Acceptance criteria
-- AC-CC-1 (CC-002): a registry with fake LOSSY and UNKNOWN compressors that fail the test when called → green under LOSSLESS_ONLY. Under LOSSY_ALLOWED the LOSSY one is called, and the UNKNOWN one only when explicitly enabled.
+- AC-CC-1 (CC-002): a registry with fake LOSSY and UNKNOWN compressors that fail the test when called → green while they are disabled (their default). Enabled, each is called. The request's `policy` reads `LOSSLESS_ONLY` with only LOSSLESS compressors enabled, `LOSSY_ALLOWED` otherwise.
 - AC-CC-2 (CC-003): an enabled compressor whose `applicable()` is false is never called with `compress()`.
 - AC-CC-3 (CC-004/005): a compressor returning longer text is rejected. A Hypothesis run of 10k random texts through all registered compressors shows no increase.
 - AC-CC-4 (CC-006): a segment compressed alone vs. among 50 random other segments gives the same output. Two engine instances give the same output.
@@ -183,7 +185,7 @@ each invocation is logged as `(segment_id, kind, compressor, decision, t_in, t_o
 - AC-CC-8 (CC-012/013): stats rows match a hand-computed expectation for a 3-segment × 2-compressor fixture, including skip-reason histograms.
 - AC-CC-9 (CC-015): the contract test enumerates the registry and fails if a LOSSLESS compressor has no `prop_<id>_decode_roundtrip` test (or `prop_<id>_decodes_whole_request` for `reference`).
 - AC-CC-10 (CC-019): a fake SELECTIVE request compressor that stubs the target of a duplicate reference is rejected with `reference_target_modified`, and the target stays verbatim. A fake structural compressor that changes the target is accepted, and the trace records the chain guarantee as `structural`.
-- AC-CC-11 (CC-020): a registry entry with `default_enabled: true` and an assumption without an evaluation record fails the contract test. The same entry with `default_enabled: false` passes, and its policy eligibility is unchanged.
+- AC-CC-11 (CC-020): a registry entry with `default_enabled: true` and an assumption without an evaluation record fails the contract test. The same entry with `default_enabled: false` passes, and the user can still enable it.
 - AC-CC-12 (CC-021): a TOOL_RESULT from a tool in `verbatim_tools` that duplicates an earlier result is stubbed by `duplicate_tool_results`, while `json_minify` is skipped on it with `verbatim_tool`.
 - AC-CC-13 (CC-024): the same request processed twice gives identical forwarded bytes and identical stats, and the second run records only hits. The same text with a different `SegmentView` (e.g. a verbatim tool) or a different compressor config is not served from the cache. The cache never exceeds its bound. With `result_cache_mb: 0` nothing is cached.
 

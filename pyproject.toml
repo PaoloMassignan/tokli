@@ -50,6 +50,10 @@ tokli = "tokli.cli.main:main"
 [tool.hatch.build.targets.wheel]
 packages = ["src/tokli"]
 
+# UI-003 / ADR 0009: the evaluation records ship read-only with the package.
+[tool.hatch.build.targets.wheel.force-include]
+"evals/records" = "tokli/_eval_records"
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_functions = ["test_*", "prop_*"]

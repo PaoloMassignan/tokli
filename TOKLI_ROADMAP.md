@@ -94,7 +94,7 @@ also lets the harness validate itself on a low-risk compressor first.
 
 ## S4 — Compressor registry, policy and configuration API
 
-- Global policy LOSSLESS_ONLY / LOSSY_ALLOWED (CC-002); per-compressor enable (CC-003).
+- Per-compressor enable as the only control, with the "Lossless only" shortcut (CC-002, CC-003; S4 SCR-001).
 - `ConfigService` + `/tokli/api/config` with UI-override layer and locked-key reporting
   (CF-001, CF-009, API-005, API-006 Origin checks, API-007).
 - UI toggles + policy switch; compressor cards from registry metadata.
@@ -105,6 +105,7 @@ also lets the harness validate itself on a low-risk compressor first.
   only if its smoke record says `no_measurable_damage` (E11)**. Otherwise it ships available but off.
 - Exit: toggling a compressor in the UI changes the next request's `config_hash` and attribution.
   The dashboard shows pruning and text-compression savings separately.
+- **Accepted 2026-10-03** (`slices/S4/COMPLETION_REPORT.md`): E11 `no_measurable_damage`; `duplicate_tool_results` on by default; SCR-001 (policy as a shortcut), SCR-002.
 
 ## S5 — OpenAI Responses (Codex, API key)
 
@@ -131,10 +132,10 @@ also lets the harness validate itself on a low-risk compressor first.
 - Extend the S2.5 harness to the full tier: case generators, paired bootstrap CI, multi-model and
   multi-provider runs (Tier 2), Tier 3 protocol for agent tasks. Full-tier records for every
   compressor that is default-on at v1 (QE-006).
-- `diff_context_trim`, `log_filter` (SELECTIVE, off by default, LOSSY_ALLOWED only);
+- `diff_context_trim`, `log_filter` (SELECTIVE, off by default);
   `dictionary` and `search_group` (LOSSLESS, off by default) with decoders.
 - `analyze.tool_resources` (Claude Code defaults + the shell-command classification of SPEC 019) and
-  `superseded_tool_results` (SELECTIVE, LOSSY_ALLOWED only, off by default).
+  `superseded_tool_results` (SELECTIVE, off by default).
 - E7, E8, E2-ext (cache cost of superseding), E10 (argument stubbing / pair removal) executed.
   Default-enabled set decided from data.
 

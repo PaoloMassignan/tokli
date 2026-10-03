@@ -1,6 +1,7 @@
 # SPEC 010 — v1 compressor catalogue
 
 Status: Draft (revised in Phase 0.1) · Slices: S1 (`json_minify`), S4 (`duplicate_tool_results`, SPEC 019), S8 (`search_group`, `dictionary`, `diff_context_trim`, `log_filter`, `superseded_tool_results`)
+Approved for S4 (2026-10-03): the `duplicate_tool_results` entry and its assumptions.
 Approved for S1 (2026-09-30): CP-JM-001…CP-JM-005.
 Changed by SCR-001 (2026-10-02): `test_json_minify_linear_time` measurement sizes.
 Related: SPEC 009 (contract, preservation model, claim types), SPEC 012 (evaluation), PHASE0_1_REVIEW.md
@@ -11,15 +12,15 @@ Every compressor here is a registry entry satisfying SPEC 009. Common engine-lev
 
 ## Summary
 
-| id | kind | equivalence | scope | prefix-stable | Tokli notation in output | LOSSLESS_ONLY | default enabled (POLICY) | slice |
+| id | kind | equivalence | scope | prefix-stable | Tokli notation in output | "Lossless only" shortcut | default enabled (POLICY) | slice |
 |---|---|---|---|---|---|---|---|---|
-| `json_minify` | LOSSLESS | structural | segment | yes | none (standard JSON) | eligible | **yes, provisional** until its S2.5 smoke-evaluation record exists (QE-016) | S1 |
-| `duplicate_tool_results` | LOSSLESS | reference | request | yes | reference stub | eligible | **only if** its smoke evaluation passes at the end of S4 (CC-020); otherwise shipped off | S4 |
-| `search_group` | LOSSLESS | byte | segment | yes | `[file]` headers, `\` escapes | eligible | no (until an evaluation record exists; E8) | S8 |
-| `dictionary` | LOSSLESS | byte | segment | yes | `§X` symbols + legend | eligible | no (until E7/E8) | S8 |
-| `superseded_tool_results` | SELECTIVE | none | request | **no** | supersession stub | not eligible | no | S8 |
-| `diff_context_trim` | SELECTIVE | none | segment | yes | omission note | not eligible | no | S8 |
-| `log_filter` | SELECTIVE | none | segment | yes | omission note | not eligible | no | S8 |
+| `json_minify` | LOSSLESS | structural | segment | yes | none (standard JSON) | kept on | **yes, provisional** until its S2.5 smoke-evaluation record exists (QE-016) | S1 |
+| `duplicate_tool_results` | LOSSLESS | reference | request | yes | reference stub | kept on | **yes**: smoke record `no_measurable_damage` on `claude-opus-5-5` (E11, 2026-10-03; CC-020) | S4 |
+| `search_group` | LOSSLESS | byte | segment | yes | `[file]` headers, `\` escapes | kept on | no (until an evaluation record exists; E8) | S8 |
+| `dictionary` | LOSSLESS | byte | segment | yes | `§X` symbols + legend | kept on | no (until E7/E8) | S8 |
+| `superseded_tool_results` | SELECTIVE | none | request | **no** | supersession stub | switched off | no | S8 |
+| `diff_context_trim` | SELECTIVE | none | segment | yes | omission note | switched off | no | S8 |
+| `log_filter` | SELECTIVE | none | segment | yes | omission note | switched off | no | S8 |
 
 ### Assumption ids (behavioural; each is an evaluation case family in SPEC 012)
 

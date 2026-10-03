@@ -49,7 +49,7 @@ persisted by default. It is available in the in-memory trace ring buffer and at
 | `stream` | bool | |
 | `auth_mode` | `passthrough` \| `inject` | never any credential material |
 | `credential_kind` | `api_key` \| `oauth` \| `none` \| `unknown` | prefix classification only |
-| `policy` | `LOSSLESS_ONLY` \| `LOSSY_ALLOWED` | effective at request start |
+| `policy` | `LOSSLESS_ONLY` \| `LOSSY_ALLOWED` | derived at request start: `LOSSLESS_ONLY` when every enabled compressor is LOSSLESS (CC-002) |
 | `config_hash` | text | hash of the effective compression-relevant config |
 | `outcome` | `compressed` \| `passthrough` \| `verbatim_route` \| `error` | |
 | `passthrough_reason` | text \| null | e.g. `no_applicable_compressor`, `parse_error`, `content_encoding`, `too_large`, `policy_off` |

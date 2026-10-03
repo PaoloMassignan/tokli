@@ -1,0 +1,114 @@
+case_set: 2026-10-03.1
+family: reference_fact_lookup
+assumption: resolves_result_reference
+checker: exact_value
+request:
+  max_tokens: 400
+  tools:
+  - name: Read
+    description: Reads a file.
+    input_schema:
+      type: object
+      properties:
+        file_path:
+          type: string
+  - name: Glob
+    description: Lists files.
+    input_schema:
+      type: object
+      properties:
+        pattern:
+          type: string
+  messages:
+  - role: user
+    content: Look at src/app/raven_settings.py and then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKEREF1
+      name: Read
+      input:
+        file_path: src/app/raven_settings.py
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKEREF1
+      content: "     1\t\"\"\"Synthetic settings module.\"\"\"\n     2\t\n     3\tfrom dataclasses import\
+        \ dataclass\n     4\t\n     5\t\n     6\t@dataclass\n     7\tclass RetrySettings:\n     8\t  \
+        \  retry_max_items: int = 57753\n     9\t    retry_token_ttl: int = 9777\n    10\t    retry_endpoint:\
+        \ str = \"kelp-488\"\n    11\t    retry_timeout_ms: int = 4701\n    12\t\n    13\t@dataclass\n\
+        \    14\tclass StorageSettings:\n    15\t    storage_timeout_ms: int = 66919\n    16\t    storage_label:\
+        \ str = \"pebble-61\"\n    17\t    storage_token_ttl: int = 68244\n    18\t    storage_batch_size:\
+        \ int = 77489\n    19\t\n    20\t@dataclass\n    21\tclass LoggingSettings:\n    22\t    logging_label:\
+        \ str = \"harbor-716\"\n    23\t    logging_timeout_ms: int = 68695\n    24\t    logging_endpoint:\
+        \ str = \"birch-271\"\n    25\t    logging_batch_size: int = 9509\n    26\t\n    27\t@dataclass\n\
+        \    28\tclass ServerSettings:\n    29\t    server_max_items: int = 76665\n    30\t    server_token_ttl:\
+        \ int = 38140\n    31\t    server_timeout_ms: int = 51330\n    32\t    server_batch_size: int\
+        \ = 34944\n"
+  - role: assistant
+    content:
+    - type: text
+      text: Let me also see the other files in that folder.
+    - type: tool_use
+      id: toolu_01SMOKEREF2
+      name: Glob
+      input:
+        pattern: src/app/*.py
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKEREF2
+      content: 'src/app/birch_40.py
+
+        src/app/birch_97.py
+
+        src/app/cobalt_49.py
+
+        src/app/delta_10.py
+
+        src/app/delta_38.py
+
+        src/app/ember_80.py
+
+        src/app/harbor_5.py
+
+        src/app/kelp_5.py
+
+        src/app/onyx_4.py
+
+        src/app/pebble_20.py
+
+        src/app/quartz_37.py
+
+        src/app/quartz_59.py
+
+        '
+  - role: assistant
+    content:
+    - type: text
+      text: I will read src/app/raven_settings.py again to be sure it is current.
+    - type: tool_use
+      id: toolu_01SMOKEREF3
+      name: Read
+      input:
+        file_path: src/app/raven_settings.py
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKEREF3
+      content: "     1\t\"\"\"Synthetic settings module.\"\"\"\n     2\t\n     3\tfrom dataclasses import\
+        \ dataclass\n     4\t\n     5\t\n     6\t@dataclass\n     7\tclass RetrySettings:\n     8\t  \
+        \  retry_max_items: int = 57753\n     9\t    retry_token_ttl: int = 9777\n    10\t    retry_endpoint:\
+        \ str = \"kelp-488\"\n    11\t    retry_timeout_ms: int = 4701\n    12\t\n    13\t@dataclass\n\
+        \    14\tclass StorageSettings:\n    15\t    storage_timeout_ms: int = 66919\n    16\t    storage_label:\
+        \ str = \"pebble-61\"\n    17\t    storage_token_ttl: int = 68244\n    18\t    storage_batch_size:\
+        \ int = 77489\n    19\t\n    20\t@dataclass\n    21\tclass LoggingSettings:\n    22\t    logging_label:\
+        \ str = \"harbor-716\"\n    23\t    logging_timeout_ms: int = 68695\n    24\t    logging_endpoint:\
+        \ str = \"birch-271\"\n    25\t    logging_batch_size: int = 9509\n    26\t\n    27\t@dataclass\n\
+        \    28\tclass ServerSettings:\n    29\t    server_max_items: int = 76665\n    30\t    server_token_ttl:\
+        \ int = 38140\n    31\t    server_timeout_ms: int = 51330\n    32\t    server_batch_size: int\
+        \ = 34944\n"
+    - type: text
+      text: According to the latest read of src/app/raven_settings.py, what is the value of storage_batch_size?
+        Answer with only the value, without quotes, nothing else.
+expected: '77489'

@@ -6,8 +6,10 @@ from collections.abc import Mapping, Sequence
 from dataclasses import asdict
 from typing import Any
 
-from tokli.compression.engine import POLICY, CompressorStats, EngineResult
+from tokli.app.evaluations import evaluation_status, records_dir
+from tokli.compression.engine import CompressorStats, EngineResult
 from tokli.compression.registry import REGISTRY
+from tokli.config import EffectiveConfig
 from tokli.telemetry.records import CompressorStatsRecord, RequestRecord
 from tokli.tokens.calibration import calibrated_value
 
@@ -15,7 +17,6 @@ API_VERSION = 1
 
 __all__ = [
     "API_VERSION",
-    "POLICY",
     "compression_report",
     "compressor_summary",
     "compressors_view",
@@ -146,14 +147,16 @@ def compressor_summary(result: EngineResult) -> dict[str, dict[str, Any]]:
     }
 
 
-def compressors_view(
-    enabled: Mapping[str, bool], availability: Mapping[str, str]
-) -> dict[str, Any]:
-    """The registry as metadata (read-only in S3, SPEC 015): spec fields, enabled, availability.
-    Locks and evaluation status arrive in S4."""
+def compressors_view(config: EffectiveConfig, availability: Mapping[str, str]) -> dict[str, Any]:
+    """The registry as metadata (SPEC 015): spec fields, enabled, availability, the lock on its
+    toggle (UI-005) and its evaluation status (UI-003). The policy is derived (CC-002)."""
+    settings = config.settings.compressors.model_dump()
+    enabled = {cid: bool(toggle["enabled"]) for cid, toggle in settings.items()}
+    lossless = all(c.spec.kind == "LOSSLESS" for c in REGISTRY if enabled.get(c.spec.id))
+    records = records_dir()
     return {
         "api_version": API_VERSION,
-        "policy": POLICY,
+        "policy": "LOSSLESS_ONLY" if lossless else "LOSSY_ALLOWED",
         "compressors": [
             {
                 "id": c.spec.id,
@@ -171,6 +174,8 @@ def compressors_view(
                 "enabled": bool(enabled.get(c.spec.id, False)),
                 "default_enabled": c.spec.default_enabled,
                 "availability": availability.get(c.spec.id, "available"),
+                "locked_by": config.locked.get(f"compressors.{c.spec.id}.enabled"),
+                "evaluation": evaluation_status(c.spec, records),
             }
             for c in REGISTRY
         ],

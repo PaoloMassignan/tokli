@@ -1,0 +1,114 @@
+case_set: 2026-10-03.1
+family: reference_fact_lookup
+assumption: resolves_result_reference
+checker: exact_value
+request:
+  max_tokens: 400
+  tools:
+  - name: Read
+    description: Reads a file.
+    input_schema:
+      type: object
+      properties:
+        file_path:
+          type: string
+  - name: Glob
+    description: Lists files.
+    input_schema:
+      type: object
+      properties:
+        pattern:
+          type: string
+  messages:
+  - role: user
+    content: Look at src/app/fjord_settings.py and then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKEREF1
+      name: Read
+      input:
+        file_path: src/app/fjord_settings.py
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKEREF1
+      content: "     1\t\"\"\"Synthetic settings module.\"\"\"\n     2\t\n     3\tfrom dataclasses import\
+        \ dataclass\n     4\t\n     5\t\n     6\t@dataclass\n     7\tclass LoggingSettings:\n     8\t\
+        \    logging_timeout_ms: int = 66011\n     9\t    logging_batch_size: int = 81772\n    10\t  \
+        \  logging_endpoint: str = \"cobalt-374\"\n    11\t    logging_window_s: int = 59967\n    12\t\
+        \n    13\t@dataclass\n    14\tclass CacheSettings:\n    15\t    cache_batch_size: int = 48536\n\
+        \    16\t    cache_window_s: int = 36613\n    17\t    cache_label: str = \"cobalt-675\"\n    18\t\
+        \    cache_max_items: int = 73722\n    19\t\n    20\t@dataclass\n    21\tclass StorageSettings:\n\
+        \    22\t    storage_token_ttl: int = 30509\n    23\t    storage_timeout_ms: int = 57662\n   \
+        \ 24\t    storage_batch_size: int = 88124\n    25\t    storage_window_s: int = 46050\n    26\t\
+        \n    27\t@dataclass\n    28\tclass QueueSettings:\n    29\t    queue_endpoint: str = \"lumen-699\"\
+        \n    30\t    queue_timeout_ms: int = 39223\n    31\t    queue_batch_size: int = 72048\n    32\t\
+        \    queue_token_ttl: int = 1311\n"
+  - role: assistant
+    content:
+    - type: text
+      text: Let me also see the other files in that folder.
+    - type: tool_use
+      id: toolu_01SMOKEREF2
+      name: Glob
+      input:
+        pattern: src/app/*.py
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKEREF2
+      content: 'src/app/cobalt_4.py
+
+        src/app/cobalt_70.py
+
+        src/app/delta_35.py
+
+        src/app/fjord_60.py
+
+        src/app/garnet_42.py
+
+        src/app/harbor_25.py
+
+        src/app/juniper_73.py
+
+        src/app/kelp_41.py
+
+        src/app/lumen_18.py
+
+        src/app/lumen_44.py
+
+        src/app/nimbus_4.py
+
+        src/app/raven_82.py
+
+        '
+  - role: assistant
+    content:
+    - type: text
+      text: I will read src/app/fjord_settings.py again to be sure it is current.
+    - type: tool_use
+      id: toolu_01SMOKEREF3
+      name: Read
+      input:
+        file_path: src/app/fjord_settings.py
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKEREF3
+      content: "     1\t\"\"\"Synthetic settings module.\"\"\"\n     2\t\n     3\tfrom dataclasses import\
+        \ dataclass\n     4\t\n     5\t\n     6\t@dataclass\n     7\tclass LoggingSettings:\n     8\t\
+        \    logging_timeout_ms: int = 66011\n     9\t    logging_batch_size: int = 81772\n    10\t  \
+        \  logging_endpoint: str = \"cobalt-374\"\n    11\t    logging_window_s: int = 59967\n    12\t\
+        \n    13\t@dataclass\n    14\tclass CacheSettings:\n    15\t    cache_batch_size: int = 48536\n\
+        \    16\t    cache_window_s: int = 36613\n    17\t    cache_label: str = \"cobalt-675\"\n    18\t\
+        \    cache_max_items: int = 73722\n    19\t\n    20\t@dataclass\n    21\tclass StorageSettings:\n\
+        \    22\t    storage_token_ttl: int = 30509\n    23\t    storage_timeout_ms: int = 57662\n   \
+        \ 24\t    storage_batch_size: int = 88124\n    25\t    storage_window_s: int = 46050\n    26\t\
+        \n    27\t@dataclass\n    28\tclass QueueSettings:\n    29\t    queue_endpoint: str = \"lumen-699\"\
+        \n    30\t    queue_timeout_ms: int = 39223\n    31\t    queue_batch_size: int = 72048\n    32\t\
+        \    queue_token_ttl: int = 1311\n"
+    - type: text
+      text: According to the latest read of src/app/fjord_settings.py, what is the value of queue_token_ttl?
+        Answer with only the value, without quotes, nothing else.
+expected: '1311'

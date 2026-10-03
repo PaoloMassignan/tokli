@@ -52,7 +52,6 @@ def test_reason_codes_known() -> None:
         "known_endpoint",
         "too_small",
         "not_applicable(not_json)",
-        "policy_forbids(LOSSY)",
         "unavailable(x)",
         "stage_exception(transform.compression)",
         "upstream_status(429)",
@@ -111,3 +110,8 @@ def test_credential_kind_classification() -> None:
 def test_header_names_only() -> None:
     names = header_names([("X-Api-Key", "secret"), ("content-type", "a"), ("x-api-key", "again")])
     assert names == ["content-type", "x-api-key"]
+
+
+def test_policy_forbids_removed_from_closed_set() -> None:
+    """S4 SCR-001: kinds no longer gate execution, so `policy_forbids` is never produced."""
+    assert not reasons.is_known("policy_forbids(LOSSY)")

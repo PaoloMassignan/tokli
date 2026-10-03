@@ -45,6 +45,7 @@ class Segment:
     tool_call_id: str | None = None
     is_error: bool = False
     cache_breakpoint_after: bool = False
+    whole_result: bool = False  # the segment is the entire content of its tool result
 
 
 @dataclass(frozen=True)
@@ -52,6 +53,17 @@ class Patch:
     segment_id: str
     new_text: str
     produced_by: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class ToolRecord:
+    """One tool call of the request and its result segments, read-only (CM-013)."""
+
+    call_id: str
+    name: str
+    arguments: Any  # parsed JSON, or the raw string
+    index: int
+    result_segment_ids: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -64,6 +76,7 @@ class CanonicalRequest:
     segments: tuple[Segment, ...]
     original_json: Any = field(repr=False)
     original_bytes: bytes = field(repr=False)
+    tools: tuple[ToolRecord, ...] = ()
 
     def segment(self, segment_id: str) -> Segment:
         for segment in self.segments:

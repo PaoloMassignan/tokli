@@ -84,18 +84,23 @@ def stats_of(result, cid: str):  # type: ignore[no-untyped-def]
     return next(s for s in result.stats if s.compressor_id == cid)
 
 
-def test_lossless_only_never_runs_lossy_compressor() -> None:
+def test_disabled_non_lossless_compressors_never_run() -> None:
+    """AC-CC-1 after S4 SCR-001: whatever their kind, disabled compressors are never called;
+    enabled ones are (see test_non_lossless_compressors_run_only_when_enabled)."""
     lossy, unknown, selective = (
         Fake("lossy", kind="LOSSY"),
         Fake("unk", kind="UNKNOWN"),
         Fake("sel", kind="SELECTIVE"),
     )
-    engine = Engine([lossy, unknown, selective], settings_for("lossy", "unk", "sel"))
+    engine = Engine([lossy, unknown, selective], settings_for())
     result = run(engine, make_request(("TOOL_RESULT", "x " * 100)))
     assert lossy.applicable_calls == lossy.compress_calls == 0
     assert unknown.compress_calls == selective.compress_calls == 0
-    assert stats_of(result, "lossy").skip_reasons == {"policy_forbids(LOSSY)": 1}
+    assert stats_of(result, "lossy").skip_reasons == {"disabled": 1}
     assert result.patches == ()
+    enabled = Engine([lossy, unknown, selective], settings_for("lossy", "unk", "sel"))
+    assert run(enabled, make_request(("TOOL_RESULT", "x " * 100))).patches
+    assert lossy.compress_calls == 1
 
 
 def test_disabled_compressor_skipped() -> None:
@@ -316,9 +321,13 @@ def prop_compression_never_increases_tokens(texts: list[str]) -> None:
 @settings(max_examples=100, deadline=None)
 @given(TEXTS)
 def prop_compression_is_deterministic(texts: list[str]) -> None:
+    """CC-006. The request budget (CC-014) is a wall-clock control, so it is lifted here: under a
+    loaded test run one engine could exhaust it and the other not (flaky in the S4 full run,
+    2026-10-03), which says nothing about the compressors' determinism."""
     request = make_request(*[("TOOL_RESULT", t) for t in texts])
-    first = run(Engine(REGISTRY, settings_for("json_minify")), request)
-    second = run(Engine(REGISTRY, settings_for("json_minify")), request)
+    unbounded = settings_for("json_minify", request_budget_ms=1e9)
+    first = run(Engine(REGISTRY, unbounded), request)
+    second = run(Engine(REGISTRY, unbounded), request)
     assert first.patches == second.patches
 
 
@@ -350,8 +359,19 @@ def prop_protected_spans_preserved(before: str, protected: str, after: str) -> N
 def test_registry_contract_every_lossless_has_roundtrip_property() -> None:
     sources = "\n".join(p.read_text(encoding="utf-8") for p in (ROOT / "tests").rglob("test_*.py"))
     for compressor in REGISTRY:
-        if compressor.spec.kind == "LOSSLESS":
-            name = f"prop_{compressor.spec.id}_decode_roundtrip"
+        spec = compressor.spec
+        if spec.kind != "LOSSLESS":
+            continue
+        if spec.equivalence == "reference":  # CC-015: whole-request decode
+            named = [
+                g.split("(")[-1].rstrip(")")
+                for g in spec.guarantees
+                if "decodes_whole_request" in g
+            ]
+            assert named, spec.id
+            assert all(f"def {name}(" in sources for name in named), named
+        else:
+            name = f"prop_{spec.id}_decode_roundtrip"
             assert f"def {name}(" in sources, name
 
 
@@ -376,8 +396,8 @@ def test_registry_default_enabled_requires_eval_record() -> None:
         assert report.is_file(), report
 
 
-def test_json_minify_is_the_only_registered_compressor_in_s1() -> None:
-    assert [c.spec.id for c in REGISTRY] == ["json_minify"]
+def test_registry_lists_the_s4_compressors() -> None:
+    assert [c.spec.id for c in REGISTRY] == ["json_minify", "duplicate_tool_results"]
     assert isinstance(REGISTRY[0], JsonMinify)
 
 

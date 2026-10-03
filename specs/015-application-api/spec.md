@@ -3,6 +3,7 @@
 Status: Draft · Slices: S1 (`requests/{id}`), S3 (metrics), S4 (config), S9 (diagnostics)
 Approved for S1 (2026-09-30): `GET /tokli/api/requests/{id}`, `GET /tokli/health`, API-001, API-002, API-004.
 Approved for S3 (2026-10-03): `GET /tokli/api/requests`, `metrics/summary|timeseries|compressors`, read-only `GET /tokli/api/compressors`; API-001…API-004, API-008…API-012.
+Approved for S4 (2026-10-03): `GET`/`PATCH /tokli/api/config`, `GET /tokli/api/compressors` with `locked_by` and evaluation status; API-005, API-006, API-007.
 
 ## Purpose
 One JSON API under `/tokli/api` that the dashboard, the CLI and any replacement UI consume.
@@ -19,7 +20,7 @@ It exposes application use cases, never storage tables or compressor objects.
 | `GET /tokli/api/metrics/compressors?…` | per-compressor aggregates (TOKLI_TELEMETRY_AND_COST §3) | S3 |
 | `GET /tokli/api/compressors` | registry: spec metadata + `enabled`, `available`, `unavailable_reason`, `locked_by` | S3 (read-only), S4 (`locked_by`, evaluation status) |
 | `GET /tokli/api/config` | effective config with per-key `source` and `locked` flags (secrets never included) | S4 |
-| `PATCH /tokli/api/config` | set UI-override keys (`compression.policy`, `compressors.<id>.enabled`, selected options) | S4 |
+| `PATCH /tokli/api/config` | set UI-override keys (`compressors.<id>.enabled`, `telemetry.retention_days`) | S4 |
 | `GET /tokli/api/diagnostics` | doctor report as JSON | S9 |
 | `GET /tokli/health` | health (SPEC 014) | S1 |
 
@@ -33,7 +34,7 @@ It exposes application use cases, never storage tables or compressor objects.
 | API-004 | THE API SHALL be versioned by a top-level `api_version` field. Breaking changes require a new version. |
 | API-005 | WHEN `PATCH /tokli/api/config` targets a key pinned by env/CLI, THE SYSTEM SHALL answer 409 naming the pinning source; WHEN it targets an unknown or non-UI-editable key, 400. |
 | API-006 | THE SYSTEM SHALL reject mutating API requests whose `Origin` is present and not the Tokli origin, or whose `Host` is not the bound loopback host:port (403). |
-| API-007 | WHEN configuration changes are accepted, THE SYSTEM SHALL persist them to `<data>/ui-overrides.yaml`, apply them atomically to subsequent requests, and return the new effective config and `config_hash`. |
+| API-007 | WHEN configuration changes are accepted, THE SYSTEM SHALL persist them to `<data>/ui-overrides.yaml`, apply them atomically to subsequent requests, and return the new effective config and `config_hash`. The file SHALL be written atomically (temporary file, then replace) and read strictly at startup, as the config file. A request in flight SHALL keep the snapshot it started with. A PATCH that changes nothing SHALL answer 200 with the unchanged `config_hash`. A failed write SHALL answer 500 and leave the previous overrides in force. (S4 review A3, M3, M4.) |
 | API-008 | THE API layer SHALL depend only on `tokli.app` use cases (import contract). |
 | API-009 | THE SYSTEM SHALL answer 403 to any request under `/tokli/` whose `Host` header is not the bound address and port (or `localhost` / `127.0.0.1` / `[::1]` with that port when bound to loopback). Proxy routes are not affected. |
 | API-010 | THE metrics endpoints SHALL interpret `from` and `to` as ISO-8601 instants with offset, half-open `[from, to)`, defaulting to the last 7 days; `tz` as an IANA time-zone name (default `UTC`) that sets the `timeseries` bucket boundaries; and `compressor` / `kind` as restricting the saving to that compressor's (kind's) marginal savings and the requests to those where it was considered. Invalid values SHALL give 400 `{api_version, error: {type: "invalid_parameter", fields: {<name>: <message>}}}`. |
@@ -43,7 +44,7 @@ It exposes application use cases, never storage tables or compressor objects.
 ## Acceptance criteria
 - AC-API-1: JSON-schema contract tests for every endpoint (golden schemas in `tests/contract/api/`).
 - AC-API-2: a canary scan of all API responses after the fixture traffic finds no content or keys.
-- AC-API-3: a PATCH on a key pinned by `TOKLI_COMPRESSION__POLICY` → 409 with `source: env`.
+- AC-API-3: a PATCH on a key pinned by `TOKLI_COMPRESSORS__JSON_MINIFY__ENABLED` → 409 with `source: env`.
 - AC-API-4: a cross-origin POST/PATCH → 403. A same-origin one succeeds.
 - AC-API-6 (API-009): a request to `/tokli/api/metrics/summary` with `Host: evil.example` gets 403; the same with the bound host succeeds; a proxy request is unaffected.
 - AC-API-7 (API-010): `timeseries` day buckets in `Europe/Rome` and `America/New_York` follow local midnight across a DST change.

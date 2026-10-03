@@ -1,0 +1,114 @@
+case_set: 2026-10-03.1
+family: reference_fact_lookup
+assumption: resolves_result_reference
+checker: exact_value
+request:
+  max_tokens: 400
+  tools:
+  - name: Read
+    description: Reads a file.
+    input_schema:
+      type: object
+      properties:
+        file_path:
+          type: string
+  - name: Glob
+    description: Lists files.
+    input_schema:
+      type: object
+      properties:
+        pattern:
+          type: string
+  messages:
+  - role: user
+    content: Look at src/app/indigo_settings.py and then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKEREF1
+      name: Read
+      input:
+        file_path: src/app/indigo_settings.py
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKEREF1
+      content: "     1\t\"\"\"Synthetic settings module.\"\"\"\n     2\t\n     3\tfrom dataclasses import\
+        \ dataclass\n     4\t\n     5\t\n     6\t@dataclass\n     7\tclass LoggingSettings:\n     8\t\
+        \    logging_token_ttl: int = 81942\n     9\t    logging_label: str = \"cobalt-904\"\n    10\t\
+        \    logging_window_s: int = 26546\n    11\t    logging_endpoint: str = \"harbor-833\"\n    12\t\
+        \n    13\t@dataclass\n    14\tclass StorageSettings:\n    15\t    storage_window_s: int = 33909\n\
+        \    16\t    storage_token_ttl: int = 3455\n    17\t    storage_batch_size: int = 32040\n    18\t\
+        \    storage_timeout_ms: int = 64639\n    19\t\n    20\t@dataclass\n    21\tclass ServerSettings:\n\
+        \    22\t    server_max_items: int = 63838\n    23\t    server_endpoint: str = \"kelp-960\"\n\
+        \    24\t    server_batch_size: int = 10543\n    25\t    server_label: str = \"delta-722\"\n \
+        \   26\t\n    27\t@dataclass\n    28\tclass CacheSettings:\n    29\t    cache_endpoint: str =\
+        \ \"maple-157\"\n    30\t    cache_timeout_ms: int = 18560\n    31\t    cache_window_s: int =\
+        \ 48315\n    32\t    cache_max_items: int = 67544\n"
+  - role: assistant
+    content:
+    - type: text
+      text: Let me also see the other files in that folder.
+    - type: tool_use
+      id: toolu_01SMOKEREF2
+      name: Glob
+      input:
+        pattern: src/app/*.py
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKEREF2
+      content: 'src/app/ember_98.py
+
+        src/app/garnet_64.py
+
+        src/app/harbor_57.py
+
+        src/app/juniper_47.py
+
+        src/app/juniper_93.py
+
+        src/app/lumen_48.py
+
+        src/app/lumen_79.py
+
+        src/app/maple_15.py
+
+        src/app/nimbus_49.py
+
+        src/app/nimbus_84.py
+
+        src/app/onyx_35.py
+
+        src/app/quartz_39.py
+
+        '
+  - role: assistant
+    content:
+    - type: text
+      text: I will read src/app/indigo_settings.py again to be sure it is current.
+    - type: tool_use
+      id: toolu_01SMOKEREF3
+      name: Read
+      input:
+        file_path: src/app/indigo_settings.py
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKEREF3
+      content: "     1\t\"\"\"Synthetic settings module.\"\"\"\n     2\t\n     3\tfrom dataclasses import\
+        \ dataclass\n     4\t\n     5\t\n     6\t@dataclass\n     7\tclass LoggingSettings:\n     8\t\
+        \    logging_token_ttl: int = 81942\n     9\t    logging_label: str = \"cobalt-904\"\n    10\t\
+        \    logging_window_s: int = 26546\n    11\t    logging_endpoint: str = \"harbor-833\"\n    12\t\
+        \n    13\t@dataclass\n    14\tclass StorageSettings:\n    15\t    storage_window_s: int = 33909\n\
+        \    16\t    storage_token_ttl: int = 3455\n    17\t    storage_batch_size: int = 32040\n    18\t\
+        \    storage_timeout_ms: int = 64639\n    19\t\n    20\t@dataclass\n    21\tclass ServerSettings:\n\
+        \    22\t    server_max_items: int = 63838\n    23\t    server_endpoint: str = \"kelp-960\"\n\
+        \    24\t    server_batch_size: int = 10543\n    25\t    server_label: str = \"delta-722\"\n \
+        \   26\t\n    27\t@dataclass\n    28\tclass CacheSettings:\n    29\t    cache_endpoint: str =\
+        \ \"maple-157\"\n    30\t    cache_timeout_ms: int = 18560\n    31\t    cache_window_s: int =\
+        \ 48315\n    32\t    cache_max_items: int = 67544\n"
+    - type: text
+      text: According to the latest read of src/app/indigo_settings.py, what is the value of cache_timeout_ms?
+        Answer with only the value, without quotes, nothing else.
+expected: '18560'

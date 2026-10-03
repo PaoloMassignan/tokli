@@ -3,6 +3,7 @@ use cases in ``tokli.app`` (API-008)."""
 
 from __future__ import annotations
 
+import json
 import logging
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
@@ -18,11 +19,14 @@ from starlette.types import ASGIApp, Receive, Scope, Send
 
 from tokli.app.api import API_VERSION, compressors_view, request_view
 from tokli.app.bootstrap import Services
+from tokli.app.config_service import PatchError, apply_patch, config_view
 from tokli.app.metrics import InvalidParameters, MetricsQuery, parse_filters
+from tokli.app.runtime import Runtime
 from tokli.http.proxy import PREFIX, ProxyHandler
 from tokli.observability.ids import new_request_id
 
 _METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]
+_MUTATING = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 _LOG = logging.getLogger("tokli.metrics")
 UI_DIR = Path(__file__).resolve().parent.parent / "ui"
 # Explicit content types (UI-011): never the host's file-type registry, which on some Windows
@@ -61,11 +65,19 @@ class TokliHostCheck:
         if scope["type"] == "http" and (
             scope["path"] == "/tokli" or scope["path"].startswith("/tokli/")
         ):
-            host = dict(scope["headers"]).get(b"host", b"").decode("latin-1")
+            headers = dict(scope["headers"])
+            host = headers.get(b"host", b"").decode("latin-1")
+            kind = None
             if not self._accept(host):
+                kind = "forbidden_host"
+            elif scope["method"] in _MUTATING and b"origin" in headers:
+                # API-006: a browser on another origin may not change Tokli's settings.
+                origin = headers[b"origin"].decode("latin-1")
+                if not origin.startswith("http://") or not self._accept(origin[len("http://") :]):
+                    kind = "forbidden_origin"
+            if kind is not None:
                 response = JSONResponse(
-                    {"api_version": API_VERSION, "error": {"type": "forbidden_host"}},
-                    status_code=403,
+                    {"api_version": API_VERSION, "error": {"type": kind}}, status_code=403
                 )
                 await response(scope, receive, send)
                 return
@@ -92,7 +104,8 @@ def get_only(
 
 
 def create_app(services: Services, listen: str | None = None) -> ASGIApp:
-    proxy = ProxyHandler(services)
+    runtime = Runtime(services)
+    proxy = ProxyHandler(runtime)
     server = services.config.settings.server
     listen = listen or f"{server.host}:{server.port}"
     metrics = (
@@ -105,6 +118,7 @@ def create_app(services: Services, listen: str | None = None) -> ASGIApp:
     )
 
     async def health(request: Request) -> Response:
+        services = runtime.current()
         store = services.store
         telemetry = "disabled" if store is None else ("ok" if store.healthy else "failing")
         unavailable = [
@@ -180,7 +194,9 @@ def create_app(services: Services, listen: str | None = None) -> ASGIApp:
 
     @get_only
     async def compressors(request: Request) -> Response:
-        return JSONResponse(compressors_view(services.enabled, services.availability))
+        return JSONResponse(
+            compressors_view(runtime.current().config, runtime.current().availability)
+        )
 
     @get_only
     async def dashboard(request: Request) -> Response:
@@ -194,6 +210,31 @@ def create_app(services: Services, listen: str | None = None) -> ASGIApp:
         if media_type is None or not target.is_relative_to(UI_DIR) or not target.is_file():
             return _error(404, "not_found")
         return FileResponse(target, media_type=media_type)
+
+    async def config_endpoint(request: Request) -> Response:
+        """GET: the effective config; PATCH: change UI-editable keys (API-005…API-007)."""
+        if request.method == "GET":
+            return JSONResponse(config_view(runtime.current().config))
+        if request.method != "PATCH":
+            return _error(405, "method_not_allowed")
+        try:
+            body = json.loads(await request.body())
+            changes = body["changes"]
+            if not isinstance(changes, dict) or not changes:
+                raise ValueError("changes must be a non-empty mapping")
+        except (ValueError, KeyError, TypeError):
+            return _error(
+                400,
+                "invalid_parameter",
+                fields={"changes": 'expected {"changes": {"<key>": <value>, ...}}'},
+            )
+        try:
+            view = await anyio.to_thread.run_sync(lambda: apply_patch(runtime, changes))
+        except PatchError as exc:
+            return JSONResponse(
+                {"api_version": API_VERSION, "error": exc.error}, status_code=exc.status
+            )
+        return JSONResponse(view)
 
     async def unknown(request: Request) -> Response:
         rid = new_request_id()
@@ -233,6 +274,7 @@ def create_app(services: Services, listen: str | None = None) -> ASGIApp:
             Route("/tokli/api/metrics/timeseries", timeseries, methods=_METHODS),
             Route("/tokli/api/metrics/compressors", compressor_metrics, methods=_METHODS),
             Route("/tokli/api/compressors", compressors, methods=_METHODS),
+            Route("/tokli/api/config", config_endpoint, methods=_METHODS),
             Route(PREFIX, proxy.handle, methods=_METHODS),
             Route(PREFIX + "/{path:path}", proxy.handle, methods=_METHODS),
             Route("/{path:path}", unknown, methods=_METHODS),

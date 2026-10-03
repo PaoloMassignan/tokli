@@ -6,12 +6,13 @@ constructs compressors, tokenizers or sinks itself.
 
 from __future__ import annotations
 
+import dataclasses
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 
 from tokli.app.setup_tokenizers import required_tokenizers
 from tokli.compression.engine import Engine, EngineSettings
-from tokli.compression.registry import REGISTRY
+from tokli.compression.registry import build_registry
 from tokli.compression.stages import CompressionStage, FeaturesStage, Selector
 from tokli.config import EffectiveConfig
 from tokli.domain.models import SegmentKind
@@ -44,6 +45,7 @@ class Services:
     availability: Mapping[str, str]
     enabled: Mapping[str, bool]
     version: str
+    policy: str = "LOSSLESS_ONLY"  # derived from the enabled compressors (CC-002)
     calibration: OutlierWindow = field(default_factory=OutlierWindow)  # OB-011
 
 
@@ -75,13 +77,54 @@ def bootstrap(
         model_map=[(entry.pattern, entry.tokenizer) for entry in settings.tokens.model_map],
     )
 
+    parts = _compression(config, selector)
+    anthropic = settings.upstreams.anthropic
+    return Services(
+        config=config,
+        pipeline=parts.pipeline,
+        selector=selector,
+        mutable_kinds=parts.mutable_kinds,
+        upstream=Upstream(
+            anthropic.base_url,
+            anthropic.connect_timeout_s,
+            anthropic.read_timeout_s,
+            settings.tls.ca_bundle,
+        ),
+        traces=TraceBuffer(settings.observability.trace_buffer),
+        store=(
+            TelemetryStore(config.dirs.data_dir / TELEMETRY_DB, settings.telemetry.retention_days)
+            if telemetry
+            else None
+        ),
+        availability=parts.availability,
+        enabled=parts.enabled,
+        version=version,
+        policy=parts.policy,
+    )
+
+
+@dataclass(frozen=True)
+class _Compression:
+    pipeline: Pipeline
+    mutable_kinds: frozenset[SegmentKind]
+    availability: Mapping[str, str]
+    enabled: Mapping[str, bool]
+    policy: str
+
+
+def _compression(config: EffectiveConfig, selector: Selector) -> _Compression:
+    """The part of the services that a configuration change rebuilds (ADR 0009)."""
+    settings = config.settings
     compression = settings.compression
     enabled = {
         compressor_id: bool(toggle["enabled"])
         for compressor_id, toggle in settings.compressors.model_dump().items()
     }
     engine = Engine(
-        REGISTRY,
+        build_registry(
+            duplicate_min_tokens=settings.pruning.duplicate_min_tokens,
+            duplicate_require_same_call=settings.pruning.duplicate_require_same_call,
+        ),
         EngineSettings(
             enabled=enabled,
             verbatim_tools=frozenset(compression.verbatim_tools),
@@ -97,26 +140,27 @@ def bootstrap(
     pipeline = Pipeline(
         [RemindersStage(), FeaturesStage(selector), CompressionStage(engine, selector)]
     )
-
-    anthropic = settings.upstreams.anthropic
-    return Services(
-        config=config,
+    return _Compression(
         pipeline=pipeline,
-        selector=selector,
         mutable_kinds=frozenset(SegmentKind(kind) for kind in compression.segment_kinds),
-        upstream=Upstream(
-            anthropic.base_url,
-            anthropic.connect_timeout_s,
-            anthropic.read_timeout_s,
-            settings.tls.ca_bundle,
-        ),
-        traces=TraceBuffer(settings.observability.trace_buffer),
-        store=(
-            TelemetryStore(config.dirs.data_dir / TELEMETRY_DB, settings.telemetry.retention_days)
-            if telemetry
-            else None
-        ),
         availability=dict(engine.availability()),
         enabled=enabled,
-        version=version,
+        policy=engine.policy,
+    )
+
+
+def rebuild(services: Services, config: EffectiveConfig) -> Services:
+    """Services for a new configuration snapshot: tokenizers, upstream client, sinks and the
+    trace buffer are kept; the compression pipeline is rebuilt (ADR 0009)."""
+    parts = _compression(config, services.selector)
+    if services.store is not None:
+        services.store.set_retention(config.settings.telemetry.retention_days)
+    return dataclasses.replace(
+        services,
+        config=config,
+        pipeline=parts.pipeline,
+        mutable_kinds=parts.mutable_kinds,
+        availability=parts.availability,
+        enabled=parts.enabled,
+        policy=parts.policy,
     )
