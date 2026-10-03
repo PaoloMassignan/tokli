@@ -1,0 +1,61 @@
+case_set: 2026-10-03.1
+family: json_fact_lookup
+assumption: reads_minified_json
+checker: exact_value
+request:
+  max_tokens: 400
+  tools:
+  - name: list_builds
+    description: Lists recent synthetic CI builds.
+    input_schema:
+      type: object
+      properties: {}
+  messages:
+  - role: user
+    content: Use the list_builds tool, then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKECASE
+      name: list_builds
+      input: {}
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKECASE
+      content: "{\n  \"items\": [\n    {\n      \"id\": 200,\n      \"branch\": \"feature/fjord-36\",\n\
+        \      \"commit\": \"e82d49f\",\n      \"duration_s\": 638,\n      \"result\": \"failure\",\n\
+        \      \"tests\": {\n        \"passed\": 723,\n        \"failed\": 0\n      }\n    },\n    {\n\
+        \      \"id\": 201,\n      \"branch\": \"feature/delta-91\",\n      \"commit\": \"e3837fa\",\n\
+        \      \"duration_s\": 1690,\n      \"result\": \"failure\",\n      \"tests\": {\n        \"passed\"\
+        : 253,\n        \"failed\": 6\n      }\n    },\n    {\n      \"id\": 202,\n      \"branch\": \"\
+        feature/juniper-86\",\n      \"commit\": \"5f30f49\",\n      \"duration_s\": 619,\n      \"result\"\
+        : \"failure\",\n      \"tests\": {\n        \"passed\": 688,\n        \"failed\": 10\n      }\n\
+        \    },\n    {\n      \"id\": 203,\n      \"branch\": \"feature/fjord-77\",\n      \"commit\"\
+        : \"390c3ae\",\n      \"duration_s\": 1794,\n      \"result\": \"cancelled\",\n      \"tests\"\
+        : {\n        \"passed\": 218,\n        \"failed\": 6\n      }\n    },\n    {\n      \"id\": 204,\n\
+        \      \"branch\": \"feature/delta-83\",\n      \"commit\": \"a560c9b\",\n      \"duration_s\"\
+        : 1625,\n      \"result\": \"cancelled\",\n      \"tests\": {\n        \"passed\": 180,\n    \
+        \    \"failed\": 7\n      }\n    },\n    {\n      \"id\": 205,\n      \"branch\": \"feature/amber-84\"\
+        ,\n      \"commit\": \"1397b22\",\n      \"duration_s\": 1714,\n      \"result\": \"success\"\
+        ,\n      \"tests\": {\n        \"passed\": 80,\n        \"failed\": 2\n      }\n    },\n    {\n\
+        \      \"id\": 206,\n      \"branch\": \"feature/raven-91\",\n      \"commit\": \"8b932ae\",\n\
+        \      \"duration_s\": 1320,\n      \"result\": \"success\",\n      \"tests\": {\n        \"passed\"\
+        : 362,\n        \"failed\": 8\n      }\n    },\n    {\n      \"id\": 207,\n      \"branch\": \"\
+        feature/ember-61\",\n      \"commit\": \"dbf4b30\",\n      \"duration_s\": 1591,\n      \"result\"\
+        : \"success\",\n      \"tests\": {\n        \"passed\": 260,\n        \"failed\": 4\n      }\n\
+        \    },\n    {\n      \"id\": 208,\n      \"branch\": \"feature/lumen-91\",\n      \"commit\"\
+        : \"0c99511\",\n      \"duration_s\": 673,\n      \"result\": \"success\",\n      \"tests\": {\n\
+        \        \"passed\": 98,\n        \"failed\": 0\n      }\n    },\n    {\n      \"id\": 209,\n\
+        \      \"branch\": \"feature/juniper-1\",\n      \"commit\": \"5d17382\",\n      \"duration_s\"\
+        : 1368,\n      \"result\": \"failure\",\n      \"tests\": {\n        \"passed\": 684,\n      \
+        \  \"failed\": 9\n      }\n    },\n    {\n      \"id\": 210,\n      \"branch\": \"feature/ember-26\"\
+        ,\n      \"commit\": \"c48093c\",\n      \"duration_s\": 877,\n      \"result\": \"cancelled\"\
+        ,\n      \"tests\": {\n        \"passed\": 588,\n        \"failed\": 8\n      }\n    },\n    {\n\
+        \      \"id\": 211,\n      \"branch\": \"feature/maple-5\",\n      \"commit\": \"df34698\",\n\
+        \      \"duration_s\": 1264,\n      \"result\": \"success\",\n      \"tests\": {\n        \"passed\"\
+        : 134,\n        \"failed\": 8\n      }\n    }\n  ],\n  \"count\": 12\n}"
+    - type: text
+      text: In the list_builds result, what is the duration in seconds of the entry with id 204? Answer
+        with only the value, nothing else.
+expected: '1625'

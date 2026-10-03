@@ -231,23 +231,26 @@ Evidence codes:
 
 | Req | Why | AC | Tests |
 |---|---|---|---|
-| QE-001 | H23: harnesses that bypass the real pipeline | AC-QE-3 | `test_harness_uses_real_pipeline` |
+| QE-001 | H23: harnesses that bypass the real pipeline | AC-QE-3 | `test_harness_uses_real_pipeline`, `test_smoke_arms_differ_only_in_candidate` |
 | QE-002 | Brief§21 | AC-QE-3 | `test_harness_report_provenance` |
 | QE-003 | H23: one case per category | AC-QE-1 | `test_harness_insufficient_data` |
-| QE-004 | H23: metrics that normalise away removed content | AC-QE-2 | `test_harness_detects_destructive_compressor` |
+| QE-004 | H23: metrics that normalise away removed content | AC-QE-2 | `test_checker_exact_value`, `test_checker_json_structural`, `test_checker_registry_is_closed`, `test_smoke_harness_self_test` (S2.5); `test_harness_detects_destructive_compressor` (S8) |
 | QE-005 | reproducibility | AC-QE-3 | `test_harness_report_provenance` |
 | QE-006 | default-enable gate | release checklist | (process) + `test_registry_default_enabled_requires_eval_record` |
-| QE-007 | H23: constant or fabricated scores | AC-QE-1 | `test_harness_insufficient_data` |
+| QE-007 | H23: constant or fabricated scores | AC-QE-1 | `test_smoke_insufficient_data`, `test_eval_stops_at_call_cap` (S2.5); `test_harness_insufficient_data` (S8) |
 | QE-008 | marginal vs isolated (TELEMETRY §2) | AC-QE-3 | `test_harness_identity_ci_contains_zero` (+ isolated/chained report fields) |
-| QE-009 | Q11 decision: eval budget belongs to the user | AC-QE-4 | `test_eval_requires_confirmation_or_max_cost` |
-| QE-010 | same; no surprise spend | AC-QE-4 | `test_eval_stops_at_cost_cap` |
-| QE-011 | same; never automatic | AC-QE-4 | `test_eval_never_auto_starts`, `test_eval_requires_max_calls_without_pricing` |
-| QE-012 | R01§8: behaviour-dependent defaults arrive in S4, before the S8 harness | AC-QE-5 | `test_smoke_arms_differ_only_in_candidate` |
+| QE-009 | Q11 decision: eval budget belongs to the user | AC-QE-4, AC-QE-8 | `test_eval_requires_confirmation_or_yes` (S2.5, via QE-018); `test_eval_requires_confirmation_or_max_cost` (S6) |
+| QE-010 | same; no surprise spend | AC-QE-4 | `test_eval_stops_at_call_cap` (S2.5); `test_eval_stops_at_cost_cap` (S6) |
+| QE-011 | same; never automatic | AC-QE-4 | `test_eval_never_auto_starts`, `test_eval_requires_max_calls_without_pricing`, import contract `tokli.http \| tokli.eval` |
+| QE-012 | R01§8: behaviour-dependent defaults arrive in S4, before the S8 harness; S2.5 review A1–A3 | AC-QE-5 | `test_smoke_arms_differ_only_in_candidate`, `test_harness_uses_real_pipeline`, `test_case_not_exercised_is_excluded`, `test_cases_load_by_assumption`, `test_eval_temperature_default_omits_the_parameter`, `test_eval_temperature_zero_by_default` (S2.5 SCR-001) |
 | QE-013 | R01§8: one case format for smoke and full tiers; test-data hygiene | AC-QE-6 | `test_eval_cases_lint` |
 | QE-014 | R01§8 deterministic recording of configuration, saving and outcome | AC-QE-3 | `test_harness_report_provenance` |
 | QE-015 | R01§8: explicit, honest verdict rule | AC-QE-5 | `test_smoke_verdict_rule`, `test_smoke_insufficient_data` |
-| QE-016 | R01§7: CC-020 needs a machine-readable record | AC-QE-7 | `test_eval_record_schema_and_provisional_rule`, `test_eval_record_invalidated_by_version_bump` |
+| QE-016 | R01§7: CC-020 needs a machine-readable record | AC-QE-7 | `test_eval_record_schema_and_provisional_rule`, `test_eval_record_invalidated_by_version_bump`, `test_harness_report_provenance`, `test_registry_default_enabled_requires_eval_record` |
 | QE-017 | the harness must prove it can detect damage | AC-QE-2 | `test_smoke_harness_self_test` |
+| QE-018 | no price book before S6; S2.5 review X1, P2 | AC-QE-8 | `test_eval_requires_max_calls_without_pricing`, `test_eval_requires_confirmation_or_yes`, `test_eval_stops_at_call_cap` |
+| QE-019 | the proxy never holds credentials; S2.5 review X2, P3; ADR 0008 | AC-QE-8 | `test_eval_api_key_from_named_env_only`, `test_eval_never_writes_the_key`, `test_eval_sends_key_only_as_header` |
+| QE-020 | H23: checkers that cannot hide removed content; S2.5 review A5 | AC-QE-8 | `test_checker_exact_value`, `test_checker_json_structural` |
 
 ## Telemetry & cost (SPEC 013)
 

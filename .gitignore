@@ -7,3 +7,6 @@ __pycache__/
 .import_linter_cache/
 build/
 dist/
+
+# Per-case evaluation outputs (raw model answers); the report is committed (ADR 0008).
+evals/results/*/cases.jsonl

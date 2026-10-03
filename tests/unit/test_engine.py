@@ -361,21 +361,19 @@ def test_every_compressor_declares_assumptions() -> None:
 
 
 def test_registry_default_enabled_requires_eval_record() -> None:
+    """CC-020 / QE-016: since the S2.5 exit, every default-enabled compressor needs a real
+    evaluation record with no measurable damage; no `provisional` record is accepted."""
+    from tokli.eval.record import record_problems
+
     for compressor in REGISTRY:
         if not compressor.spec.default_enabled:
             continue
         path = ROOT / "evals" / "records" / f"{compressor.spec.id}.yaml"
         assert path.is_file(), path
         record = yaml.safe_load(path.read_text(encoding="utf-8"))
-        assert record["compressor"] == compressor.spec.id
-        assert str(record["version"]) == compressor.spec.version
-        assert set(record["assumptions_covered"]) >= set(compressor.spec.assumptions)
-        if record["tier"] == "provisional":
-            assert (
-                compressor.spec.id == "json_minify"
-            )  # QE-016: the only provisional record allowed
-        else:
-            assert record["verdict"] == "no_measurable_damage"
+        assert record_problems(record, compressor.spec) == [], compressor.spec.id
+        report = ROOT / "evals" / record["report"]
+        assert report.is_file(), report
 
 
 def test_json_minify_is_the_only_registered_compressor_in_s1() -> None:

@@ -1,0 +1,85 @@
+case_set: 2026-10-03.1
+family: json_fact_lookup
+assumption: reads_minified_json
+checker: exact_value
+request:
+  max_tokens: 400
+  tools:
+  - name: list_inventory
+    description: Lists the items of a synthetic warehouse inventory.
+    input_schema:
+      type: object
+      properties: {}
+  messages:
+  - role: user
+    content: Use the list_inventory tool, then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKECASE
+      name: list_inventory
+      input: {}
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKECASE
+      content: "{\n  \"items\": [\n    {\n      \"id\": 1000,\n      \"sku\": \"SKU-40717\",\n      \"\
+        name\": \"delta juniper\",\n      \"quantity\": 290,\n      \"price\": \"342.71\",\n      \"tags\"\
+        : [\n        \"birch\",\n        \"quartz\",\n        \"ember\"\n      ],\n      \"location\"\
+        : {\n        \"aisle\": 25,\n        \"shelf\": \"F\"\n      }\n    },\n    {\n      \"id\": 1001,\n\
+        \      \"sku\": \"SKU-48823\",\n      \"name\": \"garnet juniper\",\n      \"quantity\": 411,\n\
+        \      \"price\": \"526.61\",\n      \"tags\": [\n        \"pebble\",\n        \"nimbus\",\n \
+        \       \"onyx\"\n      ],\n      \"location\": {\n        \"aisle\": 25,\n        \"shelf\":\
+        \ \"B\"\n      }\n    },\n    {\n      \"id\": 1002,\n      \"sku\": \"SKU-52113\",\n      \"\
+        name\": \"ember quartz\",\n      \"quantity\": 385,\n      \"price\": \"427.64\",\n      \"tags\"\
+        : [\n        \"onyx\",\n        \"birch\"\n      ],\n      \"location\": {\n        \"aisle\"\
+        : 6,\n        \"shelf\": \"F\"\n      }\n    },\n    {\n      \"id\": 1003,\n      \"sku\": \"\
+        SKU-60997\",\n      \"name\": \"delta fjord\",\n      \"quantity\": 352,\n      \"price\": \"\
+        726.99\",\n      \"tags\": [\n        \"kelp\",\n        \"amber\",\n        \"garnet\"\n    \
+        \  ],\n      \"location\": {\n        \"aisle\": 7,\n        \"shelf\": \"C\"\n      }\n    },\n\
+        \    {\n      \"id\": 1004,\n      \"sku\": \"SKU-14800\",\n      \"name\": \"fjord quartz\",\n\
+        \      \"quantity\": 279,\n      \"price\": \"405.77\",\n      \"tags\": [\n        \"nimbus\"\
+        ,\n        \"harbor\"\n      ],\n      \"location\": {\n        \"aisle\": 15,\n        \"shelf\"\
+        : \"B\"\n      }\n    },\n    {\n      \"id\": 1005,\n      \"sku\": \"SKU-38126\",\n      \"\
+        name\": \"raven lumen\",\n      \"quantity\": 47,\n      \"price\": \"84.79\",\n      \"tags\"\
+        : [\n        \"indigo\",\n        \"quartz\"\n      ],\n      \"location\": {\n        \"aisle\"\
+        : 32,\n        \"shelf\": \"B\"\n      }\n    },\n    {\n      \"id\": 1006,\n      \"sku\": \"\
+        SKU-22226\",\n      \"name\": \"amber garnet\",\n      \"quantity\": 40,\n      \"price\": \"\
+        475.29\",\n      \"tags\": [\n        \"cobalt\",\n        \"lumen\",\n        \"pebble\"\n  \
+        \    ],\n      \"location\": {\n        \"aisle\": 27,\n        \"shelf\": \"C\"\n      }\n  \
+        \  },\n    {\n      \"id\": 1007,\n      \"sku\": \"SKU-64482\",\n      \"name\": \"pebble amber\"\
+        ,\n      \"quantity\": 55,\n      \"price\": \"281.20\",\n      \"tags\": [\n        \"garnet\"\
+        \n      ],\n      \"location\": {\n        \"aisle\": 20,\n        \"shelf\": \"E\"\n      }\n\
+        \    },\n    {\n      \"id\": 1008,\n      \"sku\": \"SKU-68763\",\n      \"name\": \"onyx pebble\"\
+        ,\n      \"quantity\": 495,\n      \"price\": \"208.70\",\n      \"tags\": [\n        \"onyx\"\
+        ,\n        \"ember\"\n      ],\n      \"location\": {\n        \"aisle\": 7,\n        \"shelf\"\
+        : \"E\"\n      }\n    },\n    {\n      \"id\": 1009,\n      \"sku\": \"SKU-50107\",\n      \"\
+        name\": \"juniper juniper\",\n      \"quantity\": 58,\n      \"price\": \"639.45\",\n      \"\
+        tags\": [\n        \"indigo\"\n      ],\n      \"location\": {\n        \"aisle\": 13,\n     \
+        \   \"shelf\": \"A\"\n      }\n    },\n    {\n      \"id\": 1010,\n      \"sku\": \"SKU-72581\"\
+        ,\n      \"name\": \"harbor garnet\",\n      \"quantity\": 8,\n      \"price\": \"473.14\",\n\
+        \      \"tags\": [],\n      \"location\": {\n        \"aisle\": 4,\n        \"shelf\": \"B\"\n\
+        \      }\n    },\n    {\n      \"id\": 1011,\n      \"sku\": \"SKU-96622\",\n      \"name\": \"\
+        amber pebble\",\n      \"quantity\": 33,\n      \"price\": \"169.22\",\n      \"tags\": [\n  \
+        \      \"delta\"\n      ],\n      \"location\": {\n        \"aisle\": 5,\n        \"shelf\": \"\
+        C\"\n      }\n    },\n    {\n      \"id\": 1012,\n      \"sku\": \"SKU-55677\",\n      \"name\"\
+        : \"amber quartz\",\n      \"quantity\": 76,\n      \"price\": \"198.91\",\n      \"tags\": [\n\
+        \        \"nimbus\",\n        \"pebble\"\n      ],\n      \"location\": {\n        \"aisle\":\
+        \ 30,\n        \"shelf\": \"D\"\n      }\n    },\n    {\n      \"id\": 1013,\n      \"sku\": \"\
+        SKU-77699\",\n      \"name\": \"kelp raven\",\n      \"quantity\": 340,\n      \"price\": \"268.77\"\
+        ,\n      \"tags\": [\n        \"ember\",\n        \"delta\",\n        \"nimbus\"\n      ],\n \
+        \     \"location\": {\n        \"aisle\": 5,\n        \"shelf\": \"C\"\n      }\n    },\n    {\n\
+        \      \"id\": 1014,\n      \"sku\": \"SKU-75348\",\n      \"name\": \"delta delta\",\n      \"\
+        quantity\": 93,\n      \"price\": \"24.22\",\n      \"tags\": [\n        \"birch\",\n        \"\
+        amber\"\n      ],\n      \"location\": {\n        \"aisle\": 12,\n        \"shelf\": \"C\"\n \
+        \     }\n    },\n    {\n      \"id\": 1015,\n      \"sku\": \"SKU-31949\",\n      \"name\": \"\
+        onyx kelp\",\n      \"quantity\": 5,\n      \"price\": \"426.98\",\n      \"tags\": [\n      \
+        \  \"kelp\"\n      ],\n      \"location\": {\n        \"aisle\": 27,\n        \"shelf\": \"D\"\
+        \n      }\n    },\n    {\n      \"id\": 1016,\n      \"sku\": \"SKU-95895\",\n      \"name\":\
+        \ \"amber harbor\",\n      \"quantity\": 463,\n      \"price\": \"471.42\",\n      \"tags\": [\n\
+        \        \"indigo\",\n        \"raven\"\n      ],\n      \"location\": {\n        \"aisle\": 10,\n\
+        \        \"shelf\": \"C\"\n      }\n    }\n  ],\n  \"count\": 17\n}"
+    - type: text
+      text: In the list_inventory result, what is the quantity of the entry with id 1007? Answer with
+        only the value, nothing else.
+expected: '55'

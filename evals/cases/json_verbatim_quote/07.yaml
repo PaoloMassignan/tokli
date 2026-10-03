@@ -1,0 +1,75 @@
+case_set: 2026-10-03.1
+family: json_verbatim_quote
+assumption: not_quoted_verbatim
+checker: json_structural
+request:
+  max_tokens: 400
+  tools:
+  - name: list_builds
+    description: Lists recent synthetic CI builds.
+    input_schema:
+      type: object
+      properties: {}
+  messages:
+  - role: user
+    content: Use the list_builds tool, then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKECASE
+      name: list_builds
+      input: {}
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKECASE
+      content: "{\n  \"items\": [\n    {\n      \"id\": 200,\n      \"branch\": \"feature/ember-11\",\n\
+        \      \"commit\": \"ca370eb\",\n      \"duration_s\": 1651,\n      \"result\": \"success\",\n\
+        \      \"tests\": {\n        \"passed\": 99,\n        \"failed\": 10\n      }\n    },\n    {\n\
+        \      \"id\": 201,\n      \"branch\": \"feature/onyx-35\",\n      \"commit\": \"5f9b7ea\",\n\
+        \      \"duration_s\": 284,\n      \"result\": \"success\",\n      \"tests\": {\n        \"passed\"\
+        : 323,\n        \"failed\": 1\n      }\n    },\n    {\n      \"id\": 202,\n      \"branch\": \"\
+        feature/raven-39\",\n      \"commit\": \"92038cc\",\n      \"duration_s\": 36,\n      \"result\"\
+        : \"cancelled\",\n      \"tests\": {\n        \"passed\": 217,\n        \"failed\": 0\n      }\n\
+        \    },\n    {\n      \"id\": 203,\n      \"branch\": \"feature/maple-98\",\n      \"commit\"\
+        : \"9f3b50b\",\n      \"duration_s\": 1778,\n      \"result\": \"success\",\n      \"tests\":\
+        \ {\n        \"passed\": 239,\n        \"failed\": 6\n      }\n    },\n    {\n      \"id\": 204,\n\
+        \      \"branch\": \"feature/juniper-58\",\n      \"commit\": \"c89b73e\",\n      \"duration_s\"\
+        : 136,\n      \"result\": \"success\",\n      \"tests\": {\n        \"passed\": 517,\n       \
+        \ \"failed\": 1\n      }\n    },\n    {\n      \"id\": 205,\n      \"branch\": \"feature/indigo-73\"\
+        ,\n      \"commit\": \"9369843\",\n      \"duration_s\": 451,\n      \"result\": \"cancelled\"\
+        ,\n      \"tests\": {\n        \"passed\": 801,\n        \"failed\": 12\n      }\n    },\n   \
+        \ {\n      \"id\": 206,\n      \"branch\": \"feature/quartz-38\",\n      \"commit\": \"98176da\"\
+        ,\n      \"duration_s\": 675,\n      \"result\": \"failure\",\n      \"tests\": {\n        \"\
+        passed\": 325,\n        \"failed\": 2\n      }\n    },\n    {\n      \"id\": 207,\n      \"branch\"\
+        : \"feature/lumen-39\",\n      \"commit\": \"f23d8d2\",\n      \"duration_s\": 867,\n      \"\
+        result\": \"cancelled\",\n      \"tests\": {\n        \"passed\": 656,\n        \"failed\": 6\n\
+        \      }\n    },\n    {\n      \"id\": 208,\n      \"branch\": \"feature/delta-16\",\n      \"\
+        commit\": \"3c2a8c4\",\n      \"duration_s\": 185,\n      \"result\": \"failure\",\n      \"tests\"\
+        : {\n        \"passed\": 208,\n        \"failed\": 11\n      }\n    },\n    {\n      \"id\": 209,\n\
+        \      \"branch\": \"feature/delta-45\",\n      \"commit\": \"1bc4d09\",\n      \"duration_s\"\
+        : 1258,\n      \"result\": \"success\",\n      \"tests\": {\n        \"passed\": 677,\n      \
+        \  \"failed\": 7\n      }\n    },\n    {\n      \"id\": 210,\n      \"branch\": \"feature/kelp-61\"\
+        ,\n      \"commit\": \"0fd7e94\",\n      \"duration_s\": 1466,\n      \"result\": \"cancelled\"\
+        ,\n      \"tests\": {\n        \"passed\": 771,\n        \"failed\": 8\n      }\n    },\n    {\n\
+        \      \"id\": 211,\n      \"branch\": \"feature/indigo-38\",\n      \"commit\": \"64e2272\",\n\
+        \      \"duration_s\": 776,\n      \"result\": \"success\",\n      \"tests\": {\n        \"passed\"\
+        : 703,\n        \"failed\": 1\n      }\n    },\n    {\n      \"id\": 212,\n      \"branch\": \"\
+        feature/garnet-69\",\n      \"commit\": \"c2f689e\",\n      \"duration_s\": 1723,\n      \"result\"\
+        : \"cancelled\",\n      \"tests\": {\n        \"passed\": 295,\n        \"failed\": 6\n      }\n\
+        \    },\n    {\n      \"id\": 213,\n      \"branch\": \"feature/nimbus-61\",\n      \"commit\"\
+        : \"055275c\",\n      \"duration_s\": 935,\n      \"result\": \"cancelled\",\n      \"tests\"\
+        : {\n        \"passed\": 257,\n        \"failed\": 12\n      }\n    },\n    {\n      \"id\": 214,\n\
+        \      \"branch\": \"feature/ember-23\",\n      \"commit\": \"0ecfe1b\",\n      \"duration_s\"\
+        : 1749,\n      \"result\": \"success\",\n      \"tests\": {\n        \"passed\": 386,\n      \
+        \  \"failed\": 0\n      }\n    },\n    {\n      \"id\": 215,\n      \"branch\": \"feature/harbor-85\"\
+        ,\n      \"commit\": \"7a916ce\",\n      \"duration_s\": 713,\n      \"result\": \"cancelled\"\
+        ,\n      \"tests\": {\n        \"passed\": 800,\n        \"failed\": 1\n      }\n    },\n    {\n\
+        \      \"id\": 216,\n      \"branch\": \"feature/ember-36\",\n      \"commit\": \"982c25f\",\n\
+        \      \"duration_s\": 965,\n      \"result\": \"success\",\n      \"tests\": {\n        \"passed\"\
+        : 654,\n        \"failed\": 1\n      }\n    }\n  ]\n}"
+    - type: text
+      text: Copy the complete JSON object of the entry with id 205 from the list_builds result, exactly
+        as it appears, so I can pass it to another tool. Reply with the JSON object only.
+expected: '{"branch": "feature/indigo-73", "commit": "9369843", "duration_s": 451, "id": 205, "result":
+  "cancelled", "tests": {"failed": 12, "passed": 801}}'

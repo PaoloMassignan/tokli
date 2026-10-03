@@ -1,10 +1,11 @@
-# Evaluation record (SPEC 012, QE-016). `provisional` is allowed only for json_minify and only
-# until the S2.5 smoke evaluation replaces it (Phase 0.1 decision P1).
+# Evaluation record (SPEC 012, QE-016), written by `tokli eval smoke`.
 compressor: json_minify
-version: "1"
-tier: provisional
-assumptions_covered: [reads_minified_json, not_quoted_verbatim]
-verdict: null
-model: null
-date: 2026-09-30
-report: null
+version: '1'
+tier: smoke
+assumptions_covered:
+- reads_minified_json
+- not_quoted_verbatim
+verdict: no_measurable_damage
+model: claude-opus-5-5
+date: '2026-10-03'
+report: results/2026-10-03-json_minify-claude-opus-5-5/report.md

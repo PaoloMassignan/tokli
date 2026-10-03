@@ -1,0 +1,61 @@
+case_set: 2026-10-03.1
+family: json_fact_lookup
+assumption: reads_minified_json
+checker: exact_value
+request:
+  max_tokens: 400
+  tools:
+  - name: list_builds
+    description: Lists recent synthetic CI builds.
+    input_schema:
+      type: object
+      properties: {}
+  messages:
+  - role: user
+    content: Use the list_builds tool, then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKECASE
+      name: list_builds
+      input: {}
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKECASE
+      content: "{\n  \"items\": [\n    {\n      \"id\": 200,\n      \"branch\": \"feature/nimbus-35\"\
+        ,\n      \"commit\": \"82508f4\",\n      \"duration_s\": 1783,\n      \"result\": \"cancelled\"\
+        ,\n      \"tests\": {\n        \"passed\": 97,\n        \"failed\": 4\n      }\n    },\n    {\n\
+        \      \"id\": 201,\n      \"branch\": \"feature/fjord-76\",\n      \"commit\": \"49aff13\",\n\
+        \      \"duration_s\": 1278,\n      \"result\": \"success\",\n      \"tests\": {\n        \"passed\"\
+        : 740,\n        \"failed\": 3\n      }\n    },\n    {\n      \"id\": 202,\n      \"branch\": \"\
+        feature/ember-78\",\n      \"commit\": \"c612805\",\n      \"duration_s\": 460,\n      \"result\"\
+        : \"cancelled\",\n      \"tests\": {\n        \"passed\": 895,\n        \"failed\": 2\n      }\n\
+        \    },\n    {\n      \"id\": 203,\n      \"branch\": \"feature/juniper-66\",\n      \"commit\"\
+        : \"b8c7e15\",\n      \"duration_s\": 1720,\n      \"result\": \"success\",\n      \"tests\":\
+        \ {\n        \"passed\": 147,\n        \"failed\": 8\n      }\n    },\n    {\n      \"id\": 204,\n\
+        \      \"branch\": \"feature/nimbus-28\",\n      \"commit\": \"7c42412\",\n      \"duration_s\"\
+        : 1573,\n      \"result\": \"success\",\n      \"tests\": {\n        \"passed\": 487,\n      \
+        \  \"failed\": 1\n      }\n    },\n    {\n      \"id\": 205,\n      \"branch\": \"feature/amber-90\"\
+        ,\n      \"commit\": \"4af4161\",\n      \"duration_s\": 1060,\n      \"result\": \"success\"\
+        ,\n      \"tests\": {\n        \"passed\": 419,\n        \"failed\": 3\n      }\n    },\n    {\n\
+        \      \"id\": 206,\n      \"branch\": \"feature/cobalt-48\",\n      \"commit\": \"5f29d52\",\n\
+        \      \"duration_s\": 333,\n      \"result\": \"cancelled\",\n      \"tests\": {\n        \"\
+        passed\": 533,\n        \"failed\": 3\n      }\n    },\n    {\n      \"id\": 207,\n      \"branch\"\
+        : \"feature/maple-58\",\n      \"commit\": \"747ffee\",\n      \"duration_s\": 924,\n      \"\
+        result\": \"success\",\n      \"tests\": {\n        \"passed\": 220,\n        \"failed\": 2\n\
+        \      }\n    },\n    {\n      \"id\": 208,\n      \"branch\": \"feature/lumen-6\",\n      \"\
+        commit\": \"eb61014\",\n      \"duration_s\": 1124,\n      \"result\": \"failure\",\n      \"\
+        tests\": {\n        \"passed\": 142,\n        \"failed\": 2\n      }\n    },\n    {\n      \"\
+        id\": 209,\n      \"branch\": \"feature/fjord-77\",\n      \"commit\": \"0d49735\",\n      \"\
+        duration_s\": 1173,\n      \"result\": \"failure\",\n      \"tests\": {\n        \"passed\": 446,\n\
+        \        \"failed\": 4\n      }\n    },\n    {\n      \"id\": 210,\n      \"branch\": \"feature/fjord-63\"\
+        ,\n      \"commit\": \"930b4da\",\n      \"duration_s\": 47,\n      \"result\": \"success\",\n\
+        \      \"tests\": {\n        \"passed\": 868,\n        \"failed\": 8\n      }\n    },\n    {\n\
+        \      \"id\": 211,\n      \"branch\": \"feature/amber-27\",\n      \"commit\": \"bf71c1e\",\n\
+        \      \"duration_s\": 1384,\n      \"result\": \"success\",\n      \"tests\": {\n        \"passed\"\
+        : 677,\n        \"failed\": 9\n      }\n    }\n  ],\n  \"count\": 12\n}"
+    - type: text
+      text: In the list_builds result, what is the duration in seconds of the entry with id 210? Answer
+        with only the value, nothing else.
+expected: '47'

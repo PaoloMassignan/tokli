@@ -1,0 +1,59 @@
+case_set: 2026-10-03.1
+family: json_verbatim_quote
+assumption: not_quoted_verbatim
+checker: json_structural
+request:
+  max_tokens: 400
+  tools:
+  - name: list_builds
+    description: Lists recent synthetic CI builds.
+    input_schema:
+      type: object
+      properties: {}
+  messages:
+  - role: user
+    content: Use the list_builds tool, then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKECASE
+      name: list_builds
+      input: {}
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKECASE
+      content: "{\n  \"items\": [\n    {\n      \"id\": 200,\n      \"branch\": \"feature/ember-14\",\n\
+        \      \"commit\": \"c00a783\",\n      \"duration_s\": 1040,\n      \"result\": \"failure\",\n\
+        \      \"tests\": {\n        \"passed\": 346,\n        \"failed\": 9\n      }\n    },\n    {\n\
+        \      \"id\": 201,\n      \"branch\": \"feature/fjord-41\",\n      \"commit\": \"2499ac0\",\n\
+        \      \"duration_s\": 39,\n      \"result\": \"failure\",\n      \"tests\": {\n        \"passed\"\
+        : 570,\n        \"failed\": 7\n      }\n    },\n    {\n      \"id\": 202,\n      \"branch\": \"\
+        feature/kelp-74\",\n      \"commit\": \"40e8eab\",\n      \"duration_s\": 158,\n      \"result\"\
+        : \"failure\",\n      \"tests\": {\n        \"passed\": 593,\n        \"failed\": 7\n      }\n\
+        \    },\n    {\n      \"id\": 203,\n      \"branch\": \"feature/delta-12\",\n      \"commit\"\
+        : \"12dedb6\",\n      \"duration_s\": 737,\n      \"result\": \"failure\",\n      \"tests\": {\n\
+        \        \"passed\": 150,\n        \"failed\": 5\n      }\n    },\n    {\n      \"id\": 204,\n\
+        \      \"branch\": \"feature/fjord-17\",\n      \"commit\": \"231c344\",\n      \"duration_s\"\
+        : 1179,\n      \"result\": \"success\",\n      \"tests\": {\n        \"passed\": 240,\n      \
+        \  \"failed\": 4\n      }\n    },\n    {\n      \"id\": 205,\n      \"branch\": \"feature/quartz-98\"\
+        ,\n      \"commit\": \"c345a8e\",\n      \"duration_s\": 396,\n      \"result\": \"success\",\n\
+        \      \"tests\": {\n        \"passed\": 726,\n        \"failed\": 3\n      }\n    },\n    {\n\
+        \      \"id\": 206,\n      \"branch\": \"feature/delta-74\",\n      \"commit\": \"64da1a1\",\n\
+        \      \"duration_s\": 1389,\n      \"result\": \"cancelled\",\n      \"tests\": {\n        \"\
+        passed\": 540,\n        \"failed\": 12\n      }\n    },\n    {\n      \"id\": 207,\n      \"branch\"\
+        : \"feature/birch-77\",\n      \"commit\": \"c29a190\",\n      \"duration_s\": 1197,\n      \"\
+        result\": \"cancelled\",\n      \"tests\": {\n        \"passed\": 315,\n        \"failed\": 12\n\
+        \      }\n    },\n    {\n      \"id\": 208,\n      \"branch\": \"feature/maple-83\",\n      \"\
+        commit\": \"e35c279\",\n      \"duration_s\": 946,\n      \"result\": \"success\",\n      \"tests\"\
+        : {\n        \"passed\": 889,\n        \"failed\": 6\n      }\n    },\n    {\n      \"id\": 209,\n\
+        \      \"branch\": \"feature/ember-52\",\n      \"commit\": \"9e6dd1d\",\n      \"duration_s\"\
+        : 778,\n      \"result\": \"success\",\n      \"tests\": {\n        \"passed\": 434,\n       \
+        \ \"failed\": 5\n      }\n    },\n    {\n      \"id\": 210,\n      \"branch\": \"feature/amber-41\"\
+        ,\n      \"commit\": \"8f47514\",\n      \"duration_s\": 1457,\n      \"result\": \"cancelled\"\
+        ,\n      \"tests\": {\n        \"passed\": 889,\n        \"failed\": 9\n      }\n    }\n  ]\n}"
+    - type: text
+      text: Copy the complete JSON object of the entry with id 205 from the list_builds result, exactly
+        as it appears, so I can pass it to another tool. Reply with the JSON object only.
+expected: '{"branch": "feature/quartz-98", "commit": "c345a8e", "duration_s": 396, "id": 205, "result":
+  "success", "tests": {"failed": 3, "passed": 726}}'

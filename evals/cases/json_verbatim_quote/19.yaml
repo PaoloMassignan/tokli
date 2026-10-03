@@ -1,0 +1,90 @@
+case_set: 2026-10-03.1
+family: json_verbatim_quote
+assumption: not_quoted_verbatim
+checker: json_structural
+request:
+  max_tokens: 400
+  tools:
+  - name: list_orders
+    description: Lists synthetic customer orders.
+    input_schema:
+      type: object
+      properties: {}
+  messages:
+  - role: user
+    content: Use the list_orders tool, then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKECASE
+      name: list_orders
+      input: {}
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKECASE
+      content: "{\n  \"items\": [\n    {\n      \"id\": 5000,\n      \"customer\": \"customer-695\",\n\
+        \      \"status\": \"shipped\",\n      \"total\": \"1787.37\",\n      \"lines\": [\n        {\n\
+        \          \"sku\": \"SKU-77997\",\n          \"qty\": 2\n        },\n        {\n          \"\
+        sku\": \"SKU-55251\",\n          \"qty\": 1\n        },\n        {\n          \"sku\": \"SKU-15028\"\
+        ,\n          \"qty\": 7\n        }\n      ]\n    },\n    {\n      \"id\": 5001,\n      \"customer\"\
+        : \"customer-584\",\n      \"status\": \"open\",\n      \"total\": \"2725.72\",\n      \"lines\"\
+        : [\n        {\n          \"sku\": \"SKU-39186\",\n          \"qty\": 8\n        },\n        {\n\
+        \          \"sku\": \"SKU-42104\",\n          \"qty\": 2\n        },\n        {\n          \"\
+        sku\": \"SKU-83694\",\n          \"qty\": 7\n        }\n      ]\n    },\n    {\n      \"id\":\
+        \ 5002,\n      \"customer\": \"customer-691\",\n      \"status\": \"open\",\n      \"total\":\
+        \ \"908.45\",\n      \"lines\": [\n        {\n          \"sku\": \"SKU-55625\",\n          \"\
+        qty\": 7\n        },\n        {\n          \"sku\": \"SKU-30535\",\n          \"qty\": 3\n   \
+        \     },\n        {\n          \"sku\": \"SKU-88301\",\n          \"qty\": 3\n        }\n    \
+        \  ]\n    },\n    {\n      \"id\": 5003,\n      \"customer\": \"customer-308\",\n      \"status\"\
+        : \"cancelled\",\n      \"total\": \"3589.99\",\n      \"lines\": [\n        {\n          \"sku\"\
+        : \"SKU-86629\",\n          \"qty\": 6\n        }\n      ]\n    },\n    {\n      \"id\": 5004,\n\
+        \      \"customer\": \"customer-812\",\n      \"status\": \"open\",\n      \"total\": \"1684.76\"\
+        ,\n      \"lines\": [\n        {\n          \"sku\": \"SKU-38247\",\n          \"qty\": 9\n  \
+        \      },\n        {\n          \"sku\": \"SKU-38368\",\n          \"qty\": 8\n        },\n  \
+        \      {\n          \"sku\": \"SKU-95252\",\n          \"qty\": 9\n        }\n      ]\n    },\n\
+        \    {\n      \"id\": 5005,\n      \"customer\": \"customer-117\",\n      \"status\": \"returned\"\
+        ,\n      \"total\": \"1070.32\",\n      \"lines\": [\n        {\n          \"sku\": \"SKU-53218\"\
+        ,\n          \"qty\": 5\n        }\n      ]\n    },\n    {\n      \"id\": 5006,\n      \"customer\"\
+        : \"customer-538\",\n      \"status\": \"returned\",\n      \"total\": \"93.51\",\n      \"lines\"\
+        : [\n        {\n          \"sku\": \"SKU-51280\",\n          \"qty\": 6\n        }\n      ]\n\
+        \    },\n    {\n      \"id\": 5007,\n      \"customer\": \"customer-683\",\n      \"status\":\
+        \ \"cancelled\",\n      \"total\": \"2125.23\",\n      \"lines\": [\n        {\n          \"sku\"\
+        : \"SKU-36448\",\n          \"qty\": 8\n        }\n      ]\n    },\n    {\n      \"id\": 5008,\n\
+        \      \"customer\": \"customer-941\",\n      \"status\": \"shipped\",\n      \"total\": \"3482.47\"\
+        ,\n      \"lines\": [\n        {\n          \"sku\": \"SKU-29672\",\n          \"qty\": 1\n  \
+        \      }\n      ]\n    },\n    {\n      \"id\": 5009,\n      \"customer\": \"customer-165\",\n\
+        \      \"status\": \"open\",\n      \"total\": \"1697.74\",\n      \"lines\": [\n        {\n \
+        \         \"sku\": \"SKU-72733\",\n          \"qty\": 7\n        },\n        {\n          \"sku\"\
+        : \"SKU-49603\",\n          \"qty\": 8\n        }\n      ]\n    },\n    {\n      \"id\": 5010,\n\
+        \      \"customer\": \"customer-247\",\n      \"status\": \"returned\",\n      \"total\": \"3333.13\"\
+        ,\n      \"lines\": [\n        {\n          \"sku\": \"SKU-37823\",\n          \"qty\": 9\n  \
+        \      },\n        {\n          \"sku\": \"SKU-41318\",\n          \"qty\": 7\n        },\n  \
+        \      {\n          \"sku\": \"SKU-22958\",\n          \"qty\": 5\n        }\n      ]\n    },\n\
+        \    {\n      \"id\": 5011,\n      \"customer\": \"customer-171\",\n      \"status\": \"shipped\"\
+        ,\n      \"total\": \"1033.89\",\n      \"lines\": [\n        {\n          \"sku\": \"SKU-67488\"\
+        ,\n          \"qty\": 9\n        },\n        {\n          \"sku\": \"SKU-29876\",\n          \"\
+        qty\": 6\n        }\n      ]\n    },\n    {\n      \"id\": 5012,\n      \"customer\": \"customer-588\"\
+        ,\n      \"status\": \"returned\",\n      \"total\": \"1220.69\",\n      \"lines\": [\n      \
+        \  {\n          \"sku\": \"SKU-31241\",\n          \"qty\": 2\n        },\n        {\n       \
+        \   \"sku\": \"SKU-87050\",\n          \"qty\": 7\n        }\n      ]\n    },\n    {\n      \"\
+        id\": 5013,\n      \"customer\": \"customer-846\",\n      \"status\": \"open\",\n      \"total\"\
+        : \"2800.19\",\n      \"lines\": [\n        {\n          \"sku\": \"SKU-77163\",\n          \"\
+        qty\": 4\n        },\n        {\n          \"sku\": \"SKU-92656\",\n          \"qty\": 1\n   \
+        \     },\n        {\n          \"sku\": \"SKU-88685\",\n          \"qty\": 6\n        }\n    \
+        \  ]\n    },\n    {\n      \"id\": 5014,\n      \"customer\": \"customer-249\",\n      \"status\"\
+        : \"open\",\n      \"total\": \"623.11\",\n      \"lines\": [\n        {\n          \"sku\": \"\
+        SKU-77282\",\n          \"qty\": 9\n        }\n      ]\n    },\n    {\n      \"id\": 5015,\n \
+        \     \"customer\": \"customer-430\",\n      \"status\": \"open\",\n      \"total\": \"2976.68\"\
+        ,\n      \"lines\": [\n        {\n          \"sku\": \"SKU-53477\",\n          \"qty\": 1\n  \
+        \      },\n        {\n          \"sku\": \"SKU-60783\",\n          \"qty\": 9\n        }\n   \
+        \   ]\n    },\n    {\n      \"id\": 5016,\n      \"customer\": \"customer-899\",\n      \"status\"\
+        : \"shipped\",\n      \"total\": \"3654.01\",\n      \"lines\": [\n        {\n          \"sku\"\
+        : \"SKU-40298\",\n          \"qty\": 8\n        },\n        {\n          \"sku\": \"SKU-91535\"\
+        ,\n          \"qty\": 3\n        },\n        {\n          \"sku\": \"SKU-19704\",\n          \"\
+        qty\": 3\n        }\n      ]\n    }\n  ]\n}"
+    - type: text
+      text: Copy the complete JSON object of the entry with id 5016 from the list_orders result, exactly
+        as it appears, so I can pass it to another tool. Reply with the JSON object only.
+expected: '{"customer": "customer-899", "id": 5016, "lines": [{"qty": 8, "sku": "SKU-40298"}, {"qty":
+  3, "sku": "SKU-91535"}, {"qty": 3, "sku": "SKU-19704"}], "status": "shipped", "total": "3654.01"}'

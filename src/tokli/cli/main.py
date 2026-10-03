@@ -69,6 +69,32 @@ def _parser() -> argparse.ArgumentParser:
     )
     serve.add_argument("--log-format", choices=["json", "text"], help="log line format")
 
+    evaluate = commands.add_parser("eval", help="evaluate a compressor against a real model")
+    eval_commands = evaluate.add_subparsers(dest="eval_command", required=True, metavar="TIER")
+    smoke = eval_commands.add_parser(
+        "smoke", parents=[common], help="smoke tier: baseline vs candidate (SPEC 012)"
+    )
+    smoke.add_argument("--compressor", required=True, help="compressor id to evaluate")
+    smoke.add_argument("--model", required=True, help="model id, e.g. the one used for dogfood")
+    smoke.add_argument(
+        "--api-key-env",
+        required=True,
+        metavar="NAME",
+        help="name of the environment variable holding an Anthropic API key",
+    )
+    smoke.add_argument("--max-calls", type=int, metavar="N", help="maximum provider calls")
+    smoke.add_argument("--repetitions", type=int, default=3, help="repetitions per case (3)")
+    smoke.add_argument("--yes", action="store_true", help="do not ask for confirmation")
+    smoke.add_argument(
+        "--temperature",
+        choices=["0", "default"],
+        default="0",
+        help="0, or 'default' for models that reject the parameter (sent in neither arm)",
+    )
+    smoke.add_argument(
+        "--evals-dir", required=True, metavar="DIR", help="the repository's evals directory"
+    )
+
     setup = commands.add_parser("setup", help="provision local data")
     setup_commands = setup.add_subparsers(dest="setup_command", required=True, metavar="WHAT")
     tokenizers = setup_commands.add_parser(
@@ -123,6 +149,8 @@ def _run(args: argparse.Namespace) -> int:
         return EXIT_OK if report.ok else EXIT_PROBLEM
     if args.command == "serve":
         return _serve(config)
+    if args.command == "eval":
+        return _eval_smoke(args, config)
     if args.command == "config":
         for line in config_lines(config, normalized=False):
             print(line.strip())
@@ -182,6 +210,36 @@ def _serve(config: EffectiveConfig) -> int:
             handler.close()
     print("Tokli stopped", file=sys.stderr, flush=True)
     return EXIT_OK
+
+
+def _eval_smoke(args: argparse.Namespace, config: EffectiveConfig) -> int:
+    """`tokli eval smoke`: manual only (QE-011). The two arms differ only in the candidate."""
+    from tokli.eval.command import SmokeOptions, arm_sets, smoke
+
+    def arm_config(candidate: bool) -> EffectiveConfig:
+        extra = argparse.Namespace(**vars(args))
+        extra.sets = [*args.sets, *arm_sets(args.compressor, candidate)]
+        return _load(extra)
+
+    options = SmokeOptions(
+        compressor=args.compressor,
+        model=args.model,
+        api_key_env=args.api_key_env,
+        max_calls=args.max_calls,
+        repetitions=args.repetitions,
+        yes=args.yes,
+        temperature=args.temperature,
+        evals_dir=Path(args.evals_dir),
+        tokli_version=_environment().tokli_version,
+    )
+    return smoke(
+        options,
+        arm_config(candidate=False),
+        arm_config(candidate=True),
+        bootstrap,
+        print,
+        input,
+    )
 
 
 def main(argv: Sequence[str] | None = None) -> int:

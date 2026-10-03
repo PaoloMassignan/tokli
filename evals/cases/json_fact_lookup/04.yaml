@@ -1,0 +1,85 @@
+case_set: 2026-10-03.1
+family: json_fact_lookup
+assumption: reads_minified_json
+checker: exact_value
+request:
+  max_tokens: 400
+  tools:
+  - name: list_builds
+    description: Lists recent synthetic CI builds.
+    input_schema:
+      type: object
+      properties: {}
+  messages:
+  - role: user
+    content: Use the list_builds tool, then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKECASE
+      name: list_builds
+      input: {}
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKECASE
+      content: "{\n  \"items\": [\n    {\n      \"id\": 200,\n      \"branch\": \"feature/harbor-15\"\
+        ,\n      \"commit\": \"8db4fb9\",\n      \"duration_s\": 1159,\n      \"result\": \"failure\"\
+        ,\n      \"tests\": {\n        \"passed\": 669,\n        \"failed\": 3\n      }\n    },\n    {\n\
+        \      \"id\": 201,\n      \"branch\": \"feature/cobalt-12\",\n      \"commit\": \"8bad60d\",\n\
+        \      \"duration_s\": 102,\n      \"result\": \"failure\",\n      \"tests\": {\n        \"passed\"\
+        : 557,\n        \"failed\": 9\n      }\n    },\n    {\n      \"id\": 202,\n      \"branch\": \"\
+        feature/delta-74\",\n      \"commit\": \"abe147b\",\n      \"duration_s\": 367,\n      \"result\"\
+        : \"cancelled\",\n      \"tests\": {\n        \"passed\": 361,\n        \"failed\": 2\n      }\n\
+        \    },\n    {\n      \"id\": 203,\n      \"branch\": \"feature/cobalt-20\",\n      \"commit\"\
+        : \"f2fe818\",\n      \"duration_s\": 96,\n      \"result\": \"cancelled\",\n      \"tests\":\
+        \ {\n        \"passed\": 158,\n        \"failed\": 3\n      }\n    },\n    {\n      \"id\": 204,\n\
+        \      \"branch\": \"feature/delta-56\",\n      \"commit\": \"3cae49f\",\n      \"duration_s\"\
+        : 632,\n      \"result\": \"cancelled\",\n      \"tests\": {\n        \"passed\": 358,\n     \
+        \   \"failed\": 10\n      }\n    },\n    {\n      \"id\": 205,\n      \"branch\": \"feature/delta-80\"\
+        ,\n      \"commit\": \"4280aea\",\n      \"duration_s\": 753,\n      \"result\": \"failure\",\n\
+        \      \"tests\": {\n        \"passed\": 889,\n        \"failed\": 5\n      }\n    },\n    {\n\
+        \      \"id\": 206,\n      \"branch\": \"feature/kelp-69\",\n      \"commit\": \"e740434\",\n\
+        \      \"duration_s\": 1449,\n      \"result\": \"cancelled\",\n      \"tests\": {\n        \"\
+        passed\": 826,\n        \"failed\": 1\n      }\n    },\n    {\n      \"id\": 207,\n      \"branch\"\
+        : \"feature/raven-71\",\n      \"commit\": \"b4d3891\",\n      \"duration_s\": 1400,\n      \"\
+        result\": \"cancelled\",\n      \"tests\": {\n        \"passed\": 396,\n        \"failed\": 2\n\
+        \      }\n    },\n    {\n      \"id\": 208,\n      \"branch\": \"feature/quartz-26\",\n      \"\
+        commit\": \"bde4929\",\n      \"duration_s\": 806,\n      \"result\": \"failure\",\n      \"tests\"\
+        : {\n        \"passed\": 744,\n        \"failed\": 6\n      }\n    },\n    {\n      \"id\": 209,\n\
+        \      \"branch\": \"feature/harbor-41\",\n      \"commit\": \"1e8fb14\",\n      \"duration_s\"\
+        : 615,\n      \"result\": \"cancelled\",\n      \"tests\": {\n        \"passed\": 541,\n     \
+        \   \"failed\": 11\n      }\n    },\n    {\n      \"id\": 210,\n      \"branch\": \"feature/birch-5\"\
+        ,\n      \"commit\": \"9f3a214\",\n      \"duration_s\": 484,\n      \"result\": \"failure\",\n\
+        \      \"tests\": {\n        \"passed\": 847,\n        \"failed\": 2\n      }\n    },\n    {\n\
+        \      \"id\": 211,\n      \"branch\": \"feature/amber-3\",\n      \"commit\": \"50a19d0\",\n\
+        \      \"duration_s\": 260,\n      \"result\": \"success\",\n      \"tests\": {\n        \"passed\"\
+        : 178,\n        \"failed\": 1\n      }\n    },\n    {\n      \"id\": 212,\n      \"branch\": \"\
+        feature/indigo-71\",\n      \"commit\": \"c3d8615\",\n      \"duration_s\": 1338,\n      \"result\"\
+        : \"failure\",\n      \"tests\": {\n        \"passed\": 302,\n        \"failed\": 5\n      }\n\
+        \    },\n    {\n      \"id\": 213,\n      \"branch\": \"feature/garnet-65\",\n      \"commit\"\
+        : \"94e3846\",\n      \"duration_s\": 1652,\n      \"result\": \"success\",\n      \"tests\":\
+        \ {\n        \"passed\": 139,\n        \"failed\": 10\n      }\n    },\n    {\n      \"id\": 214,\n\
+        \      \"branch\": \"feature/amber-11\",\n      \"commit\": \"5503c8a\",\n      \"duration_s\"\
+        : 516,\n      \"result\": \"success\",\n      \"tests\": {\n        \"passed\": 78,\n        \"\
+        failed\": 12\n      }\n    },\n    {\n      \"id\": 215,\n      \"branch\": \"feature/cobalt-76\"\
+        ,\n      \"commit\": \"b4685b0\",\n      \"duration_s\": 1685,\n      \"result\": \"cancelled\"\
+        ,\n      \"tests\": {\n        \"passed\": 747,\n        \"failed\": 7\n      }\n    },\n    {\n\
+        \      \"id\": 216,\n      \"branch\": \"feature/fjord-12\",\n      \"commit\": \"b81b45d\",\n\
+        \      \"duration_s\": 261,\n      \"result\": \"failure\",\n      \"tests\": {\n        \"passed\"\
+        : 177,\n        \"failed\": 2\n      }\n    },\n    {\n      \"id\": 217,\n      \"branch\": \"\
+        feature/pebble-34\",\n      \"commit\": \"5699e3d\",\n      \"duration_s\": 129,\n      \"result\"\
+        : \"failure\",\n      \"tests\": {\n        \"passed\": 429,\n        \"failed\": 1\n      }\n\
+        \    },\n    {\n      \"id\": 218,\n      \"branch\": \"feature/birch-61\",\n      \"commit\"\
+        : \"b3e7878\",\n      \"duration_s\": 564,\n      \"result\": \"success\",\n      \"tests\": {\n\
+        \        \"passed\": 195,\n        \"failed\": 11\n      }\n    },\n    {\n      \"id\": 219,\n\
+        \      \"branch\": \"feature/quartz-96\",\n      \"commit\": \"f9bfbd9\",\n      \"duration_s\"\
+        : 1072,\n      \"result\": \"cancelled\",\n      \"tests\": {\n        \"passed\": 444,\n    \
+        \    \"failed\": 0\n      }\n    },\n    {\n      \"id\": 220,\n      \"branch\": \"feature/maple-69\"\
+        ,\n      \"commit\": \"fb9e7a8\",\n      \"duration_s\": 345,\n      \"result\": \"failure\",\n\
+        \      \"tests\": {\n        \"passed\": 56,\n        \"failed\": 3\n      }\n    }\n  ],\n  \"\
+        count\": 21\n}"
+    - type: text
+      text: In the list_builds result, what is the commit of the entry with id 216? Answer with only the
+        value, nothing else.
+expected: b81b45d

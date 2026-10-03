@@ -1,0 +1,64 @@
+case_set: 2026-10-03.1
+family: json_fact_lookup
+assumption: reads_minified_json
+checker: exact_value
+request:
+  max_tokens: 400
+  tools:
+  - name: list_builds
+    description: Lists recent synthetic CI builds.
+    input_schema:
+      type: object
+      properties: {}
+  messages:
+  - role: user
+    content: Use the list_builds tool, then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKECASE
+      name: list_builds
+      input: {}
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKECASE
+      content: "{\n  \"items\": [\n    {\n      \"id\": 200,\n      \"branch\": \"feature/cobalt-59\"\
+        ,\n      \"commit\": \"c8cdc61\",\n      \"duration_s\": 186,\n      \"result\": \"cancelled\"\
+        ,\n      \"tests\": {\n        \"passed\": 317,\n        \"failed\": 4\n      }\n    },\n    {\n\
+        \      \"id\": 201,\n      \"branch\": \"feature/cobalt-78\",\n      \"commit\": \"d2f89e7\",\n\
+        \      \"duration_s\": 1425,\n      \"result\": \"success\",\n      \"tests\": {\n        \"passed\"\
+        : 848,\n        \"failed\": 10\n      }\n    },\n    {\n      \"id\": 202,\n      \"branch\":\
+        \ \"feature/amber-90\",\n      \"commit\": \"3b3f310\",\n      \"duration_s\": 548,\n      \"\
+        result\": \"failure\",\n      \"tests\": {\n        \"passed\": 137,\n        \"failed\": 2\n\
+        \      }\n    },\n    {\n      \"id\": 203,\n      \"branch\": \"feature/birch-72\",\n      \"\
+        commit\": \"fdab486\",\n      \"duration_s\": 248,\n      \"result\": \"success\",\n      \"tests\"\
+        : {\n        \"passed\": 65,\n        \"failed\": 4\n      }\n    },\n    {\n      \"id\": 204,\n\
+        \      \"branch\": \"feature/juniper-54\",\n      \"commit\": \"a74bb5c\",\n      \"duration_s\"\
+        : 1189,\n      \"result\": \"success\",\n      \"tests\": {\n        \"passed\": 326,\n      \
+        \  \"failed\": 12\n      }\n    },\n    {\n      \"id\": 205,\n      \"branch\": \"feature/kelp-4\"\
+        ,\n      \"commit\": \"91f1dc4\",\n      \"duration_s\": 1011,\n      \"result\": \"success\"\
+        ,\n      \"tests\": {\n        \"passed\": 661,\n        \"failed\": 2\n      }\n    },\n    {\n\
+        \      \"id\": 206,\n      \"branch\": \"feature/quartz-44\",\n      \"commit\": \"a8b988b\",\n\
+        \      \"duration_s\": 1703,\n      \"result\": \"failure\",\n      \"tests\": {\n        \"passed\"\
+        : 364,\n        \"failed\": 9\n      }\n    },\n    {\n      \"id\": 207,\n      \"branch\": \"\
+        feature/raven-46\",\n      \"commit\": \"1bb5b79\",\n      \"duration_s\": 36,\n      \"result\"\
+        : \"success\",\n      \"tests\": {\n        \"passed\": 847,\n        \"failed\": 8\n      }\n\
+        \    },\n    {\n      \"id\": 208,\n      \"branch\": \"feature/ember-59\",\n      \"commit\"\
+        : \"d73ca7c\",\n      \"duration_s\": 595,\n      \"result\": \"success\",\n      \"tests\": {\n\
+        \        \"passed\": 600,\n        \"failed\": 8\n      }\n    },\n    {\n      \"id\": 209,\n\
+        \      \"branch\": \"feature/amber-56\",\n      \"commit\": \"876f458\",\n      \"duration_s\"\
+        : 459,\n      \"result\": \"failure\",\n      \"tests\": {\n        \"passed\": 794,\n       \
+        \ \"failed\": 4\n      }\n    },\n    {\n      \"id\": 210,\n      \"branch\": \"feature/quartz-86\"\
+        ,\n      \"commit\": \"b55214b\",\n      \"duration_s\": 1296,\n      \"result\": \"cancelled\"\
+        ,\n      \"tests\": {\n        \"passed\": 742,\n        \"failed\": 10\n      }\n    },\n   \
+        \ {\n      \"id\": 211,\n      \"branch\": \"feature/ember-70\",\n      \"commit\": \"62b431e\"\
+        ,\n      \"duration_s\": 415,\n      \"result\": \"success\",\n      \"tests\": {\n        \"\
+        passed\": 244,\n        \"failed\": 7\n      }\n    },\n    {\n      \"id\": 212,\n      \"branch\"\
+        : \"feature/ember-50\",\n      \"commit\": \"cb38a5b\",\n      \"duration_s\": 887,\n      \"\
+        result\": \"cancelled\",\n      \"tests\": {\n        \"passed\": 761,\n        \"failed\": 0\n\
+        \      }\n    }\n  ],\n  \"count\": 13\n}"
+    - type: text
+      text: In the list_builds result, what is the duration in seconds of the entry with id 208? Answer
+        with only the value, nothing else.
+expected: '595'

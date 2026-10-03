@@ -90,6 +90,7 @@ also lets the harness validate itself on a low-risk compressor first.
 - Exit: the harness self-test is green in CI (QE-017). `json_minify` has a real smoke record that
   replaces its `provisional` one. If the verdict is `damage_detected`, `json_minify` becomes
   default-off and the result is recorded.
+- **Accepted 2026-10-03** (`slices/S2.5/COMPLETION_REPORT.md`): `json_minify` smoke record `no_measurable_damage` on `claude-opus-5-5`; stays default-enabled.
 
 ## S4 — Compressor registry, policy and configuration API
 

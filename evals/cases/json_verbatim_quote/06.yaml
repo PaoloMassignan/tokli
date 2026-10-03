@@ -1,0 +1,83 @@
+case_set: 2026-10-03.1
+family: json_verbatim_quote
+assumption: not_quoted_verbatim
+checker: json_structural
+request:
+  max_tokens: 400
+  tools:
+  - name: list_builds
+    description: Lists recent synthetic CI builds.
+    input_schema:
+      type: object
+      properties: {}
+  messages:
+  - role: user
+    content: Use the list_builds tool, then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKECASE
+      name: list_builds
+      input: {}
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKECASE
+      content: "{\n  \"items\": [\n    {\n      \"id\": 200,\n      \"branch\": \"feature/pebble-81\"\
+        ,\n      \"commit\": \"5560146\",\n      \"duration_s\": 984,\n      \"result\": \"failure\",\n\
+        \      \"tests\": {\n        \"passed\": 303,\n        \"failed\": 6\n      }\n    },\n    {\n\
+        \      \"id\": 201,\n      \"branch\": \"feature/ember-10\",\n      \"commit\": \"2f92a2b\",\n\
+        \      \"duration_s\": 371,\n      \"result\": \"success\",\n      \"tests\": {\n        \"passed\"\
+        : 819,\n        \"failed\": 10\n      }\n    },\n    {\n      \"id\": 202,\n      \"branch\":\
+        \ \"feature/birch-46\",\n      \"commit\": \"fbfc9fe\",\n      \"duration_s\": 1388,\n      \"\
+        result\": \"cancelled\",\n      \"tests\": {\n        \"passed\": 393,\n        \"failed\": 12\n\
+        \      }\n    },\n    {\n      \"id\": 203,\n      \"branch\": \"feature/juniper-7\",\n      \"\
+        commit\": \"bb36a4e\",\n      \"duration_s\": 664,\n      \"result\": \"failure\",\n      \"tests\"\
+        : {\n        \"passed\": 763,\n        \"failed\": 0\n      }\n    },\n    {\n      \"id\": 204,\n\
+        \      \"branch\": \"feature/fjord-78\",\n      \"commit\": \"a791e50\",\n      \"duration_s\"\
+        : 1289,\n      \"result\": \"cancelled\",\n      \"tests\": {\n        \"passed\": 284,\n    \
+        \    \"failed\": 5\n      }\n    },\n    {\n      \"id\": 205,\n      \"branch\": \"feature/birch-54\"\
+        ,\n      \"commit\": \"ab18781\",\n      \"duration_s\": 498,\n      \"result\": \"failure\",\n\
+        \      \"tests\": {\n        \"passed\": 432,\n        \"failed\": 9\n      }\n    },\n    {\n\
+        \      \"id\": 206,\n      \"branch\": \"feature/kelp-11\",\n      \"commit\": \"6bb4161\",\n\
+        \      \"duration_s\": 1319,\n      \"result\": \"success\",\n      \"tests\": {\n        \"passed\"\
+        : 691,\n        \"failed\": 8\n      }\n    },\n    {\n      \"id\": 207,\n      \"branch\": \"\
+        feature/harbor-95\",\n      \"commit\": \"568294c\",\n      \"duration_s\": 1245,\n      \"result\"\
+        : \"failure\",\n      \"tests\": {\n        \"passed\": 279,\n        \"failed\": 3\n      }\n\
+        \    },\n    {\n      \"id\": 208,\n      \"branch\": \"feature/maple-20\",\n      \"commit\"\
+        : \"b9d9b24\",\n      \"duration_s\": 1704,\n      \"result\": \"cancelled\",\n      \"tests\"\
+        : {\n        \"passed\": 751,\n        \"failed\": 11\n      }\n    },\n    {\n      \"id\": 209,\n\
+        \      \"branch\": \"feature/amber-39\",\n      \"commit\": \"0641cd3\",\n      \"duration_s\"\
+        : 174,\n      \"result\": \"success\",\n      \"tests\": {\n        \"passed\": 397,\n       \
+        \ \"failed\": 4\n      }\n    },\n    {\n      \"id\": 210,\n      \"branch\": \"feature/pebble-41\"\
+        ,\n      \"commit\": \"9515c55\",\n      \"duration_s\": 1295,\n      \"result\": \"failure\"\
+        ,\n      \"tests\": {\n        \"passed\": 291,\n        \"failed\": 4\n      }\n    },\n    {\n\
+        \      \"id\": 211,\n      \"branch\": \"feature/birch-18\",\n      \"commit\": \"10f369b\",\n\
+        \      \"duration_s\": 1786,\n      \"result\": \"cancelled\",\n      \"tests\": {\n        \"\
+        passed\": 567,\n        \"failed\": 3\n      }\n    },\n    {\n      \"id\": 212,\n      \"branch\"\
+        : \"feature/kelp-48\",\n      \"commit\": \"3ede421\",\n      \"duration_s\": 748,\n      \"result\"\
+        : \"success\",\n      \"tests\": {\n        \"passed\": 721,\n        \"failed\": 8\n      }\n\
+        \    },\n    {\n      \"id\": 213,\n      \"branch\": \"feature/pebble-32\",\n      \"commit\"\
+        : \"6f4fc3e\",\n      \"duration_s\": 277,\n      \"result\": \"success\",\n      \"tests\": {\n\
+        \        \"passed\": 710,\n        \"failed\": 0\n      }\n    },\n    {\n      \"id\": 214,\n\
+        \      \"branch\": \"feature/fjord-88\",\n      \"commit\": \"3e502ac\",\n      \"duration_s\"\
+        : 76,\n      \"result\": \"failure\",\n      \"tests\": {\n        \"passed\": 830,\n        \"\
+        failed\": 7\n      }\n    },\n    {\n      \"id\": 215,\n      \"branch\": \"feature/fjord-63\"\
+        ,\n      \"commit\": \"7abca95\",\n      \"duration_s\": 1655,\n      \"result\": \"success\"\
+        ,\n      \"tests\": {\n        \"passed\": 792,\n        \"failed\": 2\n      }\n    },\n    {\n\
+        \      \"id\": 216,\n      \"branch\": \"feature/garnet-84\",\n      \"commit\": \"d3a5a56\",\n\
+        \      \"duration_s\": 1693,\n      \"result\": \"success\",\n      \"tests\": {\n        \"passed\"\
+        : 794,\n        \"failed\": 0\n      }\n    },\n    {\n      \"id\": 217,\n      \"branch\": \"\
+        feature/birch-1\",\n      \"commit\": \"1e26dde\",\n      \"duration_s\": 243,\n      \"result\"\
+        : \"failure\",\n      \"tests\": {\n        \"passed\": 660,\n        \"failed\": 5\n      }\n\
+        \    },\n    {\n      \"id\": 218,\n      \"branch\": \"feature/quartz-27\",\n      \"commit\"\
+        : \"754f83b\",\n      \"duration_s\": 591,\n      \"result\": \"failure\",\n      \"tests\": {\n\
+        \        \"passed\": 164,\n        \"failed\": 1\n      }\n    },\n    {\n      \"id\": 219,\n\
+        \      \"branch\": \"feature/cobalt-80\",\n      \"commit\": \"28fa427\",\n      \"duration_s\"\
+        : 96,\n      \"result\": \"failure\",\n      \"tests\": {\n        \"passed\": 727,\n        \"\
+        failed\": 3\n      }\n    }\n  ]\n}"
+    - type: text
+      text: Copy the complete JSON object of the entry with id 216 from the list_builds result, exactly
+        as it appears, so I can pass it to another tool. Reply with the JSON object only.
+expected: '{"branch": "feature/garnet-84", "commit": "d3a5a56", "duration_s": 1693, "id": 216, "result":
+  "success", "tests": {"failed": 0, "passed": 794}}'

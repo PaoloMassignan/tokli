@@ -1,0 +1,79 @@
+case_set: 2026-10-03.1
+family: json_fact_lookup
+assumption: reads_minified_json
+checker: exact_value
+request:
+  max_tokens: 400
+  tools:
+  - name: list_builds
+    description: Lists recent synthetic CI builds.
+    input_schema:
+      type: object
+      properties: {}
+  messages:
+  - role: user
+    content: Use the list_builds tool, then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKECASE
+      name: list_builds
+      input: {}
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKECASE
+      content: "{\n  \"items\": [\n    {\n      \"id\": 200,\n      \"branch\": \"feature/delta-58\",\n\
+        \      \"commit\": \"cff24bf\",\n      \"duration_s\": 898,\n      \"result\": \"failure\",\n\
+        \      \"tests\": {\n        \"passed\": 754,\n        \"failed\": 0\n      }\n    },\n    {\n\
+        \      \"id\": 201,\n      \"branch\": \"feature/fjord-64\",\n      \"commit\": \"609d801\",\n\
+        \      \"duration_s\": 1354,\n      \"result\": \"success\",\n      \"tests\": {\n        \"passed\"\
+        : 881,\n        \"failed\": 1\n      }\n    },\n    {\n      \"id\": 202,\n      \"branch\": \"\
+        feature/raven-38\",\n      \"commit\": \"c3f9b49\",\n      \"duration_s\": 890,\n      \"result\"\
+        : \"success\",\n      \"tests\": {\n        \"passed\": 660,\n        \"failed\": 8\n      }\n\
+        \    },\n    {\n      \"id\": 203,\n      \"branch\": \"feature/garnet-99\",\n      \"commit\"\
+        : \"e82a8d0\",\n      \"duration_s\": 1394,\n      \"result\": \"cancelled\",\n      \"tests\"\
+        : {\n        \"passed\": 862,\n        \"failed\": 4\n      }\n    },\n    {\n      \"id\": 204,\n\
+        \      \"branch\": \"feature/indigo-79\",\n      \"commit\": \"07c1650\",\n      \"duration_s\"\
+        : 1636,\n      \"result\": \"cancelled\",\n      \"tests\": {\n        \"passed\": 863,\n    \
+        \    \"failed\": 1\n      }\n    },\n    {\n      \"id\": 205,\n      \"branch\": \"feature/maple-94\"\
+        ,\n      \"commit\": \"1687fdd\",\n      \"duration_s\": 49,\n      \"result\": \"success\",\n\
+        \      \"tests\": {\n        \"passed\": 169,\n        \"failed\": 6\n      }\n    },\n    {\n\
+        \      \"id\": 206,\n      \"branch\": \"feature/amber-37\",\n      \"commit\": \"83a2bbb\",\n\
+        \      \"duration_s\": 1757,\n      \"result\": \"success\",\n      \"tests\": {\n        \"passed\"\
+        : 249,\n        \"failed\": 4\n      }\n    },\n    {\n      \"id\": 207,\n      \"branch\": \"\
+        feature/amber-20\",\n      \"commit\": \"6c61014\",\n      \"duration_s\": 879,\n      \"result\"\
+        : \"failure\",\n      \"tests\": {\n        \"passed\": 750,\n        \"failed\": 0\n      }\n\
+        \    },\n    {\n      \"id\": 208,\n      \"branch\": \"feature/cobalt-54\",\n      \"commit\"\
+        : \"b28257f\",\n      \"duration_s\": 1229,\n      \"result\": \"success\",\n      \"tests\":\
+        \ {\n        \"passed\": 449,\n        \"failed\": 3\n      }\n    },\n    {\n      \"id\": 209,\n\
+        \      \"branch\": \"feature/delta-17\",\n      \"commit\": \"97cfe31\",\n      \"duration_s\"\
+        : 1306,\n      \"result\": \"failure\",\n      \"tests\": {\n        \"passed\": 52,\n       \
+        \ \"failed\": 9\n      }\n    },\n    {\n      \"id\": 210,\n      \"branch\": \"feature/juniper-17\"\
+        ,\n      \"commit\": \"504faf6\",\n      \"duration_s\": 223,\n      \"result\": \"cancelled\"\
+        ,\n      \"tests\": {\n        \"passed\": 343,\n        \"failed\": 11\n      }\n    },\n   \
+        \ {\n      \"id\": 211,\n      \"branch\": \"feature/quartz-37\",\n      \"commit\": \"70fca7d\"\
+        ,\n      \"duration_s\": 167,\n      \"result\": \"success\",\n      \"tests\": {\n        \"\
+        passed\": 875,\n        \"failed\": 8\n      }\n    },\n    {\n      \"id\": 212,\n      \"branch\"\
+        : \"feature/cobalt-63\",\n      \"commit\": \"177bc79\",\n      \"duration_s\": 1323,\n      \"\
+        result\": \"cancelled\",\n      \"tests\": {\n        \"passed\": 616,\n        \"failed\": 9\n\
+        \      }\n    },\n    {\n      \"id\": 213,\n      \"branch\": \"feature/ember-58\",\n      \"\
+        commit\": \"db2d736\",\n      \"duration_s\": 501,\n      \"result\": \"success\",\n      \"tests\"\
+        : {\n        \"passed\": 859,\n        \"failed\": 1\n      }\n    },\n    {\n      \"id\": 214,\n\
+        \      \"branch\": \"feature/onyx-22\",\n      \"commit\": \"1c47484\",\n      \"duration_s\"\
+        : 1338,\n      \"result\": \"success\",\n      \"tests\": {\n        \"passed\": 719,\n      \
+        \  \"failed\": 1\n      }\n    },\n    {\n      \"id\": 215,\n      \"branch\": \"feature/quartz-97\"\
+        ,\n      \"commit\": \"f9f3a03\",\n      \"duration_s\": 1757,\n      \"result\": \"success\"\
+        ,\n      \"tests\": {\n        \"passed\": 137,\n        \"failed\": 5\n      }\n    },\n    {\n\
+        \      \"id\": 216,\n      \"branch\": \"feature/raven-19\",\n      \"commit\": \"a93a419\",\n\
+        \      \"duration_s\": 1734,\n      \"result\": \"failure\",\n      \"tests\": {\n        \"passed\"\
+        : 213,\n        \"failed\": 4\n      }\n    },\n    {\n      \"id\": 217,\n      \"branch\": \"\
+        feature/juniper-41\",\n      \"commit\": \"c5d2fd5\",\n      \"duration_s\": 893,\n      \"result\"\
+        : \"success\",\n      \"tests\": {\n        \"passed\": 298,\n        \"failed\": 3\n      }\n\
+        \    },\n    {\n      \"id\": 218,\n      \"branch\": \"feature/indigo-97\",\n      \"commit\"\
+        : \"0f018e2\",\n      \"duration_s\": 1746,\n      \"result\": \"failure\",\n      \"tests\":\
+        \ {\n        \"passed\": 738,\n        \"failed\": 4\n      }\n    }\n  ],\n  \"count\": 19\n}"
+    - type: text
+      text: In the list_builds result, what is the duration in seconds of the entry with id 202? Answer
+        with only the value, nothing else.
+expected: '890'

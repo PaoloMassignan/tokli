@@ -79,11 +79,11 @@ include_external_packages = true
 
 # Dependency rules of TOKLI_ARCHITECTURE.md §5 as applied from S1 (ADR 0004).
 [[tool.importlinter.contracts]]
-name = "Layers: cli > http > app > compressors > compression > leaf packages > domain"
+name = "Layers: cli > http | eval > app > compressors > compression > leaf packages > domain"
 type = "layers"
 layers = [
     "tokli.cli",
-    "tokli.http",
+    "tokli.http | tokli.eval",  # independent siblings: the proxy never reaches evaluation (ADR 0008)
     "tokli.app",
     "tokli.compressors",
     "tokli.compression",

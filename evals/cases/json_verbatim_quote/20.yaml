@@ -1,0 +1,78 @@
+case_set: 2026-10-03.1
+family: json_verbatim_quote
+assumption: not_quoted_verbatim
+checker: json_structural
+request:
+  max_tokens: 400
+  tools:
+  - name: list_builds
+    description: Lists recent synthetic CI builds.
+    input_schema:
+      type: object
+      properties: {}
+  messages:
+  - role: user
+    content: Use the list_builds tool, then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKECASE
+      name: list_builds
+      input: {}
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKECASE
+      content: "{\n  \"items\": [\n    {\n      \"id\": 200,\n      \"branch\": \"feature/quartz-31\"\
+        ,\n      \"commit\": \"da91fe5\",\n      \"duration_s\": 170,\n      \"result\": \"cancelled\"\
+        ,\n      \"tests\": {\n        \"passed\": 854,\n        \"failed\": 3\n      }\n    },\n    {\n\
+        \      \"id\": 201,\n      \"branch\": \"feature/ember-7\",\n      \"commit\": \"7997cc5\",\n\
+        \      \"duration_s\": 99,\n      \"result\": \"failure\",\n      \"tests\": {\n        \"passed\"\
+        : 845,\n        \"failed\": 4\n      }\n    },\n    {\n      \"id\": 202,\n      \"branch\": \"\
+        feature/raven-5\",\n      \"commit\": \"44e9f8d\",\n      \"duration_s\": 677,\n      \"result\"\
+        : \"success\",\n      \"tests\": {\n        \"passed\": 89,\n        \"failed\": 8\n      }\n\
+        \    },\n    {\n      \"id\": 203,\n      \"branch\": \"feature/indigo-19\",\n      \"commit\"\
+        : \"f2c8af6\",\n      \"duration_s\": 961,\n      \"result\": \"failure\",\n      \"tests\": {\n\
+        \        \"passed\": 700,\n        \"failed\": 1\n      }\n    },\n    {\n      \"id\": 204,\n\
+        \      \"branch\": \"feature/fjord-22\",\n      \"commit\": \"9cb77e5\",\n      \"duration_s\"\
+        : 800,\n      \"result\": \"cancelled\",\n      \"tests\": {\n        \"passed\": 168,\n     \
+        \   \"failed\": 12\n      }\n    },\n    {\n      \"id\": 205,\n      \"branch\": \"feature/pebble-36\"\
+        ,\n      \"commit\": \"598e766\",\n      \"duration_s\": 206,\n      \"result\": \"success\",\n\
+        \      \"tests\": {\n        \"passed\": 129,\n        \"failed\": 3\n      }\n    },\n    {\n\
+        \      \"id\": 206,\n      \"branch\": \"feature/fjord-41\",\n      \"commit\": \"be31a1f\",\n\
+        \      \"duration_s\": 320,\n      \"result\": \"cancelled\",\n      \"tests\": {\n        \"\
+        passed\": 761,\n        \"failed\": 0\n      }\n    },\n    {\n      \"id\": 207,\n      \"branch\"\
+        : \"feature/maple-69\",\n      \"commit\": \"b216c2a\",\n      \"duration_s\": 259,\n      \"\
+        result\": \"success\",\n      \"tests\": {\n        \"passed\": 729,\n        \"failed\": 7\n\
+        \      }\n    },\n    {\n      \"id\": 208,\n      \"branch\": \"feature/delta-79\",\n      \"\
+        commit\": \"ed45247\",\n      \"duration_s\": 1033,\n      \"result\": \"cancelled\",\n      \"\
+        tests\": {\n        \"passed\": 769,\n        \"failed\": 8\n      }\n    },\n    {\n      \"\
+        id\": 209,\n      \"branch\": \"feature/amber-66\",\n      \"commit\": \"70187a9\",\n      \"\
+        duration_s\": 365,\n      \"result\": \"success\",\n      \"tests\": {\n        \"passed\": 267,\n\
+        \        \"failed\": 10\n      }\n    },\n    {\n      \"id\": 210,\n      \"branch\": \"feature/juniper-51\"\
+        ,\n      \"commit\": \"a31b466\",\n      \"duration_s\": 1187,\n      \"result\": \"success\"\
+        ,\n      \"tests\": {\n        \"passed\": 311,\n        \"failed\": 10\n      }\n    },\n   \
+        \ {\n      \"id\": 211,\n      \"branch\": \"feature/raven-65\",\n      \"commit\": \"89fa332\"\
+        ,\n      \"duration_s\": 1537,\n      \"result\": \"cancelled\",\n      \"tests\": {\n       \
+        \ \"passed\": 418,\n        \"failed\": 4\n      }\n    },\n    {\n      \"id\": 212,\n      \"\
+        branch\": \"feature/ember-27\",\n      \"commit\": \"66d463d\",\n      \"duration_s\": 926,\n\
+        \      \"result\": \"failure\",\n      \"tests\": {\n        \"passed\": 365,\n        \"failed\"\
+        : 10\n      }\n    },\n    {\n      \"id\": 213,\n      \"branch\": \"feature/quartz-95\",\n \
+        \     \"commit\": \"31c078a\",\n      \"duration_s\": 1108,\n      \"result\": \"failure\",\n\
+        \      \"tests\": {\n        \"passed\": 238,\n        \"failed\": 6\n      }\n    },\n    {\n\
+        \      \"id\": 214,\n      \"branch\": \"feature/ember-94\",\n      \"commit\": \"e8b2665\",\n\
+        \      \"duration_s\": 1283,\n      \"result\": \"cancelled\",\n      \"tests\": {\n        \"\
+        passed\": 86,\n        \"failed\": 1\n      }\n    },\n    {\n      \"id\": 215,\n      \"branch\"\
+        : \"feature/juniper-11\",\n      \"commit\": \"565cd8a\",\n      \"duration_s\": 141,\n      \"\
+        result\": \"failure\",\n      \"tests\": {\n        \"passed\": 638,\n        \"failed\": 0\n\
+        \      }\n    },\n    {\n      \"id\": 216,\n      \"branch\": \"feature/ember-8\",\n      \"\
+        commit\": \"0a508aa\",\n      \"duration_s\": 353,\n      \"result\": \"failure\",\n      \"tests\"\
+        : {\n        \"passed\": 553,\n        \"failed\": 5\n      }\n    },\n    {\n      \"id\": 217,\n\
+        \      \"branch\": \"feature/lumen-54\",\n      \"commit\": \"694b819\",\n      \"duration_s\"\
+        : 1515,\n      \"result\": \"success\",\n      \"tests\": {\n        \"passed\": 471,\n      \
+        \  \"failed\": 11\n      }\n    }\n  ]\n}"
+    - type: text
+      text: Copy the complete JSON object of the entry with id 205 from the list_builds result, exactly
+        as it appears, so I can pass it to another tool. Reply with the JSON object only.
+expected: '{"branch": "feature/pebble-36", "commit": "598e766", "duration_s": 206, "id": 205, "result":
+  "success", "tests": {"failed": 3, "passed": 129}}'

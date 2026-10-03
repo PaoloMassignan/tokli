@@ -1,0 +1,74 @@
+case_set: 2026-10-03.1
+family: json_fact_lookup
+assumption: reads_minified_json
+checker: exact_value
+request:
+  max_tokens: 400
+  tools:
+  - name: list_builds
+    description: Lists recent synthetic CI builds.
+    input_schema:
+      type: object
+      properties: {}
+  messages:
+  - role: user
+    content: Use the list_builds tool, then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKECASE
+      name: list_builds
+      input: {}
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKECASE
+      content: "{\n  \"items\": [\n    {\n      \"id\": 200,\n      \"branch\": \"feature/delta-81\",\n\
+        \      \"commit\": \"05d446d\",\n      \"duration_s\": 1456,\n      \"result\": \"success\",\n\
+        \      \"tests\": {\n        \"passed\": 169,\n        \"failed\": 3\n      }\n    },\n    {\n\
+        \      \"id\": 201,\n      \"branch\": \"feature/garnet-28\",\n      \"commit\": \"c15979e\",\n\
+        \      \"duration_s\": 1158,\n      \"result\": \"cancelled\",\n      \"tests\": {\n        \"\
+        passed\": 758,\n        \"failed\": 5\n      }\n    },\n    {\n      \"id\": 202,\n      \"branch\"\
+        : \"feature/quartz-61\",\n      \"commit\": \"8d3de05\",\n      \"duration_s\": 850,\n      \"\
+        result\": \"cancelled\",\n      \"tests\": {\n        \"passed\": 500,\n        \"failed\": 7\n\
+        \      }\n    },\n    {\n      \"id\": 203,\n      \"branch\": \"feature/garnet-26\",\n      \"\
+        commit\": \"5dd8e6f\",\n      \"duration_s\": 1504,\n      \"result\": \"failure\",\n      \"\
+        tests\": {\n        \"passed\": 449,\n        \"failed\": 1\n      }\n    },\n    {\n      \"\
+        id\": 204,\n      \"branch\": \"feature/lumen-7\",\n      \"commit\": \"c4d37d2\",\n      \"duration_s\"\
+        : 617,\n      \"result\": \"success\",\n      \"tests\": {\n        \"passed\": 818,\n       \
+        \ \"failed\": 9\n      }\n    },\n    {\n      \"id\": 205,\n      \"branch\": \"feature/fjord-63\"\
+        ,\n      \"commit\": \"a8bf8b3\",\n      \"duration_s\": 1593,\n      \"result\": \"failure\"\
+        ,\n      \"tests\": {\n        \"passed\": 295,\n        \"failed\": 0\n      }\n    },\n    {\n\
+        \      \"id\": 206,\n      \"branch\": \"feature/lumen-59\",\n      \"commit\": \"06ba38a\",\n\
+        \      \"duration_s\": 672,\n      \"result\": \"failure\",\n      \"tests\": {\n        \"passed\"\
+        : 429,\n        \"failed\": 12\n      }\n    },\n    {\n      \"id\": 207,\n      \"branch\":\
+        \ \"feature/lumen-16\",\n      \"commit\": \"33de1bf\",\n      \"duration_s\": 223,\n      \"\
+        result\": \"success\",\n      \"tests\": {\n        \"passed\": 815,\n        \"failed\": 0\n\
+        \      }\n    },\n    {\n      \"id\": 208,\n      \"branch\": \"feature/nimbus-29\",\n      \"\
+        commit\": \"0822a3b\",\n      \"duration_s\": 855,\n      \"result\": \"cancelled\",\n      \"\
+        tests\": {\n        \"passed\": 405,\n        \"failed\": 2\n      }\n    },\n    {\n      \"\
+        id\": 209,\n      \"branch\": \"feature/onyx-38\",\n      \"commit\": \"cc17011\",\n      \"duration_s\"\
+        : 1540,\n      \"result\": \"success\",\n      \"tests\": {\n        \"passed\": 332,\n      \
+        \  \"failed\": 2\n      }\n    },\n    {\n      \"id\": 210,\n      \"branch\": \"feature/lumen-28\"\
+        ,\n      \"commit\": \"6053a30\",\n      \"duration_s\": 982,\n      \"result\": \"success\",\n\
+        \      \"tests\": {\n        \"passed\": 447,\n        \"failed\": 12\n      }\n    },\n    {\n\
+        \      \"id\": 211,\n      \"branch\": \"feature/quartz-61\",\n      \"commit\": \"cbe6f77\",\n\
+        \      \"duration_s\": 1586,\n      \"result\": \"cancelled\",\n      \"tests\": {\n        \"\
+        passed\": 273,\n        \"failed\": 8\n      }\n    },\n    {\n      \"id\": 212,\n      \"branch\"\
+        : \"feature/quartz-81\",\n      \"commit\": \"6b02086\",\n      \"duration_s\": 842,\n      \"\
+        result\": \"success\",\n      \"tests\": {\n        \"passed\": 165,\n        \"failed\": 2\n\
+        \      }\n    },\n    {\n      \"id\": 213,\n      \"branch\": \"feature/juniper-62\",\n     \
+        \ \"commit\": \"4768d00\",\n      \"duration_s\": 1675,\n      \"result\": \"failure\",\n    \
+        \  \"tests\": {\n        \"passed\": 414,\n        \"failed\": 4\n      }\n    },\n    {\n   \
+        \   \"id\": 214,\n      \"branch\": \"feature/nimbus-55\",\n      \"commit\": \"4390964\",\n \
+        \     \"duration_s\": 1604,\n      \"result\": \"failure\",\n      \"tests\": {\n        \"passed\"\
+        : 167,\n        \"failed\": 1\n      }\n    },\n    {\n      \"id\": 215,\n      \"branch\": \"\
+        feature/harbor-61\",\n      \"commit\": \"fd420b1\",\n      \"duration_s\": 1498,\n      \"result\"\
+        : \"cancelled\",\n      \"tests\": {\n        \"passed\": 618,\n        \"failed\": 3\n      }\n\
+        \    },\n    {\n      \"id\": 216,\n      \"branch\": \"feature/indigo-37\",\n      \"commit\"\
+        : \"f2dfa6c\",\n      \"duration_s\": 1436,\n      \"result\": \"success\",\n      \"tests\":\
+        \ {\n        \"passed\": 117,\n        \"failed\": 4\n      }\n    }\n  ],\n  \"count\": 17\n}"
+    - type: text
+      text: In the list_builds result, what is the duration in seconds of the entry with id 216? Answer
+        with only the value, nothing else.
+expected: '1436'
