@@ -59,6 +59,7 @@ class CompressorStats:
     tokens_in: int = 0
     tokens_out: int = 0
     ms_total: float = 0.0
+    tokens_in_accepted: int = 0
     cache_hits: int = 0
     cache_misses: int = 0
     skip_reasons: dict[str, int] = field(default_factory=dict)
@@ -363,6 +364,7 @@ class Engine:
                     continue
 
             stat.accepted += 1
+            stat.tokens_in_accepted += t_in
             stat.tokens_out += t_out
             record("accepted", "", t_in, t_out, ms)
             text = output

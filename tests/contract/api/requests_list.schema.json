@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "requests_list.schema.json",
+  "type": "object",
+  "required": ["api_version", "requests", "next_cursor"],
+  "additionalProperties": false,
+  "properties": {
+    "api_version": {"const": 1},
+    "next_cursor": {"type": ["string", "null"]},
+    "requests": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "request_id", "ts_start", "provider", "model", "stream", "outcome", "reason",
+          "status_code", "usage_source", "overhead_ms", "tokens"
+        ],
+        "properties": {
+          "request_id": {"type": "string"},
+          "ts_start": {"type": "string"},
+          "provider": {"type": "string"},
+          "model": {"type": ["string", "null"]},
+          "stream": {"type": "boolean"},
+          "outcome": {"type": "string"},
+          "reason": {"type": ["string", "null"]},
+          "status_code": {"type": ["integer", "null"]},
+          "usage_source": {"type": "string"},
+          "overhead_ms": {"type": ["number", "null"]},
+          "tokens": {
+            "type": "object",
+            "required": ["original", "forwarded", "saved"],
+            "additionalProperties": false,
+            "properties": {
+              "original": {"$ref": "definitions.schema.json#/$defs/token_figure"},
+              "forwarded": {"$ref": "definitions.schema.json#/$defs/token_figure"},
+              "saved": {"$ref": "definitions.schema.json#/$defs/token_figure"}
+            }
+          }
+        }
+      }
+    }
+  }
+}

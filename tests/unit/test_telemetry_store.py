@@ -153,13 +153,16 @@ def test_request_record_pruning_fields(tmp_path: Path) -> None:
 
 
 def _write_v1_database(path: Path) -> None:
-    """A database exactly as an S1 build wrote it: schema v1, no `header_names` column."""
+    """A database exactly as an S1 build wrote it: schema v1, without `header_names` (v2) and
+    `tokens_in_accepted` (v3)."""
     from dataclasses import asdict, fields
 
     from tokli.telemetry.store import _sql_type
 
     columns = [f.name for f in fields(RequestRecord) if f.name != "header_names"]
-    stats_columns = [f.name for f in fields(CompressorStatsRecord)]
+    stats_columns = [
+        f.name for f in fields(CompressorStatsRecord) if f.name != "tokens_in_accepted"
+    ]
     row = {k: v for k, v in asdict(RECORD).items() if k in columns}
     with sqlite3.connect(path) as db:
         db.execute("CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)")
@@ -186,7 +189,8 @@ def _write_v1_database(path: Path) -> None:
 
 
 def test_schema_migration_forward_from_v1(tmp_path: Path) -> None:
-    """AC-TC-9 / ADR 0005: a v1 database is migrated in place; nothing earlier is lost."""
+    """AC-TC-9 / ADR 0005, ADR 0007: a v1 database is migrated in place; nothing earlier is
+    lost."""
     path = tmp_path / "t.db"
     _write_v1_database(path)
     store = open_store(path)
@@ -196,15 +200,17 @@ def test_schema_migration_forward_from_v1(tmp_path: Path) -> None:
     store.flush()
     got = store.get(new.request_id)
     store.close()
-    assert SCHEMA_VERSION == 2
+    assert SCHEMA_VERSION == 3
     assert old is not None and old["record"]["header_names"] is None
     assert old["record"]["est_original_tokens"] == 100 and old["record"]["ms_total"] == 904.0
     assert got is not None and got["record"]["header_names"] == ["x-api-key"]
     with sqlite3.connect(path) as db:
         assert db.execute("SELECT value FROM meta WHERE key = 'schema_version'").fetchone() == (
-            "2",
+            "3",
         )
         assert db.execute("SELECT COUNT(*) FROM requests").fetchone() == (2,)
+        columns = {row[1] for row in db.execute("PRAGMA table_info(compressor_stats)")}
+        assert "tokens_in_accepted" in columns
 
 
 def test_header_names_persisted(tmp_path: Path) -> None:

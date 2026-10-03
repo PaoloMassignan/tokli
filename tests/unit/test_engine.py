@@ -386,3 +386,15 @@ def test_json_minify_is_the_only_registered_compressor_in_s1() -> None:
 @pytest.mark.parametrize("cid", [c.spec.id for c in REGISTRY])
 def test_registered_compressors_are_available(cid: str) -> None:
     assert Engine(REGISTRY, settings_for(cid)).availability()[cid] == "available"
+
+
+def test_stats_record_tokens_in_of_accepted_calls() -> None:
+    """TC-016 / ADR 0007: the input of accepted invocations is counted apart from all
+    applicable ones, so the average saving % per accepted invocation can be computed."""
+    no_gain = "[1,2,3]" + "x" * 80  # applicable (looks like JSON) but never smaller
+    fake = Fake(transform=lambda t: t if t.startswith("[1,") else t.replace(" ", ""))
+    request = make_request(("TOOL_RESULT", "a b c " * 20), ("TOOL_RESULT", no_gain))
+    stats = stats_of(run(Engine([fake], settings_for("fake")), request), "fake")
+    assert (stats.applicable, stats.accepted) == (2, 1)
+    assert stats.tokens_in == 120 + len(no_gain)
+    assert stats.tokens_in_accepted == 120

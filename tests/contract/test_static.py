@@ -124,6 +124,51 @@ def test_wheel_imports_tokli_in_clean_venv(tmp_path: Path) -> None:
     assert shown.returncode == 0, shown.stderr
 
 
+@pytest.mark.packaging
+@pytest.mark.skipif(
+    os.environ.get("RUN_PACKAGING_TESTS") != "1", reason="set RUN_PACKAGING_TESTS=1"
+)
+def test_wheel_contains_ui_assets(tmp_path: Path) -> None:
+    """UI-006 / ADR 0006: the dashboard ships in the wheel, and a clean install resolves IANA
+    time zones on every OS (tzdata)."""
+    import zipfile
+
+    subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "pip",
+            "wheel",
+            "--no-deps",
+            "-w",
+            str(tmp_path / "dist"),
+            str(ROOT),
+        ],
+        check=True,
+        capture_output=True,
+    )
+    wheel = next((tmp_path / "dist").glob("tokli-*.whl"))
+    names = set(zipfile.ZipFile(wheel).namelist())
+    ui = sorted(
+        p.relative_to(SRC.parent).as_posix()
+        for p in (SRC / "ui").rglob("*.*")
+        if "__pycache__" not in p.parts
+    )
+    assert ui and all(name in names for name in ui), sorted(set(ui) - names)
+    venv.create(tmp_path / "venv", with_pip=True)
+    bindir = tmp_path / "venv" / ("Scripts" if os.name == "nt" else "bin")
+    python = bindir / ("python.exe" if os.name == "nt" else "python")
+    subprocess.run([str(python), "-m", "pip", "install", "-q", str(wheel)], check=True)
+    done = subprocess.run(
+        [str(python), "-c", "import zoneinfo; print(zoneinfo.ZoneInfo('Europe/Rome').key)"],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert done.stdout.strip() == "Europe/Rome"
+
+
 def test_routing_inputs_closed_and_no_ml() -> None:
     import dataclasses
 

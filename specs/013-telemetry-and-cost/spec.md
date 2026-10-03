@@ -3,6 +3,7 @@
 Status: Draft · Slices: S1 (records), S3 (queries), S6 (pricing) · Related: TOKLI_TELEMETRY_AND_COST.md (explanatory, incl. schemas)
 Approved for S1 (2026-09-30): TC-001, TC-002, TC-003, TC-010, TC-011, TC-012, TC-014. TC-013 API in S3; cost in S6.
 Approved for S2 (2026-10-02): TC-001 usage, calibration and whole-request estimate fields; TC-012 schema v2.
+Approved for S3 (2026-10-03): TC-013, TC-015, TC-016.
 
 ## Purpose
 Persist the minimum metadata needed to answer "how much is Tokli saving, by which compressor,
@@ -24,8 +25,10 @@ at what latency, and roughly how much money", without storing content.
 | TC-010 | THE SYSTEM SHALL prune records older than `telemetry.retention_days` (default 30; 0 = never) at startup and every 24 h. |
 | TC-011 | IF a telemetry sink fails, THEN THE SYSTEM SHALL continue serving, count the failures, report `degraded` in health, and log at most one warning per minute. |
 | TC-012 | THE telemetry schema SHALL carry a `schema_version` (v2 from S2: `requests.header_names`, ADR 0005), and startup SHALL migrate older databases forward or refuse with a clear message. It SHALL never silently drop columns. |
-| TC-013 | THE metrics API SHALL report the Tokli overhead distribution (`n`, p50, p95, p99, max of `ms_tokli_overhead`) per request-size bucket (estimated input tokens < 10k, 10k–50k, 50k–200k, > 200k), per policy and per `config_hash`. It SHALL show the product target (TOKLI_VISION.md) as a labelled reference value, never as a pass/fail status. |
+| TC-013 | THE metrics API SHALL report the Tokli overhead distribution (`n`, p50, p95, p99, max of `ms_tokli_overhead`, nearest-rank percentiles) per request-size bucket (`est_request_tokens_original` < 10k, 10k–50k, 50k–200k, > 200k; rows without it in a separate `unknown` bucket), per policy and per `config_hash`. It SHALL show the product target (TOKLI_VISION.md) as a labelled reference value, never as a pass/fail status. |
 | TC-014 | THE `RequestRecord` SHALL carry `history_rewritten` (PR-009) and the count of reference stubs forwarded (`reference_stubs`). |
+| TC-015 | THE metrics API SHALL compute token totals over requests of transformable endpoints only (verbatim routes count in request totals by outcome, never in token figures), from per-request best figures: forwarded = provider input total (input + cache read + cache writes) when usage exists, else the whole-request estimate; saving = calibrated when an in-range `k` exists, else the estimate; original = forwarded + saving; saving % = saving / original. A total SHALL be labelled `exact` or `calibrated` only when every contributing figure has that method; otherwise it SHALL be labelled `estimate` and carry `calibrated_share` (or `exact_share`), the share of the total with the stronger method. |
+| TC-016 | THE per-compressor aggregates SHALL follow TOKLI_TELEMETRY_AND_COST §3: zero-benefit rate = (applicable − accepted) / applicable; failure rate = failed / applicable; share = marginal saved / total saved; average saving % per accepted call; tokens saved per ms = marginal saved / `ms_total`. A rate whose denominator is 0 SHALL be `{value: null, reason}`. A compressor with ≥ 90 % zero-benefit, ≥ 1 ms average latency and ≥ 100 applicable invocations SHALL carry the flag `latency_without_benefit`. |
 
 ## Acceptance criteria
 - AC-TC-1: after 3 fixture requests (compressed, passthrough, upstream 429), the DB contains 3 `RequestRecord`s with the correct outcome and reason, and `CompressorStats` only for considered compressors.
@@ -36,6 +39,8 @@ at what latency, and roughly how much money", without storing content.
 - AC-TC-7 (TC-013): for 300 synthetic records with known overheads across the four buckets, the API returns the hand-computed percentiles per bucket, and the target appears as `{value, kind: "target"}` with no status field.
 - AC-TC-8 (TC-014): a request with a superseding stub on an earlier segment persists `history_rewritten: true`. A request with two duplicate stubs persists `reference_stubs: 2` and `history_rewritten: false`.
 - AC-TC-9 (TC-012): a v1 database written by S1 opens under S2, is migrated to v2 in place, and keeps every earlier row and column; old rows have `header_names` null.
+- AC-TC-11 (TC-015): for a hand-built set of records (calibrated, outlier, no usage, verbatim route), the summary returns the hand-computed totals; a total with one estimated request is labelled `estimate` with the correct `calibrated_share`.
+- AC-TC-12 (TC-016): for hand-built stats rows the compressor aggregates and the flag match hand-computed values; a compressor with 0 applicable invocations has `null` rates with a reason.
 - AC-TC-6: a read-only DB file → the request succeeds, health is `degraded`, and one warning is logged.
 
 ## Test scenarios
@@ -44,4 +49,6 @@ at what latency, and roughly how much money", without storing content.
 `test_cost_unavailable_without_price` · `test_cost_assumes_uncached_without_usage` ·
 `test_no_output_savings_claimed` · `test_price_effective_dates` · `test_retention_pruning` ·
 `test_sink_failure_degrades_not_breaks` · `test_schema_migration_forward` · `test_import_contracts` ·
-`test_overhead_percentiles_by_bucket` · `test_target_is_reference_not_status` · `test_request_record_pruning_fields`
+`test_overhead_percentiles_by_bucket` · `test_target_is_reference_not_status` · `test_request_record_pruning_fields` ·
+`test_unknown_size_bucket` · `test_summary_totals_hand_computed` · `test_summary_labels_mixed_totals_as_estimate_with_share` ·
+`test_compressor_aggregates_hand_computed` · `test_latency_without_benefit_flag`

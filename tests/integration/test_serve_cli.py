@@ -187,3 +187,22 @@ def test_serve_log_file_off_by_default(cli: Cli, monkeypatch: pytest.MonkeyPatch
     monkeypatch.setattr(uvicorn.Server, "run", lambda self, sockets=None: None)
     assert cli.run("serve", "--data-dir", str(data_dir), "--port", "0").code == 0
     assert not (data_dir / "logs").exists()
+
+
+def test_serve_prints_dashboard_address(cli: Cli, monkeypatch: pytest.MonkeyPatch) -> None:
+    """UI-011: `tokli serve` prints where the dashboard is."""
+    import uvicorn
+
+    from tests.integration.servers import BYTE_CATALOG, provision
+    from tokli.app import bootstrap as bootstrap_module
+
+    data_dir = cli.workdir / "data"
+    provision(data_dir)
+    real_bootstrap = bootstrap_module.bootstrap
+    monkeypatch.setattr(
+        "tokli.cli.main.bootstrap",
+        lambda config, **kw: real_bootstrap(config, catalog=BYTE_CATALOG, version="test"),
+    )
+    monkeypatch.setattr(uvicorn.Server, "run", lambda self, sockets=None: None)
+    result = cli.run("serve", "--data-dir", str(data_dir), "--port", "0")
+    assert re.search(r"dashboard: http://127\.0\.0\.1:\d+/tokli/", result.err)

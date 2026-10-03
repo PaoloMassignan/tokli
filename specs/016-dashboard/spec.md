@@ -1,6 +1,7 @@
 # SPEC 016 — Web dashboard
 
 Status: Draft · Slices: S3 (overview + compressors + recent), S4 (settings), S6 (cost), S9 (diagnostics)
+Approved for S3 (2026-10-03): Overview, Compressors (read-only), Recent requests; UI-001, UI-002, UI-003 (without evaluation status), UI-006, UI-008, UI-009, UI-011.
 
 ## Purpose
 Operational visibility first: how much is saved, by which compressor, at what latency. Then
@@ -29,6 +30,7 @@ simple control: policy and per-compressor enable/disable.
 | UI-007 | WHILE debug-content mode is active, THE dashboard SHALL show a persistent, non-dismissible banner. |
 | UI-008 | THE dashboard SHALL remain usable at 360 px width and SHALL respect `prefers-color-scheme`. |
 | UI-009 | THE Overview page SHALL show the overhead distribution per size bucket (TC-013) with the product target drawn as a reference line labelled "target (not a limit)". THE Compressors page SHALL show each compressor's `cost_class`, average latency and `skipped_budget` rate, next to the effective `request_budget_ms`. |
+| UI-011 | THE dashboard SHALL be served at `/tokli/` with its assets under `/tokli/ui/`, with explicit content types (never derived from the host's file-type registry), and `tokli serve` SHALL print the dashboard address at startup. |
 | UI-010 | THE Settings page SHALL explain the policies in these words: LOSSLESS ONLY — "Tokli only applies transformations that provably keep all information in the request: exactly, structurally (e.g. JSON whitespace), or by reference to an identical earlier tool result. This does not guarantee identical model behaviour. Defaults are chosen from evaluations." LOSSY ALLOWED — "Also allows transformations that drop information: selective ones keep a declared part verbatim, lossy ones do not. Enable them only with evidence that your tasks are not affected." |
 
 ## Acceptance criteria
@@ -36,9 +38,13 @@ simple control: policy and per-compressor enable/disable.
 - AC-UI-2: a browser test (Playwright, headless) renders Overview, Compressors and Recent with API fixtures, and every numeric token cell has an adjacent method label.
 - AC-UI-3: toggling a compressor issues `PATCH /tokli/api/config` and re-renders from the response.
 - AC-UI-4: offline rendering: with network blocked except loopback, all assets load.
+- AC-UI-5 (UI-011): every asset is served with the content type of its extension (`text/html`, `text/css`, `text/javascript`, `image/svg+xml`) on all CI OSes.
+
+Browser tests (AC-UI-2, UI-003, UI-008, UI-009) run with Playwright and headless Chromium in one CI job (Ubuntu, Python 3.12) and locally when Playwright is installed (ADR 0006). The evaluation-record status of UI-003 is shown from S4.
 
 ## Test scenarios
 `test_ui_has_no_compressor_specific_code` · `test_ui_renders_method_labels` · `test_ui_toggle_patches_config` ·
 `test_ui_policy_marks_non_lossless_not_permitted` · `test_ui_locked_settings_show_source` · `test_wheel_contains_ui_assets` ·
 `test_ui_assets_load_offline` · `test_debug_content_banner_visible` ·
-`test_ui_shows_equivalence_assumptions_and_eval_status` · `test_ui_overhead_target_is_reference_line` · `test_ui_policy_explanations_text`
+`test_ui_shows_equivalence_assumptions_and_eval_status` · `test_ui_overhead_target_is_reference_line` · `test_ui_policy_explanations_text` ·
+`test_ui_shows_kind_equivalence_and_assumptions` · `test_ui_usable_at_360px` · `test_ui_assets_served_with_explicit_content_types`

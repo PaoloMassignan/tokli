@@ -169,8 +169,10 @@ def run_tokli(config: EffectiveConfig, services: Services | None = None) -> Iter
     services = services or bootstrap(config, catalog=BYTE_CATALOG, version="test")
     logs = io.StringIO()
     handler = configure_logging("json", stream=logs)
+    sock = free_socket()
+    listen = f"127.0.0.1:{sock.getsockname()[1]}"
     try:
-        with serve(create_app(services)) as url:
+        with serve(create_app(services, listen=listen), sock) as url:
             yield Tokli(url, services, logs)
     finally:
         logging.getLogger().removeHandler(handler)

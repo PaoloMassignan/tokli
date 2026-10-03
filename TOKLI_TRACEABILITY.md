@@ -264,9 +264,11 @@ Evidence codes:
 | TC-009 | Brief§12 pricing ≠ compression | AC-CM-7 | `test_import_contracts` |
 | TC-010 | Brief§15 retention | AC-TC-1 | `test_retention_pruning`, `test_retention_zero_keeps_everything` |
 | TC-011 | telemetry must not break traffic | AC-TC-6 | `test_sink_failure_degrades_not_breaks`, `test_write_failure_counts_and_never_raises` |
-| TC-012 | additive migrations keep older data readable; ADR 0005 | AC-TC-1, AC-TC-9 | `test_schema_migration_forward`, `test_schema_migration_forward_from_v1`, `test_schema_version_recorded`, `test_non_ascii_data_dir`, `test_usage_and_calibration_fields_round_trip` |
-| TC-013 | R01§9: measure overhead from the first useful slice; target ≠ gate | AC-TC-7 | `test_overhead_percentiles_by_bucket`, `test_target_is_reference_not_status` |
+| TC-012 | additive migrations keep older data readable; ADR 0005 | AC-TC-1, AC-TC-9 | `test_schema_migration_forward`, `test_schema_migration_forward_from_v1` (v1 → v3), `test_schema_version_recorded`, `test_non_ascii_data_dir`, `test_usage_and_calibration_fields_round_trip` |
+| TC-013 | R01§9: measure overhead from the first useful slice; target ≠ gate | AC-TC-7 | `test_overhead_percentiles_by_bucket`, `test_target_is_reference_not_status`, `test_unknown_size_bucket`, `test_overhead_groups_by_policy_and_config_hash`, `test_ui_overhead_target_is_reference_line` |
 | TC-014 | PR-009 flag was not in the record schema (R01§10 consistency pass) | AC-TC-8 | `test_request_record_pruning_fields` |
+| TC-015 | honest totals (H21); S3 review A1–A4, P4 | AC-TC-11 | `test_summary_totals_hand_computed`, `test_summary_labels_mixed_totals_as_estimate_with_share`, `test_requests_list_metadata_only` |
+| TC-016 | which compressor saves, at what latency (TOKLI_TELEMETRY_AND_COST §3); ADR 0007 | AC-TC-12 | `test_compressor_aggregates_hand_computed`, `test_compressor_rates_without_applicable_are_null`, `test_latency_without_benefit_flag`, `test_stats_record_tokens_in_of_accepted_calls` |
 
 ## Observability (SPEC 014)
 
@@ -290,28 +292,33 @@ Evidence codes:
 
 | Req | Why | AC | Tests |
 |---|---|---|---|
-| API-001 | Brief§13 no content | AC-API-2 | `test_api_returns_no_content_or_credentials`, `test_trace_served_from_db_after_buffer_eviction` |
-| API-002 | Brief§10/§12 labelling | AC-API-1 | `test_every_api_token_field_has_method`, `test_api_contract_schemas` |
-| API-003 | Brief§13 breakdowns | AC-API-1 | `test_metrics_filters_validated` |
-| API-004 | replaceable UI (Brief§4) | AC-API-1 | `test_api_contract_schemas` |
+| API-001 | Brief§13 no content | AC-API-2 | `test_api_returns_no_content_or_credentials`, `test_api_returns_no_content_or_credentials_s3`, `test_requests_list_metadata_only`, `test_trace_served_from_db_after_buffer_eviction` |
+| API-002 | Brief§10/§12 labelling | AC-API-1 | `test_every_api_token_field_has_method`, `test_every_api_token_field_has_method_s3`, `test_api_contract_schemas`, `test_api_contract_schemas_s3` |
+| API-003 | Brief§13 breakdowns | AC-API-1 | `test_metrics_filters_validated`, `test_metrics_filters_validated_over_http`, `test_filters_default_to_last_seven_days` |
+| API-004 | replaceable UI (Brief§4) | AC-API-1 | `test_api_contract_schemas`, `test_api_contract_schemas_s3` |
 | API-005 | config ownership (ARCH §7) | AC-API-3 | `test_patch_pinned_key_conflict`, `test_patch_unknown_key_rejected` |
 | API-006 | H40 | AC-API-4 | `test_mutation_rejects_foreign_origin` |
 | API-007 | atomic config | AC-API-5 | `test_config_change_atomic_snapshot` |
-| API-008 | UI ↛ internals | AC-CM-7 | `test_import_contracts` |
+| API-008 | UI ↛ internals; ADR 0006 | AC-CM-7 | `test_import_contracts` (contract "API routes reach storage only through tokli.app use cases") |
+| API-009 | DNS rebinding; S3 review M4, P7 | AC-API-6 | `test_tokli_routes_reject_foreign_host`, `test_proxy_routes_ignore_host_check` |
+| API-010 | S3 review A5, A6 | AC-API-7 | `test_summary_compressor_filter`, `test_timeseries_hour_and_day_buckets`, `test_timeseries_buckets_follow_tz_across_dst`, `test_metrics_filters_validated` |
+| API-011 | S3 review M2 | — | `test_summary_empty_database`, `test_summary_missing_database_file`, `test_metrics_telemetry_disabled`, `test_metrics_query_failure_isolated` |
+| API-012 | S3 review X1, P6 | — | `test_summary_cost_block_null_until_s6`, `test_ui_money_shows_dash_with_reason` |
 
 ## Dashboard (SPEC 016)
 
 | Req | Why | AC | Tests |
 |---|---|---|---|
 | UI-001 | Brief§8, §13 | AC-UI-1 | `test_ui_has_no_compressor_specific_code` |
-| UI-002 | Brief§10/§12 | AC-UI-2 | `test_ui_renders_method_labels` |
-| UI-003 | Brief§8 kind visibility; R01§3 equivalence and assumptions visible | AC-UI-2 | `test_ui_renders_method_labels` (kind badges asserted), `test_ui_shows_equivalence_assumptions_and_eval_status` |
+| UI-002 | Brief§10/§12 | AC-UI-2 | `test_ui_renders_method_labels`, `test_ui_money_shows_dash_with_reason` |
+| UI-003 | Brief§8 kind visibility; R01§3 equivalence and assumptions visible | AC-UI-2 | `test_ui_shows_kind_equivalence_and_assumptions`, `test_compressors_endpoint_read_only_metadata` (evaluation status from S4) |
 | UI-004 | Brief§7/§8 policy semantics | AC-UI-3 | `test_ui_policy_marks_non_lossless_not_permitted`, `test_ui_toggle_patches_config` |
 | UI-005 | config ownership | AC-UI-3 | `test_ui_locked_settings_show_source` |
-| UI-006 | H41, MD-21 | AC-UI-4 | `test_wheel_contains_ui_assets`, `test_ui_assets_load_offline` |
+| UI-006 | H41, MD-21 | AC-UI-4 | `test_wheel_contains_ui_assets`, `test_ui_assets_load_offline`, `test_ui_assets_load_offline_in_browser` |
 | UI-007 | Brief§15 | AC-OB-5 | `test_debug_content_banner_visible` |
-| UI-008 | usability | AC-UI-2 | Playwright viewport case in `test_ui_renders_method_labels` |
-| UI-009 | R01§9: expensive compressors visible and controllable | AC-UI-2 | `test_ui_overhead_target_is_reference_line` |
+| UI-008 | usability | AC-UI-2 | `test_ui_usable_at_360px` |
+| UI-009 | R01§9: expensive compressors visible and controllable | AC-UI-2 | `test_ui_overhead_target_is_reference_line`, `test_compressor_aggregates_hand_computed` (cost class, average latency, budget-skip rate, `budget_ms`) |
+| UI-011 | S3 review M3, P8; Windows file-type registry | AC-UI-5 | `test_dashboard_served_at_tokli_root`, `test_ui_assets_served_with_explicit_content_types`, `test_serve_prints_dashboard_address` |
 | UI-010 | R01§5: exact meaning of the user-facing policies | AC-UI-2 | `test_ui_policy_explanations_text` |
 
 ## Configuration (SPEC 017)

@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "compressors.schema.json",
+  "type": "object",
+  "required": ["api_version", "policy", "compressors"],
+  "additionalProperties": false,
+  "properties": {
+    "api_version": {"const": 1},
+    "policy": {"type": "string"},
+    "compressors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id", "name", "version", "kind", "equivalence", "scope", "stage", "cost_class",
+          "guarantees", "assumptions", "segment_kinds", "min_tokens", "enabled",
+          "default_enabled", "availability"
+        ],
+        "properties": {
+          "id": {"type": "string"},
+          "name": {"type": "string"},
+          "version": {"type": "string"},
+          "kind": {"enum": ["LOSSLESS", "SELECTIVE", "LOSSY", "UNKNOWN"]},
+          "equivalence": {"type": ["string", "null"]},
+          "scope": {"enum": ["segment", "request"]},
+          "stage": {"type": "string"},
+          "cost_class": {"enum": ["cheap", "moderate", "expensive"]},
+          "guarantees": {"type": "array", "items": {"type": "string"}},
+          "assumptions": {"type": "array", "items": {"type": "string"}},
+          "segment_kinds": {"type": "array", "items": {"type": "string"}},
+          "min_tokens": {"type": "integer"},
+          "enabled": {"type": "boolean"},
+          "default_enabled": {"type": "boolean"},
+          "availability": {"type": "string"}
+        }
+      }
+    }
+  }
+}

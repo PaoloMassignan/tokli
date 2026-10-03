@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "metrics_timeseries.schema.json",
+  "type": "object",
+  "required": ["api_version", "range", "bucket", "buckets"],
+  "additionalProperties": false,
+  "properties": {
+    "api_version": {"const": 1},
+    "range": {"$ref": "definitions.schema.json#/$defs/range"},
+    "bucket": {"enum": ["hour", "day"]},
+    "buckets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["start", "requests", "original", "forwarded", "saved"],
+        "additionalProperties": false,
+        "properties": {
+          "start": {"type": "string"},
+          "requests": {"type": "integer", "minimum": 0},
+          "original": {"$ref": "definitions.schema.json#/$defs/token_figure"},
+          "forwarded": {"$ref": "definitions.schema.json#/$defs/token_figure"},
+          "saved": {"$ref": "definitions.schema.json#/$defs/token_figure"}
+        }
+      }
+    }
+  }
+}

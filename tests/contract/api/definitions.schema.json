@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "definitions.schema.json",
+  "$defs": {
+    "token_figure": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["value", "method"],
+          "properties": {
+            "value": {"type": "number"},
+            "method": {"enum": ["exact", "calibrated", "estimate"]},
+            "calibrated_share": {"type": "number", "minimum": 0, "maximum": 1},
+            "exact_share": {"type": "number", "minimum": 0, "maximum": 1},
+            "partial": {"const": true}
+          },
+          "additionalProperties": false
+        },
+        {"$ref": "#/$defs/unavailable"}
+      ]
+    },
+    "rate": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["value"],
+          "properties": {"value": {"type": "number"}},
+          "additionalProperties": false
+        },
+        {"$ref": "#/$defs/unavailable"}
+      ]
+    },
+    "unavailable": {
+      "type": "object",
+      "required": ["value", "reason"],
+      "properties": {"value": {"type": "null"}, "reason": {"type": "string"}},
+      "additionalProperties": false
+    },
+    "range": {
+      "type": "object",
+      "required": ["from", "to", "tz"],
+      "properties": {
+        "from": {"type": "string"},
+        "to": {"type": "string"},
+        "tz": {"type": "string"}
+      },
+      "additionalProperties": false
+    },
+    "percentiles": {
+      "type": "object",
+      "required": ["n", "p50", "p95", "p99", "max"],
+      "properties": {
+        "n": {"type": "integer", "minimum": 0},
+        "p50": {"type": ["number", "null"]},
+        "p95": {"type": ["number", "null"]},
+        "p99": {"type": ["number", "null"]},
+        "max": {"type": ["number", "null"]}
+      },
+      "additionalProperties": false
+    }
+  }
+}

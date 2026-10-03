@@ -7,6 +7,7 @@ from dataclasses import asdict
 from typing import Any
 
 from tokli.compression.engine import POLICY, CompressorStats, EngineResult
+from tokli.compression.registry import REGISTRY
 from tokli.telemetry.records import CompressorStatsRecord, RequestRecord
 from tokli.tokens.calibration import calibrated_value
 
@@ -17,6 +18,7 @@ __all__ = [
     "POLICY",
     "compression_report",
     "compressor_summary",
+    "compressors_view",
     "record_view",
     "request_view",
     "stats_records",
@@ -57,6 +59,7 @@ def stats_records(request_id: str, stats: Sequence[CompressorStats]) -> list[Com
             marginal_saved=s.marginal_saved,
             ms_total=s.ms_total,
             skip_reasons=dict(s.skip_reasons),
+            tokens_in_accepted=s.tokens_in_accepted,
         )
         for s in stats
         if s.considered > 0
@@ -140,4 +143,35 @@ def compressor_summary(result: EngineResult) -> dict[str, dict[str, Any]]:
             "cache": {"hits": s.cache_hits, "misses": s.cache_misses},
         }
         for s in result.stats
+    }
+
+
+def compressors_view(
+    enabled: Mapping[str, bool], availability: Mapping[str, str]
+) -> dict[str, Any]:
+    """The registry as metadata (read-only in S3, SPEC 015): spec fields, enabled, availability.
+    Locks and evaluation status arrive in S4."""
+    return {
+        "api_version": API_VERSION,
+        "policy": POLICY,
+        "compressors": [
+            {
+                "id": c.spec.id,
+                "name": c.spec.name,
+                "version": c.spec.version,
+                "kind": c.spec.kind,
+                "equivalence": c.spec.equivalence,
+                "scope": c.spec.scope,
+                "stage": c.spec.stage,
+                "cost_class": c.spec.cost_class,
+                "guarantees": list(c.spec.guarantees),
+                "assumptions": list(c.spec.assumptions),
+                "segment_kinds": sorted(str(k) for k in c.spec.segment_kinds),
+                "min_tokens": c.spec.min_tokens,
+                "enabled": bool(enabled.get(c.spec.id, False)),
+                "default_enabled": c.spec.default_enabled,
+                "availability": availability.get(c.spec.id, "available"),
+            }
+            for c in REGISTRY
+        ],
     }

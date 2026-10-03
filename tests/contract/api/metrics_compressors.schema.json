@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "metrics_compressors.schema.json",
+  "type": "object",
+  "required": ["api_version", "range", "budget_ms", "compressors"],
+  "additionalProperties": false,
+  "properties": {
+    "api_version": {"const": 1},
+    "range": {"$ref": "definitions.schema.json#/$defs/range"},
+    "budget_ms": {"type": "number"},
+    "compressors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "compressor_id", "kind", "considered", "applicable", "accepted", "failed",
+          "skipped_budget", "tokens_in", "marginal_saved", "share_of_saving",
+          "avg_saving_pct_per_accepted", "zero_benefit_rate", "failure_rate",
+          "skipped_budget_rate", "ms_total", "avg_ms", "tokens_saved_per_ms",
+          "latency_without_benefit"
+        ],
+        "properties": {
+          "compressor_id": {"type": "string"},
+          "kind": {"type": "string"},
+          "considered": {"type": "integer"},
+          "applicable": {"type": "integer"},
+          "accepted": {"type": "integer"},
+          "failed": {"type": "integer"},
+          "skipped_budget": {"type": "integer"},
+          "tokens_in": {"$ref": "definitions.schema.json#/$defs/token_figure"},
+          "marginal_saved": {"$ref": "definitions.schema.json#/$defs/token_figure"},
+          "share_of_saving": {"$ref": "definitions.schema.json#/$defs/rate"},
+          "avg_saving_pct_per_accepted": {"$ref": "definitions.schema.json#/$defs/rate"},
+          "zero_benefit_rate": {"$ref": "definitions.schema.json#/$defs/rate"},
+          "failure_rate": {"$ref": "definitions.schema.json#/$defs/rate"},
+          "skipped_budget_rate": {"$ref": "definitions.schema.json#/$defs/rate"},
+          "ms_total": {"type": "number"},
+          "avg_ms": {"$ref": "definitions.schema.json#/$defs/rate"},
+          "tokens_saved_per_ms": {"$ref": "definitions.schema.json#/$defs/token_figure"},
+          "latency_without_benefit": {"type": "boolean"}
+        }
+      }
+    }
+  }
+}

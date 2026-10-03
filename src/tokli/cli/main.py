@@ -160,6 +160,7 @@ def _serve(config: EffectiveConfig) -> int:
     print(
         f"Tokli {version} listening on http://{host}:{port}/anthropic", file=sys.stderr, flush=True
     )
+    print(f"dashboard: http://{host}:{port}/tokli/", file=sys.stderr)  # UI-011
     print(f"config dir: {dirs.config_dir} [{dirs.config_dir_source}]", file=sys.stderr)
     print(f"data dir:   {dirs.data_dir} [{dirs.data_dir_source}]", file=sys.stderr, flush=True)
     if not is_loopback(config.settings.server.host):

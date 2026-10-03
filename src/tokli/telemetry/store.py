@@ -1,4 +1,5 @@
-"""SQLite telemetry store, schema v2 (TC-001, TC-002, TC-010, TC-011, TC-012; ADR 0003, 0005).
+"""SQLite telemetry store, schema v3 (TC-001, TC-002, TC-010, TC-011, TC-012; ADR 0003, 0005,
+0007).
 
 Writes happen on one background thread through a bounded queue, so the request path never waits
 for the disk. A failing write never breaks traffic: it is counted, the store reports unhealthy,
@@ -21,7 +22,7 @@ from typing import Any
 
 from tokli.telemetry.records import CompressorStatsRecord, RequestRecord
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 _LOG = logging.getLogger("tokli.telemetry")
 _WARN_INTERVAL_S = 60.0
 
@@ -51,6 +52,7 @@ def _sql_type(name: str) -> str:
         "tokens_in",
         "tokens_out",
         "marginal_saved",
+        "tokens_in_accepted",
     }:
         return "INTEGER"
     return "TEXT"
@@ -226,6 +228,10 @@ class TelemetryStore:
             )
 
     # -- state and queries ---------------------------------------------------------------------
+
+    @property
+    def path(self) -> Path:
+        return self._path
 
     @property
     def healthy(self) -> bool:

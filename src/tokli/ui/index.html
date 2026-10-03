@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tokli</title>
+  <link rel="stylesheet" href="/tokli/ui/style.css">
+  <script type="module" src="/tokli/ui/app.js"></script>
+</head>
+<body>
+  <header>
+    <h1>Tokli</h1>
+    <nav aria-label="Pages">
+      <button type="button" data-tab="overview" aria-pressed="true">Overview</button>
+      <button type="button" data-tab="compressors" aria-pressed="false">Compressors</button>
+      <button type="button" data-tab="requests" aria-pressed="false">Recent requests</button>
+    </nav>
+    <form id="filters" aria-label="Filters">
+      <label>Range
+        <select name="range">
+          <option value="1">last 24 hours</option>
+          <option value="7" selected>last 7 days</option>
+          <option value="30">last 30 days</option>
+        </select>
+      </label>
+      <label>Provider <input name="provider" type="text" size="10" placeholder="all"></label>
+      <label>Model <input name="model" type="text" size="14" placeholder="all"></label>
+      <label>Kind
+        <select name="kind">
+          <option value="">all</option>
+          <option>LOSSLESS</option>
+          <option>SELECTIVE</option>
+          <option>LOSSY</option>
+          <option>UNKNOWN</option>
+        </select>
+      </label>
+    </form>
+    <p class="note" id="status" role="status"></p>
+  </header>
+
+  <main>
+    <section data-panel="overview">
+      <div id="overview-body">
+        <div id="cards" class="cards"></div>
+        <dl class="legend" aria-label="How each number was obtained">
+          <div><dt>exact</dt><dd>counted by the provider</dd></div>
+          <div><dt>calibrated</dt><dd>Tokli's count, corrected with the provider's count</dd></div>
+          <div><dt>estimate</dt><dd>Tokli's own count (the provider gave no figure to compare)</dd></div>
+        </dl>
+        <h2>Saved tokens over time</h2>
+        <div class="chart-box" id="saved-chart"></div>
+        <h2>Time Tokli adds to each request</h2>
+        <p class="note"><strong>Typical</strong>: half of the requests take less than this.
+          <strong>Slowest</strong>: only 1 request in 20 takes longer. Requests are grouped by
+          size. The dashed line is the goal: a reference, not a limit.</p>
+        <div class="chart-box" id="overhead-box"></div>
+      </div>
+    </section>
+
+    <section data-panel="compressors" hidden>
+      <div id="compressors-body">
+        <p class="note">When several compressors work on the same text, each one is credited only
+          with what it saved after the ones before it.</p>
+        <p class="note" id="budget"></p>
+        <div class="scroll"><table id="compressors-table"></table></div>
+      </div>
+    </section>
+
+    <section data-panel="requests" hidden>
+      <div id="requests-body">
+        <div class="scroll"><table id="requests-table"></table></div>
+        <button type="button" id="more" hidden>Older requests</button>
+        <div id="request-detail" hidden></div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

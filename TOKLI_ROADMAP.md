@@ -71,6 +71,7 @@ Acceptance for S1 (all must hold):
   `TOKLI_TELEMETRY_AND_COST.md`), recent requests (metadata), method labels.
 - Exit: a developer can answer "how much, and which compressor" from the UI during dogfooding.
   E5 (b) dogfood starts here.
+- **Accepted 2026-10-03** (`slices/S3/COMPLETION_REPORT.md`). Dogfood E5 (b) running.
 
 ## S2.5 — Minimal evaluation skeleton (smoke tier)
 

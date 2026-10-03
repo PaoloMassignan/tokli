@@ -96,7 +96,9 @@ reports *isolated* savings (each compressor alone on the same corpus) so users c
 Per time range × {provider, model, compressor, compressor kind}:
 
 - requests, compressed-request share, pass-through share by reason;
-- original tokens (calibrated when possible), forwarded tokens (exact when possible), saved tokens, saving %;
+- original tokens (calibrated when possible), forwarded tokens (exact when possible), saved tokens, saving %.
+  A total is labelled `exact` or `calibrated` only when every request in it is; otherwise it is an
+  `estimate` with the share that is exact or calibrated ("estimate · 92 % calibrated", TC-015);
 - per compressor: invocations (`considered`), applicable, accepted, tokens processed (`tokens_in`),
   total marginal saving, **average saving % per accepted invocation**, **marginal share of total
   saving**, total and average latency, **zero-benefit rate** = (applicable − accepted) / applicable,

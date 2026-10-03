@@ -28,6 +28,7 @@ dependencies = [
     "httpx>=0.27,<1",
     "certifi>=2024.2.2",
     "tiktoken>=0.8,<1",
+    "tzdata>=2024.1",  # IANA time zones on every OS (ADR 0006)
 ]
 
 [project.optional-dependencies]
@@ -38,7 +39,10 @@ dev = [
     "mypy>=1.11",
     "import-linter>=2.1",
     "types-PyYAML",
+    "jsonschema>=4.18",  # API contract tests (ADR 0006)
 ]
+# Browser tests of the dashboard (ADR 0006); run with RUN_BROWSER_TESTS=1.
+ui-test = ["playwright>=1.45"]
 
 [project.scripts]
 tokli = "tokli.cli.main:main"
@@ -104,6 +108,13 @@ type = "forbidden"
 source_modules = ["tokli.http"]
 forbidden_modules = ["tokli.compression", "tokli.compressors", "tokli.tokens"]
 # Direct imports only: tokli.app (the composition root) legitimately builds these for HTTP.
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "API routes reach storage only through tokli.app use cases (API-008, ADR 0006)"
+type = "forbidden"
+source_modules = ["tokli.http.app"]
+forbidden_modules = ["tokli.telemetry"]
 allow_indirect_imports = true
 
 [[tool.importlinter.contracts]]

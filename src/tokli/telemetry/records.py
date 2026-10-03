@@ -69,3 +69,4 @@ class CompressorStatsRecord:
     marginal_saved: int
     ms_total: float
     skip_reasons: dict[str, int] = field(default_factory=dict)
+    tokens_in_accepted: int | None = None  # schema v3 (ADR 0007)
