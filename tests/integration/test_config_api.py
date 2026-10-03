@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import threading
 from collections.abc import AsyncIterator, Callable
@@ -205,3 +206,77 @@ def test_compressors_endpoint_shows_locks_and_evaluation(tokli: Start) -> None:
     dup = rows["duplicate_tool_results"]
     assert dup["locked_by"] == "env:TOKLI_COMPRESSORS__DUPLICATE_TOOL_RESULTS__ENABLED"
     assert dup["evaluation"]["status"] in ("none", "current", "outdated")
+
+
+def test_concurrent_patches_keep_every_change(
+    tokli: Start, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """API-007 (S4.5 D1, review A1): PATCHes that arrive together are applied one after the
+    other, so none loses another's change.
+
+    Root cause: `apply_patch` read the overrides file, merged and wrote it back with no lock
+    over the whole sequence; only the snapshot swap was locked. Two PATCHes that both read
+    before either wrote each wrote a file without the other's key. The barrier makes every
+    PATCH read before any writes when nothing serialises them; when they are serialised, it
+    times out and lets them run one by one."""
+    import tokli.app.config_service as service
+
+    changes: list[dict[str, Any]] = [
+        {"compressors.json_minify.enabled": False},
+        {"compressors.duplicate_tool_results.enabled": False},
+        {"telemetry.retention_days": 5},
+    ]
+    barrier = threading.Barrier(len(changes))
+    real_read = service.read_ui_overrides
+
+    def read_together(path: Path) -> dict[str, object]:
+        with contextlib.suppress(threading.BrokenBarrierError):
+            barrier.wait(timeout=1.0)
+        return real_read(path)
+
+    monkeypatch.setattr(service, "read_ui_overrides", read_together)
+    t = tokli()
+    results: list[httpx.Response] = []
+    threads = [threading.Thread(target=lambda c=c: results.append(patch(t, c))) for c in changes]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(10)
+    assert [r.status_code for r in results] == [200] * len(changes), [r.text for r in results]
+    view = httpx.get(t.url + "/tokli/api/config", timeout=10).json()
+    for change in changes:
+        for key, value in change.items():
+            assert setting(view, key)["value"] == value and setting(view, key)["source"] == "ui"
+    stored = yaml.safe_load(
+        (t.services.config.dirs.data_dir / UI_OVERRIDES_FILE).read_text(encoding="utf-8")
+    )
+    assert stored == {
+        "compressors": {
+            "duplicate_tool_results": {"enabled": False},
+            "json_minify": {"enabled": False},
+        },
+        "telemetry": {"retention_days": 5},
+    }
+
+
+def test_failed_write_leaves_no_temporary_file(
+    tokli: Start, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """API-007 (S4.5 D1): a write that fails answers 500, changes nothing and leaves no
+    temporary file in the data directory.
+
+    Root cause: the temporary file was written before `os.replace` and was not removed when
+    the replace failed (on Windows, for example, while another process holds the target)."""
+    import tokli.app.config_service as service
+
+    def refuse(src: object, dst: object) -> None:
+        raise PermissionError("target held open")
+
+    monkeypatch.setattr(service.os, "replace", refuse)
+    t = tokli()
+    before = t.services.config.config_hash
+    response = patch(t, {"telemetry.retention_days": 5})
+    assert response.status_code == 500
+    data_dir = t.services.config.dirs.data_dir
+    assert sorted(p.name for p in data_dir.iterdir() if p.name.startswith(UI_OVERRIDES_FILE)) == []
+    assert httpx.get(t.url + "/tokli/api/config", timeout=10).json()["config_hash"] == before

@@ -145,9 +145,10 @@ def create_app(services: Services, listen: str | None = None) -> ASGIApp:
 
     async def request_detail(request: Request) -> Response:
         request_id = request.path_params["request_id"]
-        entry = services.traces.get(request_id)
-        if entry is None and services.store is not None:
-            stored = services.store.get(request_id)
+        current = runtime.current()
+        entry = current.traces.get(request_id)
+        if entry is None and current.store is not None:
+            stored = current.store.get(request_id)
             if stored is not None:
                 entry = request_view(stored["record"], stored["compressors"], None)
         if entry is None:
@@ -194,9 +195,8 @@ def create_app(services: Services, listen: str | None = None) -> ASGIApp:
 
     @get_only
     async def compressors(request: Request) -> Response:
-        return JSONResponse(
-            compressors_view(runtime.current().config, runtime.current().availability)
-        )
+        current = runtime.current()  # one snapshot, even during a PATCH
+        return JSONResponse(compressors_view(current.config, current.availability))
 
     @get_only
     async def dashboard(request: Request) -> Response:

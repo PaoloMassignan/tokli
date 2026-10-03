@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+import importlib
 import sqlite3
-from dataclasses import replace
+import threading
+from collections.abc import Callable, Iterator
+from dataclasses import dataclass, fields, replace
 from pathlib import Path
+from types import ModuleType
 
 import pytest
 
@@ -157,7 +161,7 @@ def _write_v1_database(path: Path) -> None:
     `tokens_in_accepted` (v3)."""
     from dataclasses import asdict, fields
 
-    from tokli.telemetry.store import _sql_type
+    from tokli.telemetry.store import _REQUEST_TYPES, _STATS_TYPES
 
     columns = [f.name for f in fields(RequestRecord) if f.name != "header_names"]
     stats_columns = [
@@ -170,7 +174,7 @@ def _write_v1_database(path: Path) -> None:
         db.execute(
             "CREATE TABLE requests ("
             + ", ".join(
-                f"{c} {_sql_type(c)}" + (" PRIMARY KEY" if c == "request_id" else "")
+                f"{c} {_REQUEST_TYPES[c]}" + (" PRIMARY KEY" if c == "request_id" else "")
                 for c in columns
             )
             + ")"
@@ -182,7 +186,7 @@ def _write_v1_database(path: Path) -> None:
         )
         db.execute(
             "CREATE TABLE compressor_stats ("
-            + ", ".join(f"{c} {_sql_type(c)}" for c in stats_columns)
+            + ", ".join(f"{c} {_STATS_TYPES[c]}" for c in stats_columns)
             + ", PRIMARY KEY (request_id, compressor_id))"
         )
     sqlite3.connect(path).close()
@@ -248,3 +252,116 @@ def test_usage_and_calibration_fields_round_trip(tmp_path: Path) -> None:
     stored = got["record"]
     assert stored["usage_source"] == "provider_partial" and stored["usage_cache_read"] == 30000
     assert stored["calibration_k"] == 1.25 and stored["est_request_tokens_forwarded"] == 25000
+
+
+# --- S4.5 D2 (TC-001, TC-012; review A2): a column's SQL type follows its field's annotation.
+
+_EXPECTED_SQL = {
+    "int": "INTEGER",
+    "int | None": "INTEGER",
+    "bool": "INTEGER",
+    "float": "REAL",
+    "float | None": "REAL",
+    "str": "TEXT",
+    "str | None": "TEXT",
+    "tuple[str, ...] | None": "TEXT",  # JSON
+    "dict[str, int]": "TEXT",  # JSON
+}
+
+
+def _declared_types(path: Path, table: str) -> dict[str, str]:
+    with sqlite3.connect(path) as db:
+        return {row[1]: row[2] for row in db.execute(f"PRAGMA table_info({table})")}
+
+
+@pytest.mark.parametrize(
+    "record_type, table",
+    [(RequestRecord, "requests"), (CompressorStatsRecord, "compressor_stats")],
+)
+def test_existing_column_types_unchanged(tmp_path: Path, record_type: type, table: str) -> None:
+    """Every current field maps to the SQL type of its annotation, so the fix changes no
+    existing column and needs no schema version bump."""
+    open_store(tmp_path / "t.db").close()
+    declared = _declared_types(tmp_path / "t.db", table)
+    for f in fields(record_type):
+        assert declared[f.name] == _EXPECTED_SQL[str(f.type)], f.name
+
+
+@pytest.fixture
+def store_with(monkeypatch: pytest.MonkeyPatch) -> Iterator[Callable[[type], ModuleType]]:
+    """Reloads the store module with an extended `RequestRecord`, then restores it."""
+    import tokli.telemetry.records as records
+    import tokli.telemetry.store as store_module
+
+    def load(extended: type) -> ModuleType:
+        monkeypatch.setattr(records, "RequestRecord", extended)
+        return importlib.reload(store_module)
+
+    yield load
+    monkeypatch.undo()
+    importlib.reload(store_module)
+
+
+def test_column_type_follows_field_annotation(
+    tmp_path: Path, store_with: Callable[[type], ModuleType]
+) -> None:
+    """Root cause: `_sql_type` chose the type from the column's name (prefixes and hand-written
+    lists), so a new integer field with an unforeseen name was created as TEXT, and the forward
+    migration never retypes a column."""
+
+    @dataclass(frozen=True)
+    class Extended(RequestRecord):
+        retries_seen: int | None = None
+        share_kept: float | None = None
+
+    module = store_with(Extended)
+    store = module.TelemetryStore(tmp_path / "t.db", 30)
+    store.start()
+    store.close()
+    declared = _declared_types(tmp_path / "t.db", "requests")
+    assert declared["retries_seen"] == "INTEGER"
+    assert declared["share_kept"] == "REAL"
+
+
+def test_unmapped_annotation_is_refused(store_with: Callable[[type], ModuleType]) -> None:
+    """A field type with no SQL mapping fails loudly instead of falling back to TEXT."""
+
+    @dataclass(frozen=True)
+    class Extended(RequestRecord):
+        odd: frozenset[int] | None = None
+
+    with pytest.raises(TypeError, match="odd"):
+        store_with(Extended)
+
+
+def test_close_never_closes_the_connection_under_a_busy_writer(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """TC-011: closing the store while the writer thread is still busy loses no record and
+    never touches the connection from two threads.
+
+    Root cause: `close()` waited for the writer at most a fixed time, then closed the SQLite
+    connection even if the writer was still using it. On a slow machine the writer was in the
+    middle of an INSERT, and the native library crashed (access violation)."""
+    import tokli.telemetry.store as store_module
+
+    release = threading.Event()
+    real_write = TelemetryStore._write
+
+    def slow_write(self: TelemetryStore, *args: object) -> None:
+        release.wait(5)
+        real_write(self, *args)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(TelemetryStore, "_write", slow_write)
+    monkeypatch.setattr(store_module, "_CLOSE_TIMEOUT_S", 0.1)
+    store = open_store(tmp_path / "t.db")
+    writer = store._thread
+    assert writer is not None
+    store.submit(RECORD, [STATS])
+    store.close()  # returns while the writer still waits
+    release.set()
+    writer.join(5)
+    assert not writer.is_alive()
+    assert store.failures == 0
+    with sqlite3.connect(tmp_path / "t.db") as db:
+        assert db.execute("SELECT COUNT(*) FROM requests").fetchone() == (1,)

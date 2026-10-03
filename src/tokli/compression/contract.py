@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
-from typing import Any, Literal, Protocol
+from typing import Any, Literal, Protocol, runtime_checkable
 
 from tokli.domain.models import SegmentKind, Span
 from tokli.domain.stage import Features
@@ -51,6 +51,7 @@ class Applicability:
     reason: str = ""
 
 
+@runtime_checkable
 class Compressor(Protocol):
     @property
     def spec(self) -> CompressorSpec: ...
@@ -60,6 +61,7 @@ class Compressor(Protocol):
     def compress(self, text: str, view: SegmentView) -> str | None: ...
 
 
+@runtime_checkable
 class LosslessCompressor(Compressor, Protocol):
     def decode(self, text: str) -> str: ...
 
@@ -99,6 +101,7 @@ class Proposal:
     reason: str = ""
 
 
+@runtime_checkable
 class RequestCompressor(Protocol):
     """Request scope (SPEC 009, SPEC 019): sees all candidate segments and the tool records,
     returns proposals that the engine gates one by one (PR-001)."""
@@ -117,3 +120,7 @@ class RequestCompressor(Protocol):
     def decode_request(
         self, texts: Mapping[str, str], refs: Sequence[SegmentRef]
     ) -> dict[str, str]: ...
+
+
+# Any registered compressor: segment scope or request scope (ADR 0010).
+AnyCompressor = Compressor | RequestCompressor

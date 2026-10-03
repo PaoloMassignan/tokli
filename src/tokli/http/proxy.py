@@ -2,7 +2,9 @@
 
 route → parse → pipeline → render → auth (headers only) → upstream → streamed relay. Every
 failure before the upstream call falls back to forwarding the original bytes (PX-010); only an
-unreachable upstream produces a Tokli error response (PX-008).
+unreachable upstream produces a Tokli error response (PX-008). Parse, pipeline and render run
+on a worker thread, so one request's transformation never stalls the relay of others (PX-015,
+ADR 0011).
 
 For the transformable endpoint the relay also feeds a passive usage parser, after each chunk has
 been passed on (AN-006), and a worker thread estimates the whole request while the upstream
@@ -16,7 +18,6 @@ import json
 import logging
 import time
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
 from typing import Any
 
 import anyio
@@ -25,35 +26,25 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse, Response, StreamingResponse
 
 from tokli.app import measurement
-from tokli.app.api import (
-    compression_report,
-    compressor_summary,
-    request_view,
-    stats_records,
-)
+from tokli.app.api import CompressionReport, compression_report, compressor_summary
 from tokli.app.bootstrap import Services
+from tokli.app.request_record import Observed, now_iso, record_request, usage_categories
 from tokli.app.runtime import Runtime
 from tokli.auth.passthrough import credential_kind, forward_request_headers, header_names
 from tokli.domain.models import CanonicalRequest
 from tokli.domain.stage import StageContext
 from tokli.domain.usage import Usage
 from tokli.observability.ids import new_request_id
-from tokli.observability.logs import REQUEST_LOGGER, log_fields
+from tokli.observability.logs import log_fields
 from tokli.observability.trace import Trace
 from tokli.protocols.anthropic_messages import PROTOCOL, ParseError, parse, render
 from tokli.protocols.anthropic_usage import BodyUsageParser, StreamUsageParser, unavailable
-from tokli.telemetry.records import RequestRecord
 from tokli.upstream.forwarder import UpstreamError, response_headers
 
 PREFIX = "/anthropic"
 PROVIDER = "anthropic"
-_LOG = logging.getLogger(REQUEST_LOGGER)
 _ERROR_BODY_LIMIT = 64 * 1024
 _WARN_INTERVAL_S = 60.0  # calibration outliers: at most one WARNING per minute (TM-009)
-
-
-def now_iso() -> str:
-    return datetime.now(UTC).isoformat(timespec="milliseconds")
 
 
 def canonical_endpoint(method: str, rest: str) -> str | None:
@@ -82,7 +73,7 @@ class _State:
     segments_mutable: int = 0
     segments_changed: int = 0
     tokenizer_id: str | None = None
-    engine: Any = None  # the compression report (tokli.app.api.compression_report)
+    engine: CompressionReport | None = None
     credential_kind: str = "none"
     ms_parse: float | None = None
     ms_pipeline: float | None = None
@@ -95,17 +86,18 @@ class _State:
     error_details: dict[str, str] = field(default_factory=dict)
     header_names: tuple[str, ...] = ()
     request: CanonicalRequest | None = None
-    counter: Any = None  # the request's TokenCounter
+    counter: measurement.TokenCounter | None = None
     parser: StreamUsageParser | BodyUsageParser | None = None
     usage: Usage = field(default_factory=lambda: Usage(source="unavailable"))
     ms_usage: float = 0.0
     estimate: asyncio.Future[measurement.RequestEstimate] | None = None
-    services: Any = None  # the snapshot this request started with (CF-005)
+    services: Services | None = None  # the snapshot this request started with (CF-005)
 
 
 class ProxyHandler:
     def __init__(self, runtime: Runtime) -> None:
         self._runtime = runtime
+        # Read once: these keys are not UI-editable (CF-009), so a PATCH never changes them.
         settings = runtime.current().config.settings
         self._max_bytes = settings.limits.max_transform_bytes
         self._usage_limit = settings.limits.usage_parser_buffer
@@ -124,7 +116,7 @@ class ProxyHandler:
         query = request.scope.get("query_string", b"").decode("latin-1")
         endpoint = canonical_endpoint(request.method, rest)
         state = _State(rid, started, now_iso(), endpoint or rest.split("?")[0])
-        state.services = self._runtime.current()
+        services = state.services = self._runtime.current()
         trace.span(
             "route", started, time.perf_counter(), provider=PROVIDER, endpoint=state.endpoint
         )
@@ -138,7 +130,9 @@ class ProxyHandler:
         forward_body, forward_path = body, rest
         if endpoint is not None:
             forward_path = endpoint
-            forward_body = self._transform(body, headers, trace, state)
+            forward_body = await anyio.to_thread.run_sync(
+                self._transform, body, headers, trace, state
+            )
 
         auth_started = time.perf_counter()
         upstream_headers = forward_request_headers(headers)
@@ -160,7 +154,7 @@ class ProxyHandler:
 
         state.upstream_started = time.perf_counter()
         try:
-            upstream = await state.services.upstream.open(
+            upstream = await services.upstream.open(
                 request.method, forward_path, query, upstream_headers, forward_body
             )
         except UpstreamError as exc:
@@ -199,7 +193,8 @@ class ProxyHandler:
     def _transform(
         self, body: bytes, headers: list[tuple[str, str]], trace: Trace, state: _State
     ) -> bytes:
-        services: Services = state.services
+        services = state.services
+        assert services is not None  # set by handle()
         state.protocol = PROTOCOL
         if any(name.lower() == "content-encoding" for name, _ in headers):
             self._passthrough(trace, state, "content_encoding")
@@ -229,7 +224,7 @@ class ProxyHandler:
             bytes=len(body),
         )
         counter = services.selector.select(request.model)
-        state.tokenizer_id = getattr(counter, "tokenizer_id", None)
+        state.tokenizer_id = counter.tokenizer_id
         state.request, state.counter = request, counter
         if state.segments_mutable == 0:
             self._passthrough(trace, state, "no_mutable_segments")
@@ -389,7 +384,8 @@ class ProxyHandler:
         task.add_done_callback(self._pending.discard)
 
     def _complete(self, trace: Trace, state: _State, ended: float) -> None:
-        services: Services = state.services
+        services = state.services
+        assert services is not None  # set by handle()
         upstream_start = state.upstream_started or ended
         upstream_done = state.upstream_done or ended
         if state.upstream_headers_at is not None:
@@ -412,7 +408,7 @@ class ProxyHandler:
                 status=usage.source,
                 source=usage.source,
                 **({"reason": usage.reason} if usage.reason else {}),
-                **_categories(usage),
+                **usage_categories(usage),
                 events=dict(usage.events),
                 delta_usage_fields=list(usage.delta_fields),
             )
@@ -438,12 +434,9 @@ class ProxyHandler:
         if transformable:
             self._record_calibration(trace, calibration, estimate)
 
-        ms_total = (ended - state.started) * 1000
-        ms_upstream_total = (upstream_done - upstream_start) * 1000
-        record = RequestRecord(
+        observed = Observed(
             request_id=state.request_id,
             ts_start=state.ts_start,
-            ts_end=now_iso(),
             provider=PROVIDER,
             protocol=state.protocol,
             endpoint=state.endpoint,
@@ -451,16 +444,12 @@ class ProxyHandler:
             stream=state.stream,
             auth_mode="passthrough",
             credential_kind=state.credential_kind,
-            policy=services.policy,
-            config_hash=services.config.config_hash,
             outcome=state.outcome,
-            passthrough_reason=state.reason,
+            reason=state.reason,
             segments_total=state.segments_total,
             segments_mutable=state.segments_mutable,
             segments_changed=state.segments_changed,
             tokenizer_id=state.tokenizer_id,
-            est_original_tokens=engine.est_original_tokens if engine else None,
-            est_forwarded_tokens=engine.est_forwarded_tokens if engine else None,
             status_code=state.status_code,
             ms_parse=state.ms_parse,
             ms_pipeline=state.ms_pipeline,
@@ -470,67 +459,14 @@ class ProxyHandler:
                 if state.upstream_headers_at is not None
                 else None
             ),
-            ms_upstream_total=ms_upstream_total,
-            ms_tokli_overhead=max(0.0, ms_total - ms_upstream_total),
-            ms_total=ms_total,
+            ms_upstream_total=(upstream_done - upstream_start) * 1000,
+            ms_total=(ended - state.started) * 1000,
             error_code=state.error_code,
-            est_request_tokens_original=estimate.original if estimate else None,
-            est_request_tokens_forwarded=estimate.forwarded if estimate else None,
-            usage_source=usage.source,
-            usage_input=usage.input,
-            usage_cache_read=usage.cache_read,
-            usage_cache_write_5m=usage.cache_write_5m,
-            usage_cache_write_1h=usage.cache_write_1h,
-            usage_output=usage.output,
-            calibration_k=calibration.k,
             header_names=state.header_names,
-            reference_stubs=engine.reference_stubs if engine else 0,
+            usage=usage,
+            error_details=state.error_details,
         )
-        stats = stats_records(state.request_id, engine.stats if engine else ())
-        if services.store is not None:
-            services.store.submit(record, stats)
-        services.traces.add(state.request_id, request_view(record, stats, trace.to_dict()))
-        log_fields(
-            _LOG,
-            logging.INFO,
-            "request",
-            event="request",
-            request_id=state.request_id,
-            provider=PROVIDER,
-            model=state.model,
-            stream=state.stream,
-            outcome=state.outcome,
-            reason=state.reason,
-            status=state.status_code,
-            credential_kind=state.credential_kind,
-            overhead_ms=round(record.ms_tokli_overhead or 0.0, 3),
-            tokens={
-                "original": {"value": record.est_original_tokens, "method": "estimate"},
-                "forwarded": {"value": record.est_forwarded_tokens, "method": "estimate"},
-                "saved": (
-                    {"value": calibration.saving, "method": calibration.method}
-                    if calibration.saving is not None
-                    else {"value": None, "reason": "not_measured"}
-                ),
-                "usage": (
-                    {"source": usage.source, "method": "exact", **_categories(usage)}
-                    if usage.source != "unavailable"
-                    else {"value": None, "reason": usage.reason or "usage_unavailable"}
-                ),
-                "k": calibration.k,
-            },
-            **({"upstream_error": state.error_details} if state.error_details else {}),
-            **(
-                {
-                    "sse": {
-                        "events": dict(usage.events),
-                        "delta_usage_fields": list(usage.delta_fields),
-                    }
-                }
-                if usage.events
-                else {}
-            ),
-        )
+        record_request(services, observed, engine, estimate, calibration, trace.to_dict())
 
     def _record_calibration(
         self,
@@ -566,7 +502,7 @@ class ProxyHandler:
                 "calibration outlier",
                 event="calibration_outlier",
                 k=round(calibration.k or 0.0, 4),
-                range=[0.5, 2.0],
+                range=list(measurement.OUTLIER_RANGE),
             )
 
 
@@ -584,14 +520,4 @@ def _error_fields(body: bytes, encoding: str | None) -> dict[str, str]:
     return {
         "type": str(error.get("type", "unknown"))[:100],
         "message": str(error.get("message", ""))[:500],
-    }
-
-
-def _categories(usage: Usage) -> dict[str, int | None]:
-    return {
-        "input": usage.input,
-        "cache_read": usage.cache_read,
-        "cache_write_5m": usage.cache_write_5m,
-        "cache_write_1h": usage.cache_write_1h,
-        "output": usage.output,
     }

@@ -2,16 +2,15 @@
 
 from __future__ import annotations
 
-from typing import Any
-
+from tokli.compression.contract import AnyCompressor
 from tokli.compressors.duplicate_tool_results import DuplicateToolResults
 from tokli.compressors.json_minify import JsonMinify
 
 
 def build_registry(
     *, duplicate_min_tokens: int = 64, duplicate_require_same_call: bool = False
-) -> tuple[Any, ...]:
+) -> tuple[AnyCompressor, ...]:
     return (JsonMinify(), DuplicateToolResults(duplicate_min_tokens, duplicate_require_same_call))
 
 
-REGISTRY: tuple[Any, ...] = build_registry()
+REGISTRY: tuple[AnyCompressor, ...] = build_registry()

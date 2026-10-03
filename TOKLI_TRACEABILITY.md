@@ -59,6 +59,7 @@ Evidence codes:
 | PX-012 | Brief§14 correlation | AC-OB-1 | `test_request_id_header`, `test_request_id_header_can_be_disabled` |
 | PX-013 | ops | — (trivial) | `test_health_endpoint` |
 | PX-014 | usage parsing needs plain bodies | AC-AN-3 | `test_transformable_request_asks_identity_encoding`, `test_verbatim_route_keeps_client_accept_encoding` |
+| PX-015 | one large request must not stall other streams (S4.5 D3) | AC-PX-8 | `test_slow_transform_does_not_stall_other_streams` (S4.5) |
 
 ## Anthropic (SPEC 003)
 
@@ -169,7 +170,7 @@ Evidence codes:
 | CC-021 | the bytes stay verbatim in the target | AC-CC-12 | `test_duplicate_pruning_applies_to_verbatim_tools` |
 | CC-022 | S1 review P1 (POLICY, provisional) | AC-CC-3 | `test_min_segment_tokens_default` |
 | CC-023 | H04; S1 review P2 | AC-CC-12 | `test_unresolved_tool_name_treated_as_verbatim` |
-| CC-024 | S1 E9 large-request overhead; S1 Gate 2 decision 2 | AC-CC-13 | `test_result_cache_hit_gives_identical_output`, `test_result_cache_also_caches_not_applicable_and_no_gain`, `test_result_cache_key_includes_view_and_config`, `test_result_cache_still_checks_invariants`, `test_result_cache_bounded`, `test_result_cache_off`, `test_failed_result_is_not_cached` |
+| CC-024 | S1 E9 large-request overhead; S1 Gate 2 decision 2 | AC-CC-13 | `test_result_cache_hit_gives_identical_output`, `test_result_cache_also_caches_not_applicable_and_no_gain`, `test_result_cache_key_includes_view_and_config`, `test_result_cache_still_checks_invariants`, `test_result_cache_bounded`, `test_result_cache_off`, `test_failed_result_is_not_cached`, `test_result_cache_is_safe_under_concurrent_requests` (S4.5, PX-015) |
 
 ## Tool-history pruning (SPEC 019)
 
@@ -267,8 +268,8 @@ Evidence codes:
 | TC-008 | H22 | AC-TC-5 | `test_price_effective_dates` |
 | TC-009 | Brief§12 pricing ≠ compression | AC-CM-7 | `test_import_contracts` |
 | TC-010 | Brief§15 retention | AC-TC-1 | `test_retention_pruning`, `test_retention_zero_keeps_everything` |
-| TC-011 | telemetry must not break traffic | AC-TC-6 | `test_sink_failure_degrades_not_breaks`, `test_write_failure_counts_and_never_raises` |
-| TC-012 | additive migrations keep older data readable; ADR 0005 | AC-TC-1, AC-TC-9 | `test_schema_migration_forward`, `test_schema_migration_forward_from_v1` (v1 → v3), `test_schema_version_recorded`, `test_non_ascii_data_dir`, `test_usage_and_calibration_fields_round_trip` |
+| TC-011 | telemetry must not break traffic | AC-TC-6 | `test_sink_failure_degrades_not_breaks`, `test_write_failure_counts_and_never_raises`, `test_close_never_closes_the_connection_under_a_busy_writer` (S4.5) |
+| TC-012 | additive migrations keep older data readable; ADR 0005 | AC-TC-1, AC-TC-9 | `test_schema_migration_forward`, `test_schema_migration_forward_from_v1` (v1 → v3), `test_schema_version_recorded`, `test_non_ascii_data_dir`, `test_usage_and_calibration_fields_round_trip`; S4.5 D2: `test_column_type_follows_field_annotation`, `test_unmapped_annotation_is_refused`, `test_existing_column_types_unchanged` |
 | TC-013 | R01§9: measure overhead from the first useful slice; target ≠ gate | AC-TC-7 | `test_overhead_percentiles_by_bucket`, `test_target_is_reference_not_status`, `test_unknown_size_bucket`, `test_overhead_groups_by_policy_and_config_hash`, `test_ui_overhead_target_is_reference_line` |
 | TC-014 | PR-009 flag was not in the record schema (R01§10 consistency pass) | AC-TC-8 | `test_request_record_pruning_fields` |
 | TC-015 | honest totals (H21); S3 review A1–A4, P4 | AC-TC-11 | `test_summary_totals_hand_computed`, `test_summary_labels_mixed_totals_as_estimate_with_share`, `test_requests_list_metadata_only` |
@@ -302,7 +303,7 @@ Evidence codes:
 | API-004 | replaceable UI (Brief§4) | AC-API-1 | `test_api_contract_schemas`, `test_api_contract_schemas_s3` |
 | API-005 | config ownership | AC-API-3 | `test_patch_pinned_key_conflict`, `test_patch_unknown_key_rejected`, `test_patch_rejects_malformed_body` |
 | API-006 | browser-origin mutations | AC-API-4 | `test_mutation_rejects_foreign_origin` |
-| API-007 | atomic, persisted changes; ADR 0009 | AC-API-5 | `test_config_change_atomic_snapshot`, `test_patch_persists_to_ui_overrides_file`, `test_patch_noop_returns_same_hash`, `test_ui_toggle_changes_next_config_hash_and_attribution`, `test_config_reload_reads_new_overrides` |
+| API-007 | atomic, persisted changes; ADR 0009 | AC-API-5 | `test_config_change_atomic_snapshot`, `test_patch_persists_to_ui_overrides_file`, `test_patch_noop_returns_same_hash`, `test_ui_toggle_changes_next_config_hash_and_attribution`, `test_config_reload_reads_new_overrides`; S4.5 D1: `test_concurrent_patches_keep_every_change`, `test_failed_write_leaves_no_temporary_file` |
 | API-008 | UI ↛ internals; ADR 0006 | AC-CM-7 | `test_import_contracts` (contract "API routes reach storage only through tokli.app use cases") |
 | API-009 | DNS rebinding; S3 review M4, P7 | AC-API-6 | `test_tokli_routes_reject_foreign_host`, `test_proxy_routes_ignore_host_check` |
 | API-010 | S3 review A5, A6 | AC-API-7 | `test_summary_compressor_filter`, `test_timeseries_hour_and_day_buckets`, `test_timeseries_buckets_follow_tz_across_dst`, `test_metrics_filters_validated` |

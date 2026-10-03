@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import logging
 import os
+import threading
 from collections.abc import Mapping
 from typing import Any
 
@@ -16,6 +17,9 @@ from tokli.config.loader import read_ui_overrides, ui_document, validate_values
 
 API_VERSION = 1
 _LOG = logging.getLogger("tokli.config")
+# One PATCH at a time, from reading the overrides to the swap: two concurrent PATCHes must not
+# both merge into the same old file (API-007, S4.5 D1).
+_APPLY_LOCK = threading.Lock()
 
 
 class PatchError(Exception):
@@ -51,6 +55,11 @@ def config_view(config: EffectiveConfig) -> dict[str, Any]:
 
 def apply_patch(runtime: Runtime, changes: Mapping[str, object]) -> dict[str, Any]:
     """Validates, persists and applies a change; returns the new view (API-007)."""
+    with _APPLY_LOCK:
+        return _apply(runtime, changes)
+
+
+def _apply(runtime: Runtime, changes: Mapping[str, object]) -> dict[str, Any]:
     config = runtime.current().config
     keys = schema_keys()
     fields: dict[str, str] = {}
@@ -73,7 +82,7 @@ def apply_patch(runtime: Runtime, changes: Mapping[str, object]) -> dict[str, An
     except ConfigError as exc:
         raise PatchError(500, {"type": "overrides_unreadable", "message": exc.cause}) from exc
     proposed = {**current, **changes}
-    tmp = path.with_name(path.name + ".tmp")
+    tmp = path.with_name(f"{path.name}.{os.getpid()}.{threading.get_ident()}.tmp")
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
         tmp.write_text(
@@ -81,6 +90,7 @@ def apply_patch(runtime: Runtime, changes: Mapping[str, object]) -> dict[str, An
         )
         os.replace(tmp, path)  # atomic: the old file stays if this fails
     except OSError as exc:
+        tmp.unlink(missing_ok=True)
         raise PatchError(500, {"type": "write_failed", "message": type(exc).__name__}) from exc
     new = runtime.swap(config.reload())
     _LOG.info(

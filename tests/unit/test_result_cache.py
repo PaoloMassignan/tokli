@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 import dataclasses
+import sys
+import threading
 
 from tests.helpers import make_request
 from tests.unit.test_engine import Fake, run, settings_for, stats_of
-from tokli.compression.engine import Engine
-from tokli.domain.models import Span
+from tokli.compression.contract import Applicability, SegmentView
+from tokli.compression.engine import _ENTRY_OVERHEAD, Engine, ResultCache
+from tokli.domain.models import SegmentKind, Span
+from tokli.domain.stage import Features
 
 TEXT = "a b c " * 40
 
@@ -123,3 +127,43 @@ def test_failed_result_is_not_cached() -> None:
     request = make_request(("TOOL_RESULT", TEXT))
     assert stats_of(run(engine, request), "fake").failed == 1
     assert stats_of(run(engine, request), "fake").accepted == 1
+
+
+def test_result_cache_is_safe_under_concurrent_requests() -> None:
+    """CC-024 with PX-015 (S4.5 D3, ADR 0011): transformations now run on worker threads and
+    share the engine's cache. Concurrent lookups, insertions and evictions never raise, and the
+    cache's size stays the sum of its entries.
+
+    Root cause guarded against: ``get`` looked a key up and then moved it to the end; another
+    thread could evict the key in between (``KeyError``), and two concurrent ``put`` calls
+    could lose a size update."""
+    cache = ResultCache(max_bytes=40 * (_ENTRY_OVERHEAD + 8))
+    view = SegmentView(SegmentKind.TOOL_RESULT, "user", "Read", False, ())
+    features = Features(tokens=8, json_candidate=False)
+    keys = [cache.key("c", "1", view, features, f"text {i}") for i in range(200)]
+    errors: list[BaseException] = []
+    start = threading.Barrier(8)
+
+    def worker(seed: int) -> None:
+        start.wait()
+        try:
+            for n in range(20_000):
+                key = keys[(seed * 7919 + n * 31) % len(keys)]
+                if cache.get(key) is None:
+                    cache.put(key, Applicability(True), "x" * 8)
+        except BaseException as exc:
+            errors.append(exc)
+
+    old = sys.getswitchinterval()
+    sys.setswitchinterval(1e-6)
+    try:
+        threads = [threading.Thread(target=worker, args=(s,)) for s in range(8)]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join(60)
+    finally:
+        sys.setswitchinterval(old)
+    assert errors == []
+    assert cache.size == sum(entry[2] for entry in cache._entries.values())
+    assert cache.size <= 40 * (_ENTRY_OVERHEAD + 8)

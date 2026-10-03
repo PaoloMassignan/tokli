@@ -107,6 +107,22 @@ also lets the harness validate itself on a low-risk compressor first.
   The dashboard shows pruning and text-compression savings separately.
 - **Accepted 2026-10-03** (`slices/S4/COMPLETION_REPORT.md`): E11 `no_measurable_damage`; `duplicate_tool_results` on by default; SCR-001 (policy as a shortcut), SCR-002.
 
+## S4.5 — Hardening of the accepted code
+
+Why here: a code review after S4 found two defects and several refactorings. Fixing them before
+S5 keeps the second provider from building on them.
+
+- Fix two defects: concurrent configuration changes can lose an update (API-007), and telemetry
+  column types are derived from column names (TC-012).
+- The request transformation (parse, pipeline, render) leaves the event loop, so one large
+  request never stalls the streams of others (PX-015, ADR 0011).
+- Behaviour-preserving refactorings: one acceptance gate for both compression scopes, protocol
+  types instead of `Any`, record building moved out of the HTTP layer.
+- No new product behaviour beyond PX-015, no new compressor, no new provider.
+- Exit: regression tests for both defects; PX-015 test green; all test categories green on the CI
+  matrix; overhead (E9) re-measured and compared with the S4 baseline.
+- **Accepted 2026-10-03** (`slices/S4.5/COMPLETION_REPORT.md`): D1–D3 as planned, D4 (store close under a busy writer) found by CI and fixed; E9 paired local run within 1.14× of S4.
+
 ## S5 — OpenAI Responses (Codex, API key)
 
 - Adapter `openai_responses` (OR-*): `function_call_output`/`custom_tool_call_output`/`input_text`;

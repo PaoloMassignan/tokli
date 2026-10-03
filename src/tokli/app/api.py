@@ -125,6 +125,9 @@ def request_view(
     }
 
 
+CompressionReport = EngineResult  # the compression stage's report, as the HTTP layer names it
+
+
 def compression_report(reports: Mapping[str, object]) -> EngineResult | None:
     """The compression stage's report, if the stage ran."""
     report = reports.get("transform.compression")

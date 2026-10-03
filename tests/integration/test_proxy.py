@@ -9,6 +9,7 @@ import threading
 import time
 from collections.abc import AsyncIterator, Callable
 from pathlib import Path
+from typing import Any
 
 import httpx
 import pytest
@@ -16,6 +17,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse, Response, StreamingResponse
 
 from tests.integration.servers import FakeUpstream, Tokli, free_socket
+from tests.unit.test_duplicate_pruning import FILE, conversation
 
 FIXTURES = Path(__file__).resolve().parents[1] / "compat" / "fixtures" / "anthropic_messages"
 ULID = re.compile(r"^[0-9A-HJKMNP-TV-Z]{26}$")
@@ -367,3 +369,71 @@ def test_oversize_body_relayed_verbatim(tokli: Start, upstream: FakeUpstream) ->
     assert upstream.received[-1].body == content
     trace = t.wait_trace(response.headers["x-tokli-request-id"])
     assert trace["record"]["passthrough_reason"] == "too_large"
+
+
+def test_slow_transform_does_not_stall_other_streams(
+    tokli: Start, upstream: FakeUpstream, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Causal test (AC-PX-8, PX-015): while request B is inside a pipeline stage, request A's
+    stream keeps flowing. B's stage blocks until the client has received A's next chunk.
+
+    Root cause (S4.5 D3): parse, pipeline and render ran synchronously inside the async handler,
+    on the event loop that also relays every response. B's stage then held the loop, A's next
+    chunk could not be relayed, and B waited for it until the timeout."""
+    from tokli.pipeline.pipeline import Pipeline
+
+    first, second = sse("ping", {"i": 0}), sse("message_stop", {})
+    b_in_stage = threading.Event()
+    a_second_received = threading.Event()
+    b_saw_a_flow: list[bool] = []
+
+    async def responder(request: Request) -> Response:
+        if b"stream-a" not in await request.body():
+            return JSONResponse({"type": "message", "content": []})
+
+        async def gen() -> AsyncIterator[bytes]:
+            yield first
+            await asyncio.to_thread(b_in_stage.wait, 5)
+            yield second
+
+        return StreamingResponse(gen(), media_type="text/event-stream")
+
+    real_run = Pipeline.run
+
+    def blocking_run(self: Pipeline, request: Any, ctx: Any) -> Any:
+        if any("request-b" in s.text for s in request.segments):
+            b_in_stage.set()
+            b_saw_a_flow.append(a_second_received.wait(5))
+        return real_run(self, request, ctx)
+
+    monkeypatch.setattr(Pipeline, "run", blocking_run)
+    upstream.responder = responder
+    t = tokli()
+    request_a = {
+        **json.loads(body("string_content")),
+        "stream": True,
+        "metadata": {"user_id": "stream-a"},
+    }
+    request_b = conversation("request-b\n" + FILE)  # a tool result: reaches the pipeline
+    b_status: list[int] = []
+    b_thread = threading.Thread(
+        target=lambda: b_status.append(post(t, content=json.dumps(request_b).encode()).status_code)
+    )
+    got = b""
+    with httpx.stream(
+        "POST",
+        t.url + "/anthropic/v1/messages",
+        content=json.dumps(request_a).encode(),
+        headers=CLIENT_HEADERS,
+        timeout=15,
+    ) as response:
+        for piece in response.iter_raw():
+            got += piece
+            if got == first:
+                b_thread.start()
+            if got == first + second:
+                a_second_received.set()
+    b_thread.join(15)
+    assert got == first + second
+    assert b_status == [200]
+    assert b_saw_a_flow == [True], "B's stage held the loop: A's next chunk was not relayed"

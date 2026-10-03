@@ -3,6 +3,7 @@
 Status: Draft · Slice: S1 · Related: ARCH §6
 Approved for S1 (2026-09-30): PX-001…PX-013 for the `/anthropic` prefix. PX-014 in S2; `/openai` in S5.
 Approved for S2 (2026-10-02): PX-014.
+Approved for S4.5 (2026-10-03): PX-015.
 
 ## Purpose
 Accept client traffic on a local port, route it to the correct provider without guessing, and
@@ -47,6 +48,7 @@ relayed verbatim.
 | PX-012 | THE SYSTEM SHALL add the response header `x-tokli-request-id` unless `observability.response_header` is false. |
 | PX-013 | THE SYSTEM SHALL expose `GET /tokli/health` returning status and version without authentication. |
 | PX-014 | THE SYSTEM SHALL request `accept-encoding: identity` from the upstream only for transformable endpoints, and SHALL otherwise forward the client's `accept-encoding`. |
+| PX-015 | WHILE a transformable request is being parsed, transformed or rendered, THE SYSTEM SHALL keep relaying the responses of other requests: that work SHALL NOT run on the thread that relays responses. (S4.5 review D3, ADR 0011.) |
 
 Note on PX-014: Tokli needs plain-text responses only where it parses usage. For verbatim routes,
 the client's own negotiation is preserved. REQUIRES VERIFICATION: some SDKs send `gzip` and
@@ -67,6 +69,11 @@ Spans: `route`, `upstream` (TTFB, total, status, upstream request-id header). De
 - AC-PX-5 (PX-008): connect refused → 502 with `source: tokli`.
 - AC-PX-6 (PX-009): upstream observes cancellation after a client disconnect.
 - AC-PX-7 (PX-010): a stage that raises results in upstream receiving the original bytes.
+- AC-PX-8 (PX-015): causal test. Request A is a stream relayed chunk by chunk as in AC-PX-3. While
+  A is open, request B enters a pipeline stage that blocks until the test client has received A's
+  next chunk. A's chunk arrives and both requests complete with the expected bytes; a proxy that
+  transforms on the relaying thread makes the test fail (deadlock, 5 s timeout). No absolute
+  timing threshold is used.
 
 ## Test scenarios
 `test_default_bind_is_loopback` · `test_remote_bind_requires_flag` · `test_routing_table` ·
@@ -74,7 +81,8 @@ Spans: `route`, `upstream` (TTFB, total, status, upstream request-id header). De
 `test_response_bytes_identical` · `test_stream_chunks_identical_and_unbuffered` ·
 `test_upstream_errors_relayed_verbatim` · `test_upstream_unreachable_returns_tokli_502` ·
 `test_client_disconnect_cancels_upstream` · `test_internal_error_forwards_original` ·
-`test_large_body_not_rejected` · `test_request_id_header` · `test_health_endpoint`
+`test_large_body_not_rejected` · `test_request_id_header` · `test_health_endpoint` ·
+`test_slow_transform_does_not_stall_other_streams`
 
 ## Open questions
 - ~~Q2~~ Resolved 2026-10-02 by E1: Claude Code accepts `ANTHROPIC_BASE_URL=http://127.0.0.1:8787/anthropic` and keeps the prefix on every request, including `GET /api/hello`.

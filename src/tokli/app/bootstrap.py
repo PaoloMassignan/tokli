@@ -37,7 +37,7 @@ TELEMETRY_DB = "tokli.db"
 class Services:
     config: EffectiveConfig
     pipeline: Pipeline
-    selector: Selector
+    selector: TokenizerSelector
     mutable_kinds: frozenset[SegmentKind]
     upstream: Upstream
     traces: TraceBuffer

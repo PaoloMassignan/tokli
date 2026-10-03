@@ -11,19 +11,23 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import math
+import threading
 import time
 from collections import OrderedDict
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
-from typing import Any, Protocol
+from typing import Protocol
 
 from tokli.compression.contract import (
+    AnyCompressor,
     Applicability,
+    LosslessCompressor,
+    RequestCompressor,
     SegmentRef,
     SegmentView,
     ToolRecordView,
 )
-from tokli.domain.models import CanonicalRequest, Patch, Segment, SegmentKind
+from tokli.domain.models import CanonicalRequest, Patch, Segment, SegmentKind, Span
 from tokli.domain.spans import spans_preserved
 from tokli.domain.stage import Features, StageView
 
@@ -117,6 +121,7 @@ class _RequestState:
     targets: dict[str, list[str]] = field(default_factory=dict)  # target id -> stub ids
 
 
+CacheKey = tuple[str, str, SegmentView, Features, int, bytes]
 # Fixed per-entry bookkeeping counted against the cache bound (key, tuples, dict slot).
 _ENTRY_OVERHEAD = 256
 
@@ -128,38 +133,44 @@ class ResultCache:
     version, the ``SegmentView``, the routing features and the text (SHA-256 and length). The
     effective config is fixed per engine, and each engine owns its cache. Least recently used
     entries are evicted past ``max_bytes``, an approximate measure (text characters plus a fixed
-    overhead per entry).
+    overhead per entry). Requests are transformed on worker threads (PX-015, ADR 0011), so
+    lookups and insertions hold a lock; compressors run outside it.
     """
 
     def __init__(self, max_bytes: int) -> None:
         self._max = max_bytes
-        self._entries: OrderedDict[Any, tuple[Applicability, str | None, int]] = OrderedDict()
+        self._entries: OrderedDict[CacheKey, tuple[Applicability, str | None, int]] = OrderedDict()
         self.size = 0
+        self._lock = threading.Lock()
 
     @staticmethod
-    def key(spec_id: str, version: str, view: SegmentView, features: Features, text: str) -> Any:
+    def key(
+        spec_id: str, version: str, view: SegmentView, features: Features, text: str
+    ) -> CacheKey:
         digest = hashlib.sha256(text.encode("utf-8", "surrogatepass")).digest()
         return (spec_id, version, view, features, len(text), digest)
 
-    def get(self, key: Any) -> tuple[Applicability, str | None] | None:
-        entry = self._entries.get(key)
-        if entry is None:
-            return None
-        self._entries.move_to_end(key)
-        return entry[0], entry[1]
+    def get(self, key: CacheKey) -> tuple[Applicability, str | None] | None:
+        with self._lock:
+            entry = self._entries.get(key)
+            if entry is None:
+                return None
+            self._entries.move_to_end(key)
+            return entry[0], entry[1]
 
-    def put(self, key: Any, applicability: Applicability, output: str | None) -> None:
+    def put(self, key: CacheKey, applicability: Applicability, output: str | None) -> None:
         size = _ENTRY_OVERHEAD + len(output or "")
         if size > self._max:
             return
-        old = self._entries.pop(key, None)
-        if old is not None:
-            self.size -= old[2]
-        self._entries[key] = (applicability, output, size)
-        self.size += size
-        while self.size > self._max:
-            _, (_, _, evicted) = self._entries.popitem(last=False)
-            self.size -= evicted
+        with self._lock:
+            old = self._entries.pop(key, None)
+            if old is not None:
+                self.size -= old[2]
+            self._entries[key] = (applicability, output, size)
+            self.size += size
+            while self.size > self._max:
+                _, (_, _, evicted) = self._entries.popitem(last=False)
+                self.size -= evicted
 
 
 def availability_of(requires: Sequence[str]) -> str:
@@ -185,7 +196,7 @@ def _features(text: str, counter: Counter) -> Features:
 class Engine:
     def __init__(
         self,
-        registry: Sequence[Any],  # Compressor or RequestCompressor (ADR 0010)
+        registry: Sequence[AnyCompressor],
         settings: EngineSettings,
         clock: Clock = time.perf_counter,
     ) -> None:
@@ -200,9 +211,24 @@ class Engine:
         self._cache = (
             ResultCache(settings.result_cache_bytes) if settings.result_cache_bytes else None
         )
+        # Split by scope once: a runtime protocol check costs microseconds, too much to repeat
+        # for every segment of a large request.
+        self._request_scope = tuple(
+            c
+            for c in self._compressors
+            if c.spec.scope == "request" and isinstance(c, RequestCompressor)
+        )
+        self._segment_scope = tuple(
+            c
+            for c in self._compressors
+            if c.spec.scope != "request" and not isinstance(c, RequestCompressor)
+        )
+        self._decoders = {
+            c.spec.id: c for c in self._segment_scope if isinstance(c, LosslessCompressor)
+        }
 
     @property
-    def compressors(self) -> tuple[Any, ...]:
+    def compressors(self) -> tuple[AnyCompressor, ...]:
         return self._compressors
 
     @property
@@ -220,7 +246,7 @@ class Engine:
         """``available`` or ``unavailable(<module>)`` per compressor (CC-010)."""
         return dict(self._availability)
 
-    def _pre_filter(self, compressor: Any) -> str:
+    def _pre_filter(self, compressor: AnyCompressor) -> str:
         spec = compressor.spec
         if not self._settings.enabled.get(spec.id, False):
             return "disabled"
@@ -279,7 +305,7 @@ class Engine:
     def _gate(
         self,
         original: str,
-        spans: Sequence[Any],
+        spans: Sequence[Span],
         text: str,
         output: str | None,
         t_in: int,
@@ -315,10 +341,8 @@ class Engine:
         settings = self._settings
         tools = tuple(ToolRecordView(t.call_id, t.name, t.arguments) for t in request.tools)
         position = {s.id: i for i, s in enumerate(segments)}
-        for compressor in self._compressors:
+        for compressor in self._request_scope:
             spec = compressor.spec
-            if spec.scope != "request":
-                continue
             stat = stats[spec.id]
             candidates = [s for s in segments if s.kind in spec.segment_kinds]
 
@@ -376,9 +400,11 @@ class Engine:
                 invocations.append(
                     Invocation(declined.segment_id, spec.id, "not_applicable", code, 0, 0, 0.0)
                 )
-            proposals = [p for p in proposals if p.new_text is not None]
             by_ref = {r.segment_id: r for r in refs}
             for proposal in proposals:
+                new_text = proposal.new_text
+                if new_text is None:
+                    continue  # declined, recorded above
                 sid = proposal.segment_id
                 ref = by_ref.get(sid)
                 if ref is None:
@@ -411,7 +437,7 @@ class Engine:
                     record("rejected", "reference_target_modified")
                     continue
                 why, t_out = self._gate(
-                    originals[sid], ref.view.protected, text, proposal.new_text, t_in, counter
+                    originals[sid], ref.view.protected, text, new_text, t_in, counter
                 )
                 if why:
                     stat.rejected_no_gain += why != "protected_span_changed"
@@ -425,7 +451,7 @@ class Engine:
                     and target is not None
                 ):
                     decoded = compressor.decode_request(
-                        {sid: proposal.new_text, target: state.texts[target]}, refs
+                        {sid: new_text, target: state.texts[target]}, refs
                     )
                     if decoded.get(sid) != originals[sid]:
                         stat.rejected_invariant += 1
@@ -436,7 +462,7 @@ class Engine:
                 stat.tokens_in_accepted += t_in
                 stat.tokens_out += t_out
                 record("accepted", "", t_out)
-                state.texts[sid] = proposal.new_text
+                state.texts[sid] = new_text
                 state.chains[sid].append(spec.id)
                 if spec.terminal:
                     state.terminal.add(sid)
@@ -467,11 +493,9 @@ class Engine:
             is_error=segment.is_error,
             protected=spans,
         )
-        for compressor in self._compressors:
+        for compressor in self._segment_scope:
             spec = compressor.spec
             stat = stats[spec.id]
-            if spec.scope == "request":
-                continue
 
             def record(
                 decision: str, reason: str, t_in: int = 0, t_out: int = 0, ms: float = 0.0
@@ -533,7 +557,8 @@ class Engine:
                     continue
             ms = (self._clock() - call_start) * 1000
             stat.ms_total += ms
-            if cache is not None and hit is None and ms <= settings.per_call_timeout_ms:
+            fresh = hit is None and ms <= settings.per_call_timeout_ms
+            if cache is not None and key is not None and fresh:
                 cache.put(key, applicability, output)  # failures and timeouts are not cached
 
             if not applicability.ok:
@@ -549,36 +574,29 @@ class Engine:
                 stat.tokens_out += t_in
                 record("failed", "timeout", t_in, t_in, ms)
                 continue
-            if output is None or output == text:
-                stat.rejected_no_gain += 1
+            why, t_out = self._gate(original, spans, text, output, t_in, counter)
+            if why:
+                stat.rejected_no_gain += why != "protected_span_changed"
+                stat.rejected_invariant += why == "protected_span_changed"
                 stat.tokens_out += t_in
-                record("rejected", "no_gain", t_in, t_in, ms)
+                record("rejected", why, t_in, t_in, ms)
                 continue
-            if not spans_preserved(original, spans, output):
-                stat.rejected_invariant += 1
-                stat.tokens_out += t_in
-                record("rejected", "protected_span_changed", t_in, t_in, ms)
-                continue
-            t_out = counter.count(output)
-            required = max(settings.min_gain_tokens, math.ceil(t_in * settings.min_gain_ratio))
-            if t_out > t_in - required:
-                stat.rejected_no_gain += 1
-                stat.tokens_out += t_in
-                record("rejected", "no_gain" if t_out >= t_in else "below_min_gain", t_in, t_in, ms)
-                continue
+            assert output is not None  # the gate accepts only a real output
             if is_target and spec.equivalence not in _TARGET_SAFE:  # CC-019
                 stat.rejected_invariant += 1
                 stat.tokens_out += t_in
                 record("rejected", "reference_target_modified", t_in, t_in, ms)
                 continue
-            if settings.verify_lossless and spec.kind == "LOSSLESS":
-                decode = getattr(compressor, "decode", None)
-                equivalent = getattr(compressor, "equivalent", None)
-                if decode is None or equivalent is None or not equivalent(text, decode(output)):
-                    stat.rejected_invariant += 1
-                    stat.tokens_out += t_in
-                    record("rejected", "decode_mismatch", t_in, t_in, ms)
-                    continue
+            decoder = self._decoders.get(spec.id)
+            if (
+                settings.verify_lossless
+                and spec.kind == "LOSSLESS"
+                and not (decoder is not None and decoder.equivalent(text, decoder.decode(output)))
+            ):
+                stat.rejected_invariant += 1
+                stat.tokens_out += t_in
+                record("rejected", "decode_mismatch", t_in, t_in, ms)
+                continue
 
             stat.accepted += 1
             stat.tokens_in_accepted += t_in

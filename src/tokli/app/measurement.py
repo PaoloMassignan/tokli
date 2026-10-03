@@ -13,17 +13,22 @@ from dataclasses import dataclass
 from tokli.domain.models import CanonicalRequest
 from tokli.domain.usage import Usage
 from tokli.protocols.anthropic_messages import estimate_request_tokens
-from tokli.tokens.calibration import Calibration, OutlierWindow, calibrate
+from tokli.tokens.calibration import K_MAX, K_MIN, Calibration, OutlierWindow, calibrate
 from tokli.tokens.counter import TokenCounter
 
 __all__ = [
+    "OUTLIER_RANGE",
     "Calibration",
     "OutlierWindow",
     "RequestEstimate",
+    "TokenCounter",
     "calibrate_request",
     "estimate_request_tokens",
     "whole_request_estimates",
 ]
+
+
+OUTLIER_RANGE = (K_MIN, K_MAX)  # a calibration factor outside it is an outlier (TM-009)
 
 
 @dataclass(frozen=True)

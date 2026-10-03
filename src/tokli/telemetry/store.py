@@ -18,57 +18,69 @@ from collections.abc import Sequence
 from dataclasses import asdict, fields
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any
+from types import UnionType
+from typing import Any, Union, get_args, get_origin, get_type_hints
 
 from tokli.telemetry.records import CompressorStatsRecord, RequestRecord
 
 SCHEMA_VERSION = 3
 _LOG = logging.getLogger("tokli.telemetry")
 _WARN_INTERVAL_S = 60.0
-
-_REQUEST_COLUMNS = [f.name for f in fields(RequestRecord)]
-_STATS_COLUMNS = [f.name for f in fields(CompressorStatsRecord)]
-_BOOL_COLUMNS = {"stream", "history_rewritten"}
-_JSON_COLUMNS = {"header_names"}
+_CLOSE_TIMEOUT_S = 10.0  # how long close() waits for the writer thread
 
 
-def _sql_type(name: str) -> str:
-    if name.startswith(("ms_", "calibration")) or name in {"ms_total"}:
-        return "REAL"
-    if name in {"stream", "history_rewritten"} or name.startswith(
-        ("segments_", "est_", "usage_input", "usage_cache", "usage_output", "usage_reasoning")
-    ):
-        return "INTEGER"
-    if name in {
-        "status_code",
-        "reference_stubs",
-        "considered",
-        "applicable",
-        "accepted",
-        "rejected_no_gain",
-        "rejected_invariant",
-        "failed",
-        "skipped_budget",
-        "tokens_in",
-        "tokens_out",
-        "marginal_saved",
-        "tokens_in_accepted",
-    }:
-        return "INTEGER"
-    return "TEXT"
+def _base_type(name: str, annotation: Any) -> Any:
+    """The field's type without `| None`; a union of several types has no column type."""
+    if get_origin(annotation) in (Union, UnionType):
+        args = [a for a in get_args(annotation) if a is not type(None)]
+        if len(args) != 1:
+            raise TypeError(f"telemetry field {name!r}: no SQL type for {annotation!r}")
+        annotation = args[0]
+    return get_origin(annotation) or annotation
+
+
+def _column_types(record_type: type) -> dict[str, str]:
+    """Column name → SQL type, from the record's field annotations (TC-012, S4.5 D2). The forward
+    migration never retypes a column, so an unmapped type fails here instead of becoming TEXT."""
+    hints = get_type_hints(record_type)
+    types: dict[str, str] = {}
+    for f in fields(record_type):
+        base = _base_type(f.name, hints[f.name])
+        if base not in _SQL_TYPES:
+            raise TypeError(f"telemetry field {f.name!r}: no SQL type for {hints[f.name]!r}")
+        types[f.name] = _SQL_TYPES[base]
+    return types
+
+
+# bool is stored as 0/1; tuple and dict fields are stored as JSON text.
+_SQL_TYPES: dict[Any, str] = {
+    bool: "INTEGER",
+    int: "INTEGER",
+    float: "REAL",
+    str: "TEXT",
+    tuple: "TEXT",
+    dict: "TEXT",
+}
+_REQUEST_TYPES = _column_types(RequestRecord)
+_STATS_TYPES = _column_types(CompressorStatsRecord)
+_REQUEST_COLUMNS = list(_REQUEST_TYPES)
+_STATS_COLUMNS = list(_STATS_TYPES)
+_REQUEST_HINTS = get_type_hints(RequestRecord)
+_BOOL_COLUMNS = {c for c in _REQUEST_COLUMNS if _base_type(c, _REQUEST_HINTS[c]) is bool}
+_JSON_COLUMNS = {c for c in _REQUEST_COLUMNS if _base_type(c, _REQUEST_HINTS[c]) is tuple}
 
 
 _SCHEMA = [
     "CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)",
     "CREATE TABLE IF NOT EXISTS requests ("
     + ", ".join(
-        f"{c} {_sql_type(c)}" + (" PRIMARY KEY" if c == "request_id" else "")
-        for c in _REQUEST_COLUMNS
+        f"{c} {t}" + (" PRIMARY KEY" if c == "request_id" else "")
+        for c, t in _REQUEST_TYPES.items()
     )
     + ")",
     "CREATE INDEX IF NOT EXISTS requests_ts ON requests (ts_start)",
     "CREATE TABLE IF NOT EXISTS compressor_stats ("
-    + ", ".join(f"{c} {_sql_type(c)}" for c in _STATS_COLUMNS)
+    + ", ".join(f"{c} {t}" for c, t in _STATS_TYPES.items())
     + ", PRIMARY KEY (request_id, compressor_id))",
 ]
 
@@ -77,11 +89,11 @@ _STOP = object()
 
 def _migrate(conn: sqlite3.Connection) -> None:
     """Forward migration (TC-012, ADR 0005): add every missing column; never drop or retype."""
-    for table, columns in (("requests", _REQUEST_COLUMNS), ("compressor_stats", _STATS_COLUMNS)):
+    for table, types in (("requests", _REQUEST_TYPES), ("compressor_stats", _STATS_TYPES)):
         existing = {row[1] for row in conn.execute(f"PRAGMA table_info({table})")}
-        for column in columns:
+        for column, sql_type in types.items():
             if column not in existing:
-                conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {_sql_type(column)}")
+                conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {sql_type}")
 
 
 class SchemaError(Exception):
@@ -148,13 +160,21 @@ class TelemetryStore:
             )
 
     def close(self) -> None:
-        if self._thread is not None:
+        """Stops the writer. The connection is closed by the writer itself once it has written
+        everything queued, never from here while the writer may still be using it."""
+        thread, self._thread = self._thread, None
+        if thread is not None:
             self._queue.put(_STOP)
-            self._thread.join(timeout=10)
-            self._thread = None
-        if self._conn is not None:
-            self._conn.close()
-            self._conn = None
+            thread.join(timeout=_CLOSE_TIMEOUT_S)
+            if thread.is_alive():
+                return  # still writing; it closes the connection when it reaches _STOP
+        self._close_connection()
+
+    def _close_connection(self) -> None:
+        with self._lock:
+            if self._conn is not None:
+                self._conn.close()
+                self._conn = None
 
     # -- writing -------------------------------------------------------------------------------
 
@@ -176,6 +196,7 @@ class TelemetryStore:
         while True:
             item = self._queue.get()
             if item is _STOP:
+                self._close_connection()
                 return
             if isinstance(item, threading.Event):
                 item.set()

@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from tokli.app.setup_tokenizers import required_tokenizers
-from tokli.compression.contract import Compressor
+from tokli.compression.contract import AnyCompressor
 from tokli.compression.engine import availability_of
 from tokli.compression.registry import REGISTRY
 from tokli.config import EffectiveConfig
@@ -94,7 +94,7 @@ def _tokenizer_check(status: TokenizerStatus) -> Check:
 
 
 def compressor_lines(
-    config: EffectiveConfig, registry: tuple[Compressor, ...] = REGISTRY
+    config: EffectiveConfig, registry: tuple[AnyCompressor, ...] = REGISTRY
 ) -> tuple[CompressorLine, ...]:
     toggles = config.settings.compressors.model_dump()
     return tuple(
