@@ -6,14 +6,16 @@ S1 policy is fixed to LOSSLESS_ONLY (A7). Chains of several compressors are exer
 
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import math
 import time
+from collections import OrderedDict
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
-from typing import Protocol
+from typing import Any, Protocol
 
-from tokli.compression.contract import Compressor, SegmentView
+from tokli.compression.contract import Applicability, Compressor, SegmentView
 from tokli.domain.models import CanonicalRequest, Patch, Segment, SegmentKind
 from tokli.domain.spans import spans_preserved
 from tokli.domain.stage import Features, StageView
@@ -37,6 +39,7 @@ class EngineSettings:
     request_budget_ms: float = 50.0
     per_call_timeout_ms: float = 200.0
     verify_lossless: bool = False
+    result_cache_bytes: int = 0
 
 
 @dataclass
@@ -56,6 +59,8 @@ class CompressorStats:
     tokens_in: int = 0
     tokens_out: int = 0
     ms_total: float = 0.0
+    cache_hits: int = 0
+    cache_misses: int = 0
     skip_reasons: dict[str, int] = field(default_factory=dict)
 
     @property
@@ -90,6 +95,50 @@ class EngineResult:
 
 
 Clock = Callable[[], float]
+
+# Fixed per-entry bookkeeping counted against the cache bound (key, tuples, dict slot).
+_ENTRY_OVERHEAD = 256
+
+
+class ResultCache:
+    """Results of ``applicable()`` + ``compress()`` per compressor input (CC-024).
+
+    The key holds everything CC-006 lets a segment-scope result depend on: compressor id and
+    version, the ``SegmentView``, the routing features and the text (SHA-256 and length). The
+    effective config is fixed per engine, and each engine owns its cache. Least recently used
+    entries are evicted past ``max_bytes``, an approximate measure (text characters plus a fixed
+    overhead per entry).
+    """
+
+    def __init__(self, max_bytes: int) -> None:
+        self._max = max_bytes
+        self._entries: OrderedDict[Any, tuple[Applicability, str | None, int]] = OrderedDict()
+        self.size = 0
+
+    @staticmethod
+    def key(spec_id: str, version: str, view: SegmentView, features: Features, text: str) -> Any:
+        digest = hashlib.sha256(text.encode("utf-8", "surrogatepass")).digest()
+        return (spec_id, version, view, features, len(text), digest)
+
+    def get(self, key: Any) -> tuple[Applicability, str | None] | None:
+        entry = self._entries.get(key)
+        if entry is None:
+            return None
+        self._entries.move_to_end(key)
+        return entry[0], entry[1]
+
+    def put(self, key: Any, applicability: Applicability, output: str | None) -> None:
+        size = _ENTRY_OVERHEAD + len(output or "")
+        if size > self._max:
+            return
+        old = self._entries.pop(key, None)
+        if old is not None:
+            self.size -= old[2]
+        self._entries[key] = (applicability, output, size)
+        self.size += size
+        while self.size > self._max:
+            _, (_, _, evicted) = self._entries.popitem(last=False)
+            self.size -= evicted
 
 
 def availability_of(requires: Sequence[str]) -> str:
@@ -127,6 +176,14 @@ class Engine:
         self._availability = {
             c.spec.id: availability_of(c.spec.requires) for c in self._compressors
         }
+        self._cache = (
+            ResultCache(settings.result_cache_bytes) if settings.result_cache_bytes else None
+        )
+
+    @property
+    def result_cache_bytes(self) -> int:
+        """Current size of the result cache (CC-024), 0 when it is off."""
+        return self._cache.size if self._cache is not None else 0
 
     def availability(self) -> dict[str, str]:
         """``available`` or ``unavailable(<module>)`` per compressor (CC-010)."""
@@ -242,17 +299,29 @@ class Engine:
                 continue
 
             call_start = self._clock()
-            try:
-                applicability = compressor.applicable(text, segment_view, features)
-                output = compressor.compress(text, segment_view) if applicability.ok else None
-            except Exception:  # isolation (CC-008): a compressor never fails the request
-                ms = (self._clock() - call_start) * 1000
-                stat.ms_total += ms
-                stat.failed += 1
-                record("failed", "exception", ms=ms)
-                continue
+            cache, key, hit = self._cache, None, None
+            if cache is not None:
+                key = cache.key(spec.id, spec.version, segment_view, features, text)
+                hit = cache.get(key)
+            if hit is not None:
+                stat.cache_hits += 1
+                applicability, output = hit
+            else:
+                if cache is not None:
+                    stat.cache_misses += 1
+                try:
+                    applicability = compressor.applicable(text, segment_view, features)
+                    output = compressor.compress(text, segment_view) if applicability.ok else None
+                except Exception:  # isolation (CC-008): a compressor never fails the request
+                    ms = (self._clock() - call_start) * 1000
+                    stat.ms_total += ms
+                    stat.failed += 1
+                    record("failed", "exception", ms=ms)
+                    continue
             ms = (self._clock() - call_start) * 1000
             stat.ms_total += ms
+            if cache is not None and hit is None and ms <= settings.per_call_timeout_ms:
+                cache.put(key, applicability, output)  # failures and timeouts are not cached
 
             if not applicability.ok:
                 code = f"not_applicable({applicability.reason})"

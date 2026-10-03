@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import base64
 import fnmatch
+import threading
 from collections import OrderedDict
 from collections.abc import Mapping, Sequence
 from pathlib import Path
@@ -42,20 +43,23 @@ class TokenCounter:
             special_tokens=dict(spec.special_tokens),
         )
         self._cache: OrderedDict[str, int] = OrderedDict()
+        self._lock = threading.Lock()  # the whole-request estimate counts in a worker thread
 
     @property
     def tokenizer_id(self) -> str:
         return self._spec.tokenizer_id
 
     def count(self, text: str) -> int:
-        cached = self._cache.get(text)
-        if cached is not None:
-            self._cache.move_to_end(text)
-            return cached
-        value = len(self._encoding.encode_ordinary(text))
-        self._cache[text] = value
-        if len(self._cache) > _CACHE_SIZE:
-            self._cache.popitem(last=False)
+        with self._lock:
+            cached = self._cache.get(text)
+            if cached is not None:
+                self._cache.move_to_end(text)
+                return cached
+        value = len(self._encoding.encode_ordinary(text))  # outside the lock: may run in parallel
+        with self._lock:
+            self._cache[text] = value
+            if len(self._cache) > _CACHE_SIZE:
+                self._cache.popitem(last=False)
         return value
 
 

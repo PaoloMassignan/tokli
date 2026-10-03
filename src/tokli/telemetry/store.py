@@ -1,4 +1,4 @@
-"""SQLite telemetry store, schema v1 (TC-001, TC-002, TC-010, TC-011, TC-012; ADR 0003).
+"""SQLite telemetry store, schema v2 (TC-001, TC-002, TC-010, TC-011, TC-012; ADR 0003, 0005).
 
 Writes happen on one background thread through a bounded queue, so the request path never waits
 for the disk. A failing write never breaks traffic: it is counted, the store reports unhealthy,
@@ -21,13 +21,14 @@ from typing import Any
 
 from tokli.telemetry.records import CompressorStatsRecord, RequestRecord
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 _LOG = logging.getLogger("tokli.telemetry")
 _WARN_INTERVAL_S = 60.0
 
 _REQUEST_COLUMNS = [f.name for f in fields(RequestRecord)]
 _STATS_COLUMNS = [f.name for f in fields(CompressorStatsRecord)]
 _BOOL_COLUMNS = {"stream", "history_rewritten"}
+_JSON_COLUMNS = {"header_names"}
 
 
 def _sql_type(name: str) -> str:
@@ -72,6 +73,15 @@ _SCHEMA = [
 _STOP = object()
 
 
+def _migrate(conn: sqlite3.Connection) -> None:
+    """Forward migration (TC-012, ADR 0005): add every missing column; never drop or retype."""
+    for table, columns in (("requests", _REQUEST_COLUMNS), ("compressor_stats", _STATS_COLUMNS)):
+        existing = {row[1] for row in conn.execute(f"PRAGMA table_info({table})")}
+        for column in columns:
+            if column not in existing:
+                conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {_sql_type(column)}")
+
+
 class SchemaError(Exception):
     """The database was written by a newer, unknown schema version."""
 
@@ -111,8 +121,9 @@ class TelemetryStore:
                     conn.execute("PRAGMA journal_mode=WAL")
                     for statement in _SCHEMA:
                         conn.execute(statement)
+                    _migrate(conn)
                     conn.execute(
-                        "INSERT OR IGNORE INTO meta (key, value) VALUES ('schema_version', ?)",
+                        "INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', ?)",
                         (str(SCHEMA_VERSION),),
                     )
             except sqlite3.Error as exc:
@@ -180,6 +191,9 @@ class TelemetryStore:
             self._fail("telemetry database unavailable")
             return
         row = asdict(record)
+        for column in _JSON_COLUMNS:
+            if row[column] is not None:
+                row[column] = json.dumps(list(row[column]))
         try:
             with self._lock, conn:
                 conn.execute(
@@ -267,6 +281,9 @@ class TelemetryStore:
         record = dict(zip(_REQUEST_COLUMNS, row, strict=True))
         for column in _BOOL_COLUMNS:
             record[column] = bool(record[column])
+        for column in _JSON_COLUMNS:
+            if record[column] is not None:
+                record[column] = json.loads(record[column])
         compressors = []
         for stat in stats:
             entry = dict(zip(_STATS_COLUMNS, stat, strict=True))

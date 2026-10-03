@@ -83,3 +83,30 @@ def test_tokenizer_selected_by_model_map() -> None:
     assert selector.select("Claude-3-opus").tokenizer_id == "o"  # case-sensitive globs
     assert selector.select("mystery-model").tokenizer_id == "o"  # tokens.default
     assert selector.select(None).tokenizer_id == "o"
+
+
+def test_counter_safe_across_threads() -> None:
+    """I1: the whole-request estimate counts in a worker thread while the event loop counts too.
+    The per-text cache must stay consistent under concurrent use and eviction."""
+    import threading
+
+    from tests.integration.servers import BYTE_CATALOG
+    from tokli.tokens.counter import TokenCounter
+
+    counter = TokenCounter(BYTE_CATALOG["o200k_base"], {bytes([b]): b for b in range(256)})
+    errors: list[BaseException] = []
+
+    def work(seed: int) -> None:
+        try:
+            for i in range(3000):
+                text = f"{seed}-{i % 9000}-" + "x" * (i % 7)
+                assert counter.count(text) == len(text.encode("utf-8"))
+        except BaseException as exc:
+            errors.append(exc)
+
+    threads = [threading.Thread(target=work, args=(n,)) for n in range(8)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+    assert errors == []

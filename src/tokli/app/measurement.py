@@ -1,0 +1,54 @@
+"""Whole-request estimates and calibration for one request (TM-004, TM-009; I1).
+
+The whole-request estimate runs in a worker thread after the request was sent upstream, so it
+never delays the client. Token counts are cached per text, so a conversation's unchanged history
+costs almost nothing after the first request.
+"""
+
+from __future__ import annotations
+
+import time
+from dataclasses import dataclass
+
+from tokli.domain.models import CanonicalRequest
+from tokli.domain.usage import Usage
+from tokli.protocols.anthropic_messages import estimate_request_tokens
+from tokli.tokens.calibration import Calibration, OutlierWindow, calibrate
+from tokli.tokens.counter import TokenCounter
+
+__all__ = [
+    "Calibration",
+    "OutlierWindow",
+    "RequestEstimate",
+    "calibrate_request",
+    "estimate_request_tokens",
+    "whole_request_estimates",
+]
+
+
+@dataclass(frozen=True)
+class RequestEstimate:
+    original: int
+    forwarded: int
+    started: float  # perf_counter
+    ended: float
+
+
+def whole_request_estimates(
+    request: CanonicalRequest, counter: TokenCounter, saved: int
+) -> RequestEstimate:
+    """The original request's estimate, and the forwarded one (``original - saved``: segment
+    texts are counted one by one, so the mutable-scope saving carries over exactly)."""
+    started = time.perf_counter()
+    original = estimate_request_tokens(request, counter.count)
+    return RequestEstimate(original, original - saved, started, time.perf_counter())
+
+
+def calibrate_request(
+    usage: Usage, estimate: RequestEstimate | None, saved: int | None
+) -> Calibration:
+    return calibrate(
+        usage.input_total if usage.source != "unavailable" else None,
+        estimate.forwarded if estimate is not None else None,
+        saved,
+    )

@@ -2,6 +2,7 @@
 
 Status: Draft · Slices: S1 (records), S3 (queries), S6 (pricing) · Related: TOKLI_TELEMETRY_AND_COST.md (explanatory, incl. schemas)
 Approved for S1 (2026-09-30): TC-001, TC-002, TC-003, TC-010, TC-011, TC-012, TC-014. TC-013 API in S3; cost in S6.
+Approved for S2 (2026-10-02): TC-001 usage, calibration and whole-request estimate fields; TC-012 schema v2.
 
 ## Purpose
 Persist the minimum metadata needed to answer "how much is Tokli saving, by which compressor,
@@ -22,7 +23,7 @@ at what latency, and roughly how much money", without storing content.
 | TC-009 | THE telemetry and pricing modules SHALL NOT be imported by compression modules, and pricing SHALL NOT be imported by telemetry (import contracts). |
 | TC-010 | THE SYSTEM SHALL prune records older than `telemetry.retention_days` (default 30; 0 = never) at startup and every 24 h. |
 | TC-011 | IF a telemetry sink fails, THEN THE SYSTEM SHALL continue serving, count the failures, report `degraded` in health, and log at most one warning per minute. |
-| TC-012 | THE telemetry schema SHALL carry a `schema_version`, and startup SHALL migrate older databases forward or refuse with a clear message. It SHALL never silently drop columns. |
+| TC-012 | THE telemetry schema SHALL carry a `schema_version` (v2 from S2: `requests.header_names`, ADR 0005), and startup SHALL migrate older databases forward or refuse with a clear message. It SHALL never silently drop columns. |
 | TC-013 | THE metrics API SHALL report the Tokli overhead distribution (`n`, p50, p95, p99, max of `ms_tokli_overhead`) per request-size bucket (estimated input tokens < 10k, 10k–50k, 50k–200k, > 200k), per policy and per `config_hash`. It SHALL show the product target (TOKLI_VISION.md) as a labelled reference value, never as a pass/fail status. |
 | TC-014 | THE `RequestRecord` SHALL carry `history_rewritten` (PR-009) and the count of reference stubs forwarded (`reference_stubs`). |
 
@@ -34,6 +35,7 @@ at what latency, and roughly how much money", without storing content.
 - AC-TC-5: a price-book entry change with a later `effective_from` does not change the cost of earlier requests.
 - AC-TC-7 (TC-013): for 300 synthetic records with known overheads across the four buckets, the API returns the hand-computed percentiles per bucket, and the target appears as `{value, kind: "target"}` with no status field.
 - AC-TC-8 (TC-014): a request with a superseding stub on an earlier segment persists `history_rewritten: true`. A request with two duplicate stubs persists `reference_stubs: 2` and `history_rewritten: false`.
+- AC-TC-9 (TC-012): a v1 database written by S1 opens under S2, is migrated to v2 in place, and keeps every earlier row and column; old rows have `header_names` null.
 - AC-TC-6: a read-only DB file → the request succeeds, health is `degraded`, and one warning is logged.
 
 ## Test scenarios

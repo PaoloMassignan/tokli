@@ -8,6 +8,7 @@ from typing import Any
 
 from tokli.compression.engine import POLICY, CompressorStats, EngineResult
 from tokli.telemetry.records import CompressorStatsRecord, RequestRecord
+from tokli.tokens.calibration import calibrated_value
 
 API_VERSION = 1
 
@@ -20,10 +21,13 @@ __all__ = [
     "request_view",
     "stats_records",
 ]
-_ESTIMATES = ("est_original_tokens", "est_forwarded_tokens")
-_UNAVAILABLE_UNTIL_S2 = (
+_ESTIMATES = (
+    "est_original_tokens",
+    "est_forwarded_tokens",
     "est_request_tokens_original",
     "est_request_tokens_forwarded",
+)
+_USAGE = (
     "usage_input",
     "usage_cache_read",
     "usage_cache_write_5m",
@@ -60,7 +64,9 @@ def stats_records(request_id: str, stats: Sequence[CompressorStats]) -> list[Com
 
 
 def record_view(record: Mapping[str, Any]) -> dict[str, Any]:
-    """Token figures as ``{value, method}``; unavailable ones as ``{value: null, reason}``."""
+    """Every token figure as ``{value, method}``, or ``{value: null, reason}`` when unknown
+    (TM-005). Derived figures: the request ``saving`` and ``request_tokens_original``, calibrated
+    when an in-range ``k`` exists."""
     view = dict(record)
     for key in _ESTIMATES:
         value = view.get(key)
@@ -69,9 +75,34 @@ def record_view(record: Mapping[str, Any]) -> dict[str, Any]:
             if value is not None
             else {"value": None, "reason": "not_measured"}
         )
-    for key in _UNAVAILABLE_UNTIL_S2:
-        view[key] = {"value": None, "reason": "unavailable_until_s2"}
+    source = view.get("usage_source") or "unavailable"
+    for key in _USAGE:
+        value = view.get(key)
+        if value is None:
+            view[key] = {"value": None, "reason": f"usage_{source}"}
+        else:
+            view[key] = {"value": value, "method": "exact"}
+            if key == "usage_output" and source == "provider_partial":
+                view[key]["partial"] = True
+    k = view.get("calibration_k")
+    original, forwarded = record.get("est_original_tokens"), record.get("est_forwarded_tokens")
+    saved = original - forwarded if original is not None and forwarded is not None else None
+    view["saving"] = _figure(*calibrated_value(saved, k))
+    view["request_tokens_original"] = _figure(
+        *calibrated_value(record.get("est_request_tokens_original"), k)
+    )
     return view
+
+
+def _figure(value: int | None, method: str) -> dict[str, Any]:
+    return (
+        {"value": value, "method": method}
+        if value is not None
+        else {
+            "value": None,
+            "reason": "not_measured",
+        }
+    )
 
 
 def request_view(
@@ -106,6 +137,7 @@ def compressor_summary(result: EngineResult) -> dict[str, dict[str, Any]]:
             "saved": s.marginal_saved,
             "ms": round(s.ms_total, 3),
             "skipped": dict(s.skip_reasons),
+            "cache": {"hits": s.cache_hits, "misses": s.cache_misses},
         }
         for s in result.stats
     }

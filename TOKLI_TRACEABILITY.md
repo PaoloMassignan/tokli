@@ -58,7 +58,7 @@ Evidence codes:
 | PX-011 | H33 | AC-CM-5 | `test_large_body_not_rejected` |
 | PX-012 | Brief§14 correlation | AC-OB-1 | `test_request_id_header`, `test_request_id_header_can_be_disabled` |
 | PX-013 | ops | — (trivial) | `test_health_endpoint` |
-| PX-014 | usage parsing needs plain bodies | AC-AN-3 | `test_headers_forwarded_except_hop_by_hop` (accept-encoding cases) |
+| PX-014 | usage parsing needs plain bodies | AC-AN-3 | `test_transformable_request_asks_identity_encoding`, `test_verbatim_route_keeps_client_accept_encoding` |
 
 ## Anthropic (SPEC 003)
 
@@ -68,11 +68,12 @@ Evidence codes:
 | AN-002 | tool results nested in user-role `tool_result` blocks must be reachable (SPEC 003 rationale) | AC-AN-1 | `test_anthropic_segment_mapping`, `test_system_segments` |
 | AN-003 | H04 | AC-AN-2 | `test_anthropic_tool_name_resolution` |
 | AN-004 | `cache_control` preservation; H05, H07 | AC-AN-1 | `test_anthropic_block_attributes_preserved`, `test_anthropic_cache_control_count_preserved` |
-| AN-005 | H20 | AC-AN-3 | `test_anthropic_usage_non_stream` |
-| AN-006 | same; streaming default | AC-AN-3, AC-AN-4 | `test_anthropic_usage_stream`, `test_anthropic_usage_stream_with_error_event` |
-| AN-007 | telemetry never breaks traffic | AC-AN-3 | `test_usage_parser_failure_is_unavailable` |
+| AN-005 | H20 | AC-AN-3 | `test_anthropic_usage_non_stream`, `test_anthropic_usage_non_stream_without_cache_split`, `test_anthropic_usage_non_stream_end_to_end` |
+| AN-006 | same; streaming default | AC-AN-3, AC-AN-4 | `test_anthropic_usage_stream`, `test_anthropic_usage_stream_last_value_per_field_wins`, `prop_usage_stream_any_chunk_split`, `test_anthropic_usage_stream_end_to_end`, `test_stream_causal_relay_with_usage_tee`, `test_stream_records_usage_field_names_of_message_delta`, `test_stream_metadata_in_summary_log_line`, `test_message_delta_without_split_keeps_cache_split_from_message_start` |
+| AN-007 | telemetry never breaks traffic; S2 review X3 | AC-AN-3, AC-AN-6 | `test_usage_parser_failure_is_unavailable`, `test_usage_unavailable_reasons_end_to_end` |
 | AN-008 | Claude Code calls count_tokens; Q4 | AC-AN-5 | `test_anthropic_other_endpoints_verbatim` |
-| AN-009 | bounded memory | AC-AN-4 | `test_usage_parser_memory_bounded` |
+| AN-009 | bounded memory; S2 review A3 | AC-AN-4 | `test_usage_parser_memory_bounded`, `test_usage_parser_ignores_large_uninteresting_events_within_bound` |
+| AN-010 | a stream cut short still has exact input usage; S2 review A4 | AC-AN-3 | `test_anthropic_usage_stream_with_error_event`, `test_stream_cut_after_message_start_is_partial`, `test_anthropic_usage_stream_with_error_event_end_to_end` |
 
 ## OpenAI Chat (SPEC 004)
 
@@ -133,12 +134,12 @@ Evidence codes:
 | TM-001 | H20 | AC-TM-1 | `test_token_counts_stable_fixture` |
 | TM-002 | model-dependent tokenizers | AC-TM-1 | `test_tokenizer_selected_by_model_map` |
 | TM-003 | Brief§10 exact vs estimate | AC-AN-3 | `test_anthropic_usage_non_stream` (and per protocol) |
-| TM-004 | H21 | AC-TM-5 | `test_calibration_factor` |
-| TM-005 | Brief§10 "never present an estimate as exact" | AC-TM-4 | `test_every_api_token_field_has_method` |
+| TM-004 | H21; S2 review A1, A2, A6 | AC-TM-5, AC-TM-7 | `test_calibration_factor`, `test_calibration_range_is_inclusive`, `test_calibration_unavailable`, `test_passthrough_request_is_calibrated_with_zero_saving`, `test_whole_request_estimate_excludes_binary_payloads`, `test_whole_request_estimate_counts_every_segment_text`, `test_calibrated_saving_end_to_end`, `test_estimate_off_latency_path`, `test_counter_safe_across_threads` |
+| TM-005 | Brief§10 "never present an estimate as exact"; S2 review A7 | AC-TM-4 | `test_every_api_token_field_has_method`, `test_calibrated_saving_end_to_end` |
 | TM-006 | MD-02 | AC-TM-2 | `test_missing_tokenizer_fails_with_actionable_message`, `test_tampered_tokenizer_is_reported`, `test_serve_missing_tokenizer_fails_clearly`, `test_load_counter_missing_file`, `test_load_counter_refuses_tampered_file` |
 | TM-007 | MD-02, MD-20 | AC-TM-3 | `test_import_has_no_side_effects`, `test_starts_offline_with_provisioned_tokenizer` |
 | TM-008 | Brief§19 | AC-TM-1 | `test_fingerprint_equal_across_os`, `test_token_counts_match_reference_values` |
-| TM-009 | tokenizer drift detection | AC-TM-5 | `test_calibration_outlier_falls_back_to_estimate` |
+| TM-009 | tokenizer drift detection; S2 review A9 | AC-TM-5 | `test_calibration_outlier_falls_back_to_estimate`, `test_calibration_outlier_end_to_end`, `test_health_degraded_on_calibration_outliers` |
 | TM-010 | MD-02; Q7 decision (S0 review P2) | AC-TM-6 | `test_setup_tokenizers_verifies_sha256`, `test_setup_tokenizers_from_file`, `test_setup_tokenizers_refuses_tampered_download`, `test_setup_tokenizers_from_file_rejects_unknown_file`, `test_setup_tokenizers_from_file_never_downloads_missing_ones`, `test_required_tokenizers`, `test_catalog_entries_are_pinned`, `test_check_tokenizer_states`, `test_setup_tokenizers_cli_refuses_unknown_file`, `test_sha256_hex_matches_hashlib` |
 
 ## Compression core (SPEC 009)
@@ -168,6 +169,7 @@ Evidence codes:
 | CC-021 | R01§3: verbatim hazard does not apply where the bytes stay verbatim in the target | AC-CC-12, AC-PR-9 | `test_verbatim_tools_exempt_only_reference_equivalence`, `test_duplicate_pruning_applies_to_verbatim_tools` |
 | CC-022 | S1 review P1 (POLICY, provisional) | AC-CC-3 | `test_min_segment_tokens_default` |
 | CC-023 | H04; S1 review P2 | AC-CC-12 | `test_unresolved_tool_name_treated_as_verbatim` |
+| CC-024 | S1 E9 large-request overhead; S1 Gate 2 decision 2 | AC-CC-13 | `test_result_cache_hit_gives_identical_output`, `test_result_cache_also_caches_not_applicable_and_no_gain`, `test_result_cache_key_includes_view_and_config`, `test_result_cache_still_checks_invariants`, `test_result_cache_bounded`, `test_result_cache_off`, `test_failed_result_is_not_cached` |
 
 ## Tool-history pruning (SPEC 019)
 
@@ -262,7 +264,7 @@ Evidence codes:
 | TC-009 | Brief§12 pricing ≠ compression | AC-CM-7 | `test_import_contracts` |
 | TC-010 | Brief§15 retention | AC-TC-1 | `test_retention_pruning`, `test_retention_zero_keeps_everything` |
 | TC-011 | telemetry must not break traffic | AC-TC-6 | `test_sink_failure_degrades_not_breaks`, `test_write_failure_counts_and_never_raises` |
-| TC-012 | additive migrations keep older data readable | AC-TC-1 | `test_schema_migration_forward`, `test_schema_version_recorded`, `test_non_ascii_data_dir` |
+| TC-012 | additive migrations keep older data readable; ADR 0005 | AC-TC-1, AC-TC-9 | `test_schema_migration_forward`, `test_schema_migration_forward_from_v1`, `test_schema_version_recorded`, `test_non_ascii_data_dir`, `test_usage_and_calibration_fields_round_trip` |
 | TC-013 | R01§9: measure overhead from the first useful slice; target ≠ gate | AC-TC-7 | `test_overhead_percentiles_by_bucket`, `test_target_is_reference_not_status` |
 | TC-014 | PR-009 flag was not in the record schema (R01§10 consistency pass) | AC-TC-8 | `test_request_record_pruning_fields` |
 
@@ -280,8 +282,9 @@ Evidence codes:
 | OB-008 | Brief§15 | AC-OB-4 | `test_default_logging_contains_no_prompt_text` |
 | OB-009 | Brief§15 explicit, visible debug | AC-OB-5 | `test_debug_content_requires_both_switches`, `test_debug_content_banner_visible`, `test_debug_content_ttl_and_cap` |
 | OB-010 | ops | AC-OB-1 | `test_request_summary_log_line` |
-| OB-011 | degraded visibility | AC-TC-6 | `test_health_degraded_conditions`, `test_health_endpoint` |
-| OB-012 | E1 needs the header names Claude Code sends; S1 review P6 | AC-OB-4 | `test_trace_records_header_names_only` |
+| OB-011 | degraded visibility; S2 review A8 | AC-TC-6 | `test_health_degraded_conditions`, `test_health_endpoint`, `test_outlier_window`, `test_health_degraded_on_calibration_outliers` |
+| OB-012 | E1 needs the header names Claude Code sends; S1 review P6; S1 Gate 2 decision 3 | AC-OB-4, AC-OB-6 | `test_trace_records_header_names_only`, `test_header_names_persisted`, `test_header_names_persisted_end_to_end` |
+| OB-013 | logs outlive the console; S1 Gate 2 decision 4 | AC-OB-7 | `test_log_file_defaults`, `test_log_file_written_when_enabled`, `test_log_file_rotates`, `test_log_file_rotation_failure_does_not_stop_tokli`, `test_log_file_rotation_with_file_held_open`, `test_log_file_open_failure_does_not_stop_tokli`, `test_log_file_contains_no_credentials_or_content`, `test_serve_log_file_enabled`, `test_serve_log_file_off_by_default` |
 
 ## Application API (SPEC 015)
 
@@ -317,7 +320,7 @@ Evidence codes:
 |---|---|---|---|
 | CF-001 | MD-05 | AC-CF-1 | `test_env_overrides_file_for_every_key`, `test_cli_overrides_env`, `test_ui_override_only_when_not_pinned`, `test_set_flag_overrides_env`, `test_defaults_when_no_layers`, `test_config_file_found_in_config_dir`, `test_named_flag_source`, `test_nested_keys_and_env_names` |
 | CF-002 | Brief§18 inspectable | AC-CF-1 | `test_config_show_reports_sources` |
-| CF-003 | fail clearly (Brief§18) | AC-CF-2 | `test_unknown_key_rejected_with_layer`, `test_unknown_section_rejected`, `test_invalid_value_names_layer_key_and_expected_type`, `test_explicit_config_file_must_exist`, `test_set_requires_key_equals_value` |
+| CF-003 | fail clearly (Brief§18) | AC-CF-2 | `test_keys_added_in_s2_defaults`, `test_keys_added_in_s2_reject_out_of_range`, `test_unknown_key_rejected_with_layer`, `test_unknown_section_rejected`, `test_invalid_value_names_layer_key_and_expected_type`, `test_explicit_config_file_must_exist`, `test_set_requires_key_equals_value` |
 | CF-004 | MD-04, MD-08 | AC-CF-3 | `test_cwd_config_and_dotenv_ignored` |
 | CF-005 | mid-request consistency | AC-API-5 | `test_config_snapshot_immutable` |
 | CF-006 | fingerprint + telemetry | AC-CF-4 | `test_config_hash_stable_and_sensitive` |

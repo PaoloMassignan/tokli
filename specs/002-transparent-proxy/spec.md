@@ -2,6 +2,7 @@
 
 Status: Draft · Slice: S1 · Related: ARCH §6
 Approved for S1 (2026-09-30): PX-001…PX-013 for the `/anthropic` prefix. PX-014 in S2; `/openai` in S5.
+Approved for S2 (2026-10-02): PX-014.
 
 ## Purpose
 Accept client traffic on a local port, route it to the correct provider without guessing, and

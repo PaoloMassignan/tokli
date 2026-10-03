@@ -8,13 +8,20 @@ from __future__ import annotations
 
 import json
 import logging
+import logging.handlers
 import re
 import sys
+import time
 from datetime import UTC, datetime
+from io import TextIOWrapper
+from pathlib import Path
 from typing import IO, Any
 
 REQUEST_LOGGER = "tokli.request"
 MAX_LINE = 8192
+LOG_FILE_MAX_BYTES = 10 * 1024 * 1024  # OB-013
+LOG_FILE_BACKUPS = 5
+_RETRY_ROTATION_S = 60.0
 
 _SECRETS = [
     re.compile(r"sk-[A-Za-z0-9_\-]{6,}"),
@@ -75,3 +82,60 @@ def configure_logging(fmt: str, stream: IO[str] | None = None) -> logging.Handle
 
 def log_fields(logger: logging.Logger, level: int, message: str, **fields: Any) -> None:
     logger.log(level, message, extra={"tokli": fields})
+
+
+class SafeRotatingFileHandler(logging.handlers.RotatingFileHandler):
+    """A rotating file that never stops Tokli (OB-013).
+
+    On Windows a rename fails while another process holds the file open. Then the handler keeps
+    appending to the current file, counts the failure and retries the rotation a minute later.
+    Write errors are counted, never printed: stderr logging is unaffected.
+    """
+
+    def __init__(self, path: Path, max_bytes: int, backups: int) -> None:
+        super().__init__(
+            path, maxBytes=max_bytes, backupCount=backups, encoding="utf-8", delay=False
+        )
+        self.failures = 0
+        self._retry_at = 0.0
+
+    def _open(self) -> TextIOWrapper:
+        # LF line endings on every OS, so the file reads the same everywhere.
+        stream = open(self.baseFilename, self.mode, encoding=self.encoding, newline="\n")  # noqa: SIM115
+        assert isinstance(stream, TextIOWrapper)
+        return stream
+
+    def shouldRollover(self, record: logging.LogRecord) -> bool:
+        if time.monotonic() < self._retry_at:
+            return False
+        return bool(super().shouldRollover(record))
+
+    def doRollover(self) -> None:
+        try:
+            super().doRollover()
+        except OSError:
+            self.failures += 1
+            self._retry_at = time.monotonic() + _RETRY_ROTATION_S
+            if self.stream is None or self.stream.closed:
+                self.stream = self._open()
+
+    def handleError(self, record: logging.LogRecord) -> None:
+        self.failures += 1
+
+
+def configure_log_file(
+    path: Path, *, max_bytes: int = LOG_FILE_MAX_BYTES, backups: int = LOG_FILE_BACKUPS
+) -> SafeRotatingFileHandler | None:
+    """Adds a JSON-lines rotating file to the root logger (OB-013). ``None`` when the file
+    cannot be opened; logging to stderr goes on regardless."""
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        handler = SafeRotatingFileHandler(path, max_bytes, backups)
+    except OSError:
+        return None
+    handler.setFormatter(JsonFormatter())
+    root = logging.getLogger()
+    root.addHandler(handler)
+    if root.level == logging.NOTSET or root.level > logging.INFO:
+        root.setLevel(logging.INFO)
+    return handler

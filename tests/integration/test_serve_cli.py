@@ -3,6 +3,7 @@ scenarios "alternative port" and "hostile environment", serve variant)."""
 
 from __future__ import annotations
 
+import json
 import os
 import re
 import socket
@@ -125,3 +126,64 @@ def test_serve_process_end_to_end(tmp_path: Path) -> None:
     finally:
         process.terminate()
         process.wait(timeout=15)
+
+
+def test_serve_log_file_enabled(cli: Cli, monkeypatch: pytest.MonkeyPatch) -> None:
+    """OB-013 / AC-OB-7: with the key on, log lines also go to <data dir>/logs/tokli.log as JSON,
+    even when the console format is text; the file is closed when Tokli stops."""
+    import logging
+
+    import uvicorn
+
+    from tests.integration.servers import BYTE_CATALOG, provision
+    from tokli.app import bootstrap as bootstrap_module
+    from tokli.observability.logs import REQUEST_LOGGER, log_fields
+
+    data_dir = cli.workdir / "data"
+    provision(data_dir)
+    real_bootstrap = bootstrap_module.bootstrap
+    monkeypatch.setattr(
+        "tokli.cli.main.bootstrap",
+        lambda config, **kw: real_bootstrap(config, catalog=BYTE_CATALOG, version="test"),
+    )
+
+    def run_once(self: uvicorn.Server, sockets: object = None) -> None:
+        log_fields(logging.getLogger(REQUEST_LOGGER), logging.INFO, "request", event="request")
+
+    monkeypatch.setattr(uvicorn.Server, "run", run_once)
+    before = list(logging.getLogger().handlers)
+    result = cli.run(
+        "serve",
+        "--data-dir",
+        str(data_dir),
+        "--port",
+        "0",
+        "--log-format",
+        "text",
+        "--set",
+        "observability.log_file=true",
+    )
+    assert result.code == 0
+    log_file = data_dir / "logs" / "tokli.log"
+    lines = log_file.read_text(encoding="utf-8").splitlines()
+    assert json.loads(lines[-1])["event"] == "request"
+    assert logging.getLogger().handlers == before  # handlers removed and closed on stop
+    log_file.unlink()  # closed: deletable on Windows too
+
+
+def test_serve_log_file_off_by_default(cli: Cli, monkeypatch: pytest.MonkeyPatch) -> None:
+    import uvicorn
+
+    from tests.integration.servers import BYTE_CATALOG, provision
+    from tokli.app import bootstrap as bootstrap_module
+
+    data_dir = cli.workdir / "data"
+    provision(data_dir)
+    real_bootstrap = bootstrap_module.bootstrap
+    monkeypatch.setattr(
+        "tokli.cli.main.bootstrap",
+        lambda config, **kw: real_bootstrap(config, catalog=BYTE_CATALOG, version="test"),
+    )
+    monkeypatch.setattr(uvicorn.Server, "run", lambda self, sockets=None: None)
+    assert cli.run("serve", "--data-dir", str(data_dir), "--port", "0").code == 0
+    assert not (data_dir / "logs").exists()

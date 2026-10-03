@@ -150,3 +150,95 @@ def test_request_record_pruning_fields(tmp_path: Path) -> None:
     store.close()
     assert got is not None
     assert got["record"]["history_rewritten"] is True and got["record"]["reference_stubs"] == 2
+
+
+def _write_v1_database(path: Path) -> None:
+    """A database exactly as an S1 build wrote it: schema v1, no `header_names` column."""
+    from dataclasses import asdict, fields
+
+    from tokli.telemetry.store import _sql_type
+
+    columns = [f.name for f in fields(RequestRecord) if f.name != "header_names"]
+    stats_columns = [f.name for f in fields(CompressorStatsRecord)]
+    row = {k: v for k, v in asdict(RECORD).items() if k in columns}
+    with sqlite3.connect(path) as db:
+        db.execute("CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)")
+        db.execute("INSERT INTO meta VALUES ('schema_version', '1')")
+        db.execute(
+            "CREATE TABLE requests ("
+            + ", ".join(
+                f"{c} {_sql_type(c)}" + (" PRIMARY KEY" if c == "request_id" else "")
+                for c in columns
+            )
+            + ")"
+        )
+        db.execute(
+            f"INSERT INTO requests ({', '.join(columns)}) "
+            f"VALUES ({', '.join('?' for _ in columns)})",
+            [row[c] for c in columns],
+        )
+        db.execute(
+            "CREATE TABLE compressor_stats ("
+            + ", ".join(f"{c} {_sql_type(c)}" for c in stats_columns)
+            + ", PRIMARY KEY (request_id, compressor_id))"
+        )
+    sqlite3.connect(path).close()
+
+
+def test_schema_migration_forward_from_v1(tmp_path: Path) -> None:
+    """AC-TC-9 / ADR 0005: a v1 database is migrated in place; nothing earlier is lost."""
+    path = tmp_path / "t.db"
+    _write_v1_database(path)
+    store = open_store(path)
+    old = store.get(RECORD.request_id)
+    new = replace(RECORD, request_id="01NEW00000000000000000000A", header_names=("x-api-key",))
+    store.submit(new, [])
+    store.flush()
+    got = store.get(new.request_id)
+    store.close()
+    assert SCHEMA_VERSION == 2
+    assert old is not None and old["record"]["header_names"] is None
+    assert old["record"]["est_original_tokens"] == 100 and old["record"]["ms_total"] == 904.0
+    assert got is not None and got["record"]["header_names"] == ["x-api-key"]
+    with sqlite3.connect(path) as db:
+        assert db.execute("SELECT value FROM meta WHERE key = 'schema_version'").fetchone() == (
+            "2",
+        )
+        assert db.execute("SELECT COUNT(*) FROM requests").fetchone() == (2,)
+
+
+def test_header_names_persisted(tmp_path: Path) -> None:
+    """OB-012 / AC-OB-6: names survive a restart; values are never stored."""
+    path = tmp_path / "t.db"
+    store = open_store(path)
+    store.submit(replace(RECORD, header_names=("anthropic-version", "x-api-key")), [])
+    store.close()
+    reopened = open_store(path)
+    got = reopened.get(RECORD.request_id)
+    reopened.close()
+    assert got is not None
+    assert got["record"]["header_names"] == ["anthropic-version", "x-api-key"]
+
+
+def test_usage_and_calibration_fields_round_trip(tmp_path: Path) -> None:
+    store = open_store(tmp_path / "t.db")
+    record = replace(
+        RECORD,
+        usage_source="provider_partial",
+        usage_input=25,
+        usage_cache_read=30000,
+        usage_cache_write_5m=1000,
+        usage_cache_write_1h=200,
+        usage_output=1,
+        calibration_k=1.25,
+        est_request_tokens_original=26000,
+        est_request_tokens_forwarded=25000,
+    )
+    store.submit(record, [])
+    store.flush()
+    got = store.get(RECORD.request_id)
+    store.close()
+    assert got is not None
+    stored = got["record"]
+    assert stored["usage_source"] == "provider_partial" and stored["usage_cache_read"] == 30000
+    assert stored["calibration_k"] == 1.25 and stored["est_request_tokens_forwarded"] == 25000

@@ -30,14 +30,20 @@ def create_app(services: Services, listen: str | None = None) -> Starlette:
             if services.enabled.get(cid) and state != "available"
         ]
         compressors = "ok" if not unavailable else "unavailable: " + ", ".join(sorted(unavailable))
-        degraded = telemetry == "failing" or bool(unavailable)
+        state, calibrated, outliers = services.calibration.state()  # OB-011
+        calibration = "ok" if state == "ok" else f"outliers: {outliers} of {calibrated}"
+        degraded = telemetry == "failing" or bool(unavailable) or state != "ok"
         server = services.config.settings.server
         return JSONResponse(
             {
                 "status": "degraded" if degraded else "ok",
                 "version": services.version,
                 "listen": listen or f"{server.host}:{server.port}",
-                "checks": {"telemetry": telemetry, "compressors": compressors},
+                "checks": {
+                    "telemetry": telemetry,
+                    "compressors": compressors,
+                    "calibration": calibration,
+                },
             }
         )
 

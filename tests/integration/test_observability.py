@@ -248,8 +248,13 @@ def test_every_api_token_field_has_method(tokli: Start) -> None:
     for field in ("est_original_tokens", "est_forwarded_tokens"):
         assert record[field]["method"] == "estimate"
         assert isinstance(record[field]["value"], int)
+    for field in ("est_request_tokens_original", "est_request_tokens_forwarded"):
+        assert record[field]["method"] == "estimate"
+    # The default fake upstream answers without usage (TM-005: unknown is null with a reason).
     for field in ("usage_input", "usage_output", "usage_cache_read"):
-        assert record[field] == {"value": None, "reason": "unavailable_until_s2"}
+        assert record[field] == {"value": None, "reason": "usage_unavailable"}
+    assert record["saving"]["method"] == "estimate"
+    assert record["request_tokens_original"]["method"] == "estimate"
 
 
 def test_api_returns_no_content_or_credentials(tokli: Start) -> None:

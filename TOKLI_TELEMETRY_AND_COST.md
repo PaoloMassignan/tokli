@@ -25,7 +25,9 @@ Rules:
 
 `estimate_forwarded_input_total` needs a local estimate of the whole forwarded request, not only
 the mutable segments. Tokli estimates it as the sum of all segment texts plus
-`tokenizer(json.dumps(non-text structure))`. It is crude. That is acceptable because it is only
+`tokenizer(json.dumps(non-text structure))`, without binary payloads (base64 image and document
+data, thinking signatures), which the provider does not count as text (TM-004). It is computed
+off the latency path, while the upstream is answering. It is crude. That is acceptable because it is only
 used to compute a ratio, and `k` is stored so its distribution can be inspected. It is a
 diagnostic signal of tokenizer drift in its own right.
 
@@ -55,7 +57,7 @@ persisted by default. It is available in the in-memory trace ring buffer and at
 | `tokenizer_id` | text | |
 | `est_original_tokens`, `est_forwarded_tokens` | int | mutable-segment scope, **estimate** |
 | `est_request_tokens_original`, `est_request_tokens_forwarded` | int | whole-request estimate (for `k`) |
-| `usage_source` | `provider` \| `unavailable` | |
+| `usage_source` | `provider` \| `provider_partial` \| `unavailable` | partial: stream cut short after `message_start` (AN-010) |
 | `usage_input`, `usage_cache_read`, `usage_cache_write_5m`, `usage_cache_write_1h`, `usage_output`, `usage_reasoning` | int \| null | provider categories mapped per §4 |
 | `calibration_k` | real \| null | |
 | `status_code` | int | upstream status relayed |
@@ -63,6 +65,7 @@ persisted by default. It is available in the in-memory trace ring buffer and at
 | `history_rewritten` | bool | a non-prefix-stable compressor changed an already-sent segment (PR-009) |
 | `reference_stubs` | int | reference stubs forwarded in this request (TC-014) |
 | `error_code` | text \| null | Tokli error taxonomy (OB spec) |
+| `header_names` | JSON list \| null | client request header names, lower-cased and sorted, never values (OB-012; schema v2) |
 
 ### CompressorStats (persisted, per request × compressor)
 

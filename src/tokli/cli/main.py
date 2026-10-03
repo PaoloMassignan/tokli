@@ -8,6 +8,7 @@ stderr, ``error: <cause>`` and ``fix: <fix>``, and exit with status 1 (PT-008).
 from __future__ import annotations
 
 import argparse
+import logging
 import os
 import platform
 import sys
@@ -136,7 +137,7 @@ def _serve(config: EffectiveConfig) -> int:
     import uvicorn
 
     from tokli.http.app import create_app
-    from tokli.observability.logs import configure_logging
+    from tokli.observability.logs import configure_log_file, configure_logging
 
     sock = prepare_listener(config)
     try:
@@ -147,7 +148,13 @@ def _serve(config: EffectiveConfig) -> int:
     except BaseException:
         sock.close()
         raise
-    configure_logging(config.settings.observability.log_format)
+    handlers = [configure_logging(config.settings.observability.log_format)]
+    if config.settings.observability.log_file:  # OB-013
+        log_file = configure_log_file(config.dirs.data_dir / "logs" / "tokli.log")
+        if log_file is None:
+            print("warning: cannot open the log file; logging to stderr only", file=sys.stderr)
+        else:
+            handlers.append(log_file)
     host, port = sock.getsockname()[:2]
     dirs = config.dirs
     print(
@@ -169,6 +176,9 @@ def _serve(config: EffectiveConfig) -> int:
         if services.store is not None:
             services.store.close()  # idempotent; flushes pending telemetry
         sock.close()
+        for handler in handlers:
+            logging.getLogger().removeHandler(handler)
+            handler.close()
     print("Tokli stopped", file=sys.stderr, flush=True)
     return EXIT_OK
 

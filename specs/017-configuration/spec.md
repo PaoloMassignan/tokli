@@ -2,6 +2,7 @@
 
 Status: **Approved for S0 (2026-09-29)**: CF-001 (layers 1–4), CF-002 (CLI part), CF-003…CF-006, CF-008, CF-011, CF-012. Other requirements: Draft. · Slice: S0 (loader), S4 (UI overrides)
 Approved for S1 (2026-09-30): the keys in "Keys added in S1" and N-level key paths.
+Approved for S2 (2026-10-02): the keys in "Keys added in S2".
 
 ## Purpose
 Every behaviour-affecting setting has one definition, one precedence rule and a visible source.
@@ -65,6 +66,14 @@ defaults.
 | `observability.trace_buffer` / `response_header` | `500` / `true` |
 | `observability.log_format` (also `--log-format`) | `json` (or `text`) |
 | `telemetry.retention_days` | `30` |
+
+## Keys added in S2
+
+| Key | Default |
+|---|---|
+| `limits.usage_parser_buffer` | `1048576` (AN-009) |
+| `compression.result_cache_mb` | `64`; `0` disables the cache (CC-024) |
+| `observability.log_file` | `false` (OB-013) |
 
 ## Requirements
 

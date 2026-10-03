@@ -55,6 +55,8 @@ Decisions that change what is forwarded are always recorded, with a machine-read
 | Compressor result rejected | `no_gain`, `below_min_gain`, `protected_span_changed`, `reference_target_modified`, `exception`, `timeout`, `decode_mismatch` (debug verification mode) |
 | Stage failure | `stage_exception(<stage id>)` |
 | Upstream | `upstream_status(<code>)`, `upstream_unreachable`, `upstream_timeout`, `client_disconnected` |
+| Usage | `usage_unavailable(<why>)`, `<why>` ∈ `upstream_status`, `content_encoding`, `buffer_limit`, `parse_error`, `no_usage`, `client_disconnected` (AN-007) |
+| Calibration | `calibration_outlier`, `calibration_unavailable` (TM-009) |
 
 "Why didn't `json_minify` run on my request?" is answered from the trace alone.
 
@@ -70,7 +72,9 @@ Decisions that change what is forwarded are always recorded, with a machine-read
 ## 6. Log output
 
 - Format: JSON lines (default) or human-readable (`--log-format text`), to stderr and optionally
-  to a rotating file in the data dir (10 MB × 5).
+  to a rotating file in the data dir (10 MB × 5) when `observability.log_file` is true. The file
+  is always JSON lines, UTF-8 with LF line endings, at `<data dir>/logs/tokli.log`. A failed write or
+  rotation (for example a file held open on Windows) never stops Tokli (OB-013).
 - Levels: `INFO` per request summary (one line), `DEBUG` per-stage lines, `WARNING` for degraded
   states (tokenizer calibration outliers, sink failures), `ERROR` for Tokli faults.
 - No log line exceeds 8 KB (a guard truncates and marks it).

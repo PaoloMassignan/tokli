@@ -62,6 +62,7 @@ Acceptance for S1 (all must hold):
   history becomes almost free; allowed by CC-006), request header **names** persisted in the request
   record, and an optional rotating log file in the data dir (TOKLI_OBSERVABILITY §6).
 - Exit: trace shows exact forwarded usage and a calibrated saving for streamed Claude Code requests.
+- **Accepted 2026-10-03** (`slices/S2/COMPLETION_REPORT.md`). E4 (Anthropic) done: SPEC 003 Q3.
 
 ## S3 — Metrics API + minimal dashboard
 

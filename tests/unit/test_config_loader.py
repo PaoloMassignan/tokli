@@ -24,6 +24,8 @@ EXAMPLES: dict[str, tuple[str, str, object]] = {
     "upstreams.anthropic.read_timeout_s": ("100", "200", 200),
     "tls.ca_bundle": ("a.pem", "b.pem", "b.pem"),
     "limits.max_transform_bytes": ("1000", "2000", 2000),
+    "limits.usage_parser_buffer": ("4096", "8192", 8192),
+    "compression.result_cache_mb": ("0", "8", 8),
     "compression.segment_kinds": ("[TOOL_RESULT]", '["USER_TEXT"]', ("USER_TEXT",)),
     "compression.verbatim_tools": ("[Read]", '["Bash"]', ("Bash",)),
     "compression.min_segment_tokens": ("10", "20", 20),
@@ -42,6 +44,7 @@ EXAMPLES: dict[str, tuple[str, str, object]] = {
     "observability.trace_buffer": ("10", "20", 20),
     "observability.response_header": ("false", "true", True),
     "observability.log_format": ("text", "json", "json"),
+    "observability.log_file": ("true", "false", False),
     "telemetry.retention_days": ("1", "2", 2),
 }
 FILE_EXPECTED: dict[str, object] = {
@@ -53,6 +56,8 @@ FILE_EXPECTED: dict[str, object] = {
     "upstreams.anthropic.read_timeout_s": 100,
     "tls.ca_bundle": "a.pem",
     "limits.max_transform_bytes": 1000,
+    "limits.usage_parser_buffer": 4096,
+    "compression.result_cache_mb": 0,
     "compression.segment_kinds": ("TOOL_RESULT",),
     "compression.verbatim_tools": ("Read",),
     "compression.min_segment_tokens": 10,
@@ -67,6 +72,7 @@ FILE_EXPECTED: dict[str, object] = {
     "observability.trace_buffer": 10,
     "observability.response_header": False,
     "observability.log_format": "text",
+    "observability.log_file": True,
     "telemetry.retention_days": 1,
 }
 
@@ -81,9 +87,10 @@ DEFAULT_BEHAVIOUR_JSON = {
         "request_budget_ms": 50.0,
         "per_call_timeout_ms": 200.0,
         "verify_lossless": False,
+        "result_cache_mb": 64,
     },
     "compressors": {"json_minify": {"enabled": True}},
-    "limits": {"max_transform_bytes": 33554432},
+    "limits": {"max_transform_bytes": 33554432, "usage_parser_buffer": 1048576},
     "tokens": {
         "default": "o200k_base",
         "model_map": [
@@ -329,3 +336,19 @@ def test_cwd_config_and_dotenv_ignored(
     config = load_config(CliOverrides(), env, platform_name())
     assert config.values["tokens.default"] == "o200k_base"
     assert config.config_file is None
+
+
+def test_keys_added_in_s2_defaults(env: dict[str, str]) -> None:
+    """SPEC 017 "Keys added in S2" (AN-009, CC-024, OB-013)."""
+    values = load_config(CliOverrides(), env, platform_name()).values
+    assert values["limits.usage_parser_buffer"] == 1048576
+    assert values["compression.result_cache_mb"] == 64
+    assert values["observability.log_file"] is False
+
+
+@pytest.mark.parametrize(
+    "setting", ["compression.result_cache_mb=-1", "limits.usage_parser_buffer=0"]
+)
+def test_keys_added_in_s2_reject_out_of_range(env: dict[str, str], setting: str) -> None:
+    with pytest.raises(ConfigError):
+        load_config(CliOverrides(sets=(setting,)), env, platform_name())

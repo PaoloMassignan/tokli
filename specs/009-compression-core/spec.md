@@ -2,6 +2,7 @@
 
 Status: Draft (revised in Phase 0.1) · Slice: S1 (engine + one compressor, fixed policy), S4 (policy + registry UI) · Related: ARCH §4, PHASE0_1_REVIEW.md
 Approved for S1 (2026-09-30): CC-001…CC-008, CC-010…CC-017, CC-020 (provisional record). CC-009 in S4 (decision C3); CC-018 in S8; CC-019, CC-021 and request scope in S4.
+Approved for S2 (2026-10-02): CC-024.
 
 ## Purpose
 Define what a compressor is, what "lossless" means in Tokli, how the global policy constrains
@@ -145,6 +146,7 @@ for segment in mutable segments (document order):
 | CC-008 | IF a compressor raises or exceeds `compression.per_call_timeout_ms` (default 200), THEN THE SYSTEM SHALL keep the previous text and record `failed` with the reason. In-process calls are not preempted: a call that returns after the timeout has its result discarded (`failed(timeout)`). Protection against non-terminating compressors comes from their complexity requirements; a compressor of `cost_class: expensive` needs a design that can be preempted. |
 | CC-022 | THE engine SHALL skip a compressor for a segment whose estimated tokens are below `max(compressor min_tokens, compression.min_segment_tokens)`, with `compression.min_segment_tokens` defaulting to 64 (POLICY, provisional until E5b), recording `too_small`. |
 | CC-023 | WHEN a TOOL_RESULT segment's tool name cannot be resolved (CM-006), THE engine SHALL treat it as a verbatim tool: skip with reason `verbatim_tool` and detail `unresolved`, except for compressors with equivalence `reference` (CC-021). |
+| CC-024 | THE engine SHALL keep an in-memory cache of segment-scope compressor results, bounded by `compression.result_cache_mb` (default 64; `0` disables it) with least-recently-used eviction. The cache key SHALL contain every input CC-006 allows (compressor id and version, the compressor's effective config, the `SegmentView` and the full segment text). THE engine SHALL apply its checks (CC-005, CC-007) to a cached result as to a computed one, SHALL record the result in `CompressorStats` exactly as if computed, and SHALL record cache hits and misses per compressor in the trace. |
 | CC-009 | THE engine SHALL order compressors by `(stage, id)` and SHALL stop processing a segment after an accepted `terminal` compressor. |
 | CC-010 | WHEN a compressor's `requires` modules are not importable, THE SYSTEM SHALL report it as `unavailable(<module>)` in the registry API, UI and doctor, and SHALL skip it with that reason. |
 | CC-011 | THE registry SHALL be an explicit list in `tokli.compression.registry`; adding a compressor SHALL require only a new module and one registry entry. |
@@ -183,6 +185,7 @@ each invocation is logged as `(segment_id, kind, compressor, decision, t_in, t_o
 - AC-CC-10 (CC-019): a fake SELECTIVE request compressor that stubs the target of a duplicate reference is rejected with `reference_target_modified`, and the target stays verbatim. A fake structural compressor that changes the target is accepted, and the trace records the chain guarantee as `structural`.
 - AC-CC-11 (CC-020): a registry entry with `default_enabled: true` and an assumption without an evaluation record fails the contract test. The same entry with `default_enabled: false` passes, and its policy eligibility is unchanged.
 - AC-CC-12 (CC-021): a TOOL_RESULT from a tool in `verbatim_tools` that duplicates an earlier result is stubbed by `duplicate_tool_results`, while `json_minify` is skipped on it with `verbatim_tool`.
+- AC-CC-13 (CC-024): the same request processed twice gives identical forwarded bytes and identical stats, and the second run records only hits. The same text with a different `SegmentView` (e.g. a verbatim tool) or a different compressor config is not served from the cache. The cache never exceeds its bound. With `result_cache_mb: 0` nothing is cached.
 
 ## Test scenarios
 `test_lossless_only_never_runs_lossy_compressor` · `test_lossy_allowed_runs_selective_and_lossy` ·
@@ -196,7 +199,9 @@ each invocation is logged as `(segment_id, kind, compressor, decision, t_in, t_o
 `test_import_contracts` · `test_request_scope_runs_before_segment_scope` · `test_history_rewritten_flag` ·
 `test_reference_target_integrity_enforced` · `test_every_compressor_declares_assumptions` ·
 `test_registry_default_enabled_requires_eval_record` · `test_verbatim_tools_exempt_only_reference_equivalence` ·
-`test_min_segment_tokens_default` · `test_unresolved_tool_name_treated_as_verbatim` · `test_late_result_discarded_as_timeout`
+`test_min_segment_tokens_default` · `test_unresolved_tool_name_treated_as_verbatim` · `test_late_result_discarded_as_timeout` ·
+`test_result_cache_hit_gives_identical_output` · `test_result_cache_key_includes_view_and_config` ·
+`test_result_cache_bounded` · `test_result_cache_off`
 
 ## Open questions
 - Q9: Should `min_gain_ratio` differ per compressor (spec field) rather than being global? Start global and revisit with S4 data.

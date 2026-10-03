@@ -7,7 +7,7 @@ constructs compressors, tokenizers or sinks itself.
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from tokli.app.setup_tokenizers import required_tokenizers
 from tokli.compression.engine import Engine, EngineSettings
@@ -20,6 +20,7 @@ from tokli.pipeline.pipeline import Pipeline
 from tokli.pipeline.reminders import RemindersStage
 from tokli.telemetry.store import TelemetryStore
 from tokli.tokens import CATALOG, TokenizerSpec
+from tokli.tokens.calibration import OutlierWindow
 from tokli.tokens.counter import (
     TokenCounter,
     TokenizerSelector,
@@ -43,6 +44,7 @@ class Services:
     availability: Mapping[str, str]
     enabled: Mapping[str, bool]
     version: str
+    calibration: OutlierWindow = field(default_factory=OutlierWindow)  # OB-011
 
 
 class StartupError(Exception):
@@ -89,6 +91,7 @@ def bootstrap(
             request_budget_ms=compression.request_budget_ms,
             per_call_timeout_ms=compression.per_call_timeout_ms,
             verify_lossless=compression.verify_lossless,
+            result_cache_bytes=compression.result_cache_mb * 1024 * 1024,
         ),
     )
     pipeline = Pipeline(

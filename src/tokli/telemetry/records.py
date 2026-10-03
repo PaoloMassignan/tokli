@@ -48,6 +48,7 @@ class RequestRecord:
     calibration_k: float | None = None
     history_rewritten: bool = False
     reference_stubs: int = 0
+    header_names: tuple[str, ...] | None = None
 
 
 @dataclass(frozen=True)

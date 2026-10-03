@@ -62,7 +62,7 @@ architectural decisions are in `docs/adr/`.
 |---|---|---|
 | Q1 | Expose `system` and tool descriptions as mutable in v1? (Proposed: no.) | E2 + E5 |
 | Q2 | ~~Path prefix in `ANTHROPIC_BASE_URL`?~~ | **Resolved 2026-10-02 (E1):** accepted. |
-| Q3 | Current Anthropic SSE usage fields (`message_delta` cumulative input?) | E4 |
+| Q3 | ~~Current Anthropic SSE usage fields~~ | **Resolved 2026-10-03 (E4):** `message_delta` repeats input usage cumulatively, without the 5m/1h split (SPEC 003). |
 | Q4 | Compress `count_tokens` bodies so the client's context accounting matches what is sent? | Product decision |
 | Q5 | Chat-compatible providers with usage in every chunk: take the last value? | Proposed yes |
 | Q6 | ChatGPT-subscription Codex upstream feasibility | E6 |

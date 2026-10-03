@@ -4,11 +4,14 @@ See TOKLI_TEST_STRATEGY §8.
 
 Usage: ``python -m benchmarks.overhead --data-dir DIR [--iterations N] [--out FILE]``.
 
-Two scenarios per size bucket. "cold": every segment text is unique in every iteration, so the
-token-count cache never hits (worst case). "warm": the same history with a new last turn in each
-iteration, as when an agent resends its conversation (the common case). Results are reported,
-never gated here (TOKLI_TEST_STRATEGY §8);
-``benchmarks.compare`` applies the regression limits against a committed baseline.
+Scenarios per size bucket. "cold": every segment text is unique in every iteration, so no cache
+ever hits (worst case). "warm": the same history with a new last turn in each iteration, as when
+an agent resends its conversation (the common case); the token-count and compressor-result caches
+(CC-024) hit. "warm_nocache": the same with the result cache off, to show its effect. Separately,
+"estimate_*" times the whole-request estimate (TM-004), which runs off the latency path and is
+therefore reported, not added to the overhead. Results are reported, never gated here
+(TOKLI_TEST_STRATEGY §8); ``benchmarks.compare`` applies the regression limits against the
+committed baseline for the buckets the baseline contains.
 """
 
 from __future__ import annotations
@@ -24,6 +27,7 @@ from importlib import metadata
 from pathlib import Path
 
 from tokli.app.bootstrap import bootstrap
+from tokli.app.measurement import whole_request_estimates
 from tokli.config import CliOverrides, load_config
 from tokli.domain.stage import StageContext
 from tokli.protocols.anthropic_messages import parse, render
@@ -85,13 +89,30 @@ def percentile(values: list[float], q: float) -> float:
     return ordered[index]
 
 
+def summary(timings: list[float]) -> dict[str, object]:
+    return {
+        "n": len(timings),
+        "p50_ms": round(statistics.median(timings), 2),
+        "p95_ms": round(percentile(timings, 0.95), 2),
+        "max_ms": round(max(timings), 2),
+    }
+
+
 def run(data_dir: str, iterations: int) -> dict[str, object]:
-    config = load_config(CliOverrides(data_dir=data_dir), dict(os.environ), sys.platform)
-    services = bootstrap(config, version="benchmark", telemetry=False)
+    def services_with(*sets: str):  # type: ignore[no-untyped-def]
+        config = load_config(
+            CliOverrides(data_dir=data_dir, sets=sets), dict(os.environ), sys.platform
+        )
+        return bootstrap(config, version="benchmark", telemetry=False)
+
     results: dict[str, object] = {}
     for bucket, tokens in BUCKETS.items():
-        for scenario in ("cold", "warm"):
+        for scenario in ("cold", "warm", "warm_nocache"):
+            services = services_with(
+                *(("compression.result_cache_mb=0",) if scenario == "warm_nocache" else ())
+            )
             timings: list[float] = []
+            estimates: list[float] = []
             for i in range(iterations):
                 if scenario == "cold":
                     raw = build_request(tokens, salt=1000 + i)
@@ -102,18 +123,19 @@ def run(data_dir: str, iterations: int) -> dict[str, object]:
                 result = services.pipeline.run(request, StageContext(request_id=f"bench-{i}"))
                 render(request, result.patches)
                 timings.append((time.perf_counter() - start) * 1000)
-            results[f"{bucket}_{scenario}"] = {
-                "n": iterations,
-                "p50_ms": round(statistics.median(timings), 2),
-                "p95_ms": round(percentile(timings, 0.95), 2),
-                "max_ms": round(max(timings), 2),
-            }
+                if scenario != "warm_nocache":
+                    counter = services.selector.select(request.model)
+                    estimate = whole_request_estimates(request, counter, 0)  # type: ignore[arg-type]
+                    estimates.append((estimate.ended - estimate.started) * 1000)
+            results[f"{bucket}_{scenario}"] = summary(timings)
+            if estimates:
+                results[f"{bucket}_estimate_{scenario}"] = summary(estimates)
     try:
         version = metadata.version("tokli")
     except metadata.PackageNotFoundError:
         version = "unknown"
     return {
-        "benchmark": "E9 parse+pipeline+render (cold and warm token cache)",
+        "benchmark": "E9 parse+pipeline+render (cold, warm, warm without result cache)",
         "tokli_version": version,
         "os": platform.system(),
         "python": platform.python_version(),

@@ -81,6 +81,7 @@ class LimitsSection(BaseModel):
     model_config = _STRICT
 
     max_transform_bytes: int = Field(default=32 * 1024 * 1024, gt=0)
+    usage_parser_buffer: int = Field(default=1024 * 1024, gt=0)  # AN-009
 
 
 class CompressionSection(BaseModel):
@@ -94,6 +95,7 @@ class CompressionSection(BaseModel):
     request_budget_ms: float = Field(default=50.0, gt=0)
     per_call_timeout_ms: float = Field(default=200.0, gt=0)
     verify_lossless: bool = False
+    result_cache_mb: int = Field(default=64, ge=0)  # CC-024; 0 = off
 
 
 class CompressorToggle(BaseModel):
@@ -114,6 +116,7 @@ class ObservabilitySection(BaseModel):
     trace_buffer: int = Field(default=500, ge=1)
     response_header: bool = True
     log_format: Literal["json", "text"] = "json"
+    log_file: bool = False  # OB-013
 
 
 class TelemetrySection(BaseModel):

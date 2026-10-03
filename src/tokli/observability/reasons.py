@@ -47,8 +47,20 @@ STAGE = frozenset({"stage_exception", "stage_timeout", "analyzer_returned_patche
 UPSTREAM = frozenset(
     {"upstream_status", "upstream_unreachable", "upstream_timeout", "client_disconnected"}
 )
+USAGE = frozenset({"usage_unavailable"})  # (<why>), AN-007
+USAGE_WHY = frozenset(
+    {
+        "upstream_status",
+        "content_encoding",
+        "buffer_limit",
+        "parse_error",
+        "no_usage",
+        "client_disconnected",
+    }
+)
+CALIBRATION = frozenset({"calibration_outlier", "calibration_unavailable"})  # TM-009
 
-ALL = ROUTE | PASSTHROUGH | SKIP | REJECT | STAGE | UPSTREAM
+ALL = ROUTE | PASSTHROUGH | SKIP | REJECT | STAGE | UPSTREAM | USAGE | CALIBRATION
 
 
 def is_known(code: str) -> bool:
