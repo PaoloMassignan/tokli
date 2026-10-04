@@ -250,6 +250,37 @@ cases × 3 repetitions × 2 arms. Report:
 **Consequence:** pruning tool-call arguments (`edit_args_on_resume`, E10) is not viable on this
 model. Pruning old tool results at a resume is the remaining form of the lever.
 
+### E10(d) — removing an old tool result's content draws refusals too (2026-10-04)
+
+**Method:** `evals/experiments/e10d_result_stubs.py` on `claude-opus-5-5`; result in
+`evals/experiments/e10d_result.json`.
+- **The conversation** (synthetic): the agent reads a settings file with `Read`, has five
+  unrelated exchanges, and is asked for a value from the file.
+- **Size:** 10 cases, 2 repetitions, four forms of the old result.
+
+| Form of the old `Read` result (20 calls each) | Correct | Refused |
+|---|---|---|
+| Original (control) | 20 | 0 |
+| `[tokli: earlier tool output omitted (<n> tokens)]` | 7 | 13 |
+| The same + "— read the file again if you need it" | 7 | 13 |
+| Empty string | 4 | 16 |
+
+**Reading:**
+- Replacing the content of an old tool result, with any stub or with nothing, made the provider
+  refuse in 65–80 % of calls, against none with the original.
+- The wording of the stub does not matter.
+- `duplicate_tool_results` drew no refusal in 132 calls (E11). Its stub names an identical copy
+  that is **still in the conversation**. A plausible reading, not proven: the decisive factor is
+  whether the information stays available in the request.
+
+**Consequence:** on this model, pruning that removes information from earlier turns is not
+viable in the forms tried:
+- edit arguments (E10(c));
+- tool results (E10(d)).
+
+The same caution applies to `superseded_tool_results` (S8a-3), which removes outdated reads.
+Lossless-by-reference pruning stays sound.
+
 ### Other quantitative inputs
 
 | Input | Value | Use |

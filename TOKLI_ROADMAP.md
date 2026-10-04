@@ -181,6 +181,15 @@ slice on 2026-10-04.
     (smoke run, E10(c)), so it is off and not recommended;
   - the conversation state stays, for a later pruner of old tool results at a resume.
 
+## S8d — Pruning old tool results at a resume (stopped before code)
+
+- **Requested** on 2026-10-04.
+- **Stopped** by its pre-code experiment E10(d): removing an old tool result's content, with any
+  stub or with nothing, drew provider refusals in 65–80 % of calls on `claude-opus-5-5`, against
+  none with the original (TOKLI_EVIDENCE §2).
+- **Consequence for S8a-3** (`superseded_tool_results`): it removes outdated reads, so it must
+  pass the same refusal experiment before any code.
+
 ## S5 — OpenAI Responses (Codex, API key)
 
 - Adapter `openai_responses` (OR-*): `function_call_output`/`custom_tool_call_output`/`input_text`;

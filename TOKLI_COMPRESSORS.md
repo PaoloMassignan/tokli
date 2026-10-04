@@ -392,6 +392,10 @@ provider cache". Experiment E2-ext measures whether the saving outweighs the ext
 **Settings.** `compressors.superseded_tool_results.enabled`, `pruning.superseded_min_age_turns`
 (4), `pruning.superseded_min_saving_tokens` (8,000), `pruning.tool_semantics`.
 
+**Before any code: refusals.** Removing the content of old tool results drew provider
+refusals in 65–80 % of calls on `claude-opus-5-5` (E10(d), TOKLI_EVIDENCE §2). This pruner
+removes outdated reads, so it must first pass the same refusal experiment.
+
 **Open points for S8a-3** (S8a review M1, A1, A2):
 - **A weak re-read must never supersede.** Claude Code answers a re-read of an unchanged file
   with a short "unchanged" message instead of the file, and errors carry no content either. A
