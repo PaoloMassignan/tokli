@@ -116,14 +116,19 @@ def _compression(config: EffectiveConfig, selector: Selector) -> _Compression:
     """The part of the services that a configuration change rebuilds (ADR 0009)."""
     settings = config.settings
     compression = settings.compression
-    enabled = {
-        compressor_id: bool(toggle["enabled"])
-        for compressor_id, toggle in settings.compressors.model_dump().items()
-    }
+    options = settings.compressors.model_dump()
+    enabled = {compressor_id: bool(toggle["enabled"]) for compressor_id, toggle in options.items()}
+    opted_in = frozenset(  # CC-021 (b), S8a SCR-001
+        compressor_id
+        for compressor_id, toggle in options.items()
+        if toggle.get("apply_to_verbatim_tools")
+    )
     engine = Engine(
         build_registry(
             duplicate_min_tokens=settings.pruning.duplicate_min_tokens,
             duplicate_require_same_call=settings.pruning.duplicate_require_same_call,
+            search_group_min_lines=settings.compressors.search_group.min_group_lines,
+            log_debug_sample=settings.compressors.log_filter.debug_sample,
         ),
         EngineSettings(
             enabled=enabled,
@@ -135,6 +140,7 @@ def _compression(config: EffectiveConfig, selector: Selector) -> _Compression:
             per_call_timeout_ms=compression.per_call_timeout_ms,
             verify_lossless=compression.verify_lossless,
             result_cache_bytes=compression.result_cache_mb * 1024 * 1024,
+            verbatim_opt_in=opted_in,
         ),
     )
     pipeline = Pipeline(

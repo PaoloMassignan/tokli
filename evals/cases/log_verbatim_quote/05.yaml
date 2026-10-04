@@ -1,0 +1,197 @@
+case_set: 2026-10-03.2
+family: log_verbatim_quote
+assumption: not_quoted_verbatim
+checker: verbatim_line
+request:
+  max_tokens: 400
+  tools:
+  - name: service_logs
+    description: Returns the recent logs of a synthetic service.
+    input_schema:
+      type: object
+      properties: {}
+  messages:
+  - role: user
+    content: Use the service_logs tool, then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKECASE
+      name: service_logs
+      input:
+        service: api
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKECASE
+      content: '2026-10-03 09:00:00 DEBUG poll queue=3 lag=28ms
+
+        2026-10-03 09:00:00 INFO request 1001 served in 305 ms
+
+        2026-10-03 09:00:00 INFO request 1002 served in 371 ms
+
+        2026-10-03 09:00:03 INFO request 1003 served in 234 ms
+
+        2026-10-03 09:00:06 DEBUG poll queue=7 lag=709ms
+
+        2026-10-03 09:00:07 INFO request 1005 served in 91 ms
+
+        2026-10-03 09:00:08 INFO request 1006 served in 275 ms
+
+        2026-10-03 09:00:08 INFO request 1007 served in 184 ms
+
+        2026-10-03 09:00:11 WARN pool fjord at 82 % capacity
+
+        2026-10-03 09:00:14 INFO request 1009 served in 389 ms
+
+        2026-10-03 09:00:15 INFO request 1010 served in 88 ms
+
+        2026-10-03 09:00:15 INFO request 1011 served in 129 ms
+
+        2026-10-03 09:00:18 DEBUG poll queue=3 lag=572ms
+
+        2026-10-03 09:00:20 INFO request 1013 served in 384 ms
+
+        2026-10-03 09:00:20 INFO request 1014 served in 296 ms
+
+        2026-10-03 09:00:21 INFO request 1015 served in 256 ms
+
+        2026-10-03 09:00:21 DEBUG poll queue=5 lag=225ms
+
+        2026-10-03 09:00:24 INFO request 1017 served in 208 ms
+
+        2026-10-03 09:00:25 INFO request 1018 served in 166 ms
+
+        2026-10-03 09:00:28 INFO request 1019 served in 345 ms
+
+        2026-10-03 09:00:29 DEBUG poll queue=8 lag=463ms
+
+        2026-10-03 09:00:31 INFO request 1021 served in 387 ms
+
+        2026-10-03 09:00:31 INFO request 1022 served in 384 ms
+
+        2026-10-03 09:00:34 INFO request 1023 served in 296 ms
+
+        2026-10-03 09:00:34 DEBUG poll queue=8 lag=250ms
+
+        2026-10-03 09:00:37 INFO request 1025 served in 65 ms
+
+        2026-10-03 09:00:37 INFO request 1026 served in 68 ms
+
+        2026-10-03 09:00:39 INFO request 1027 served in 253 ms
+
+        2026-10-03 09:00:42 DEBUG poll queue=1 lag=729ms
+
+        2026-10-03 09:00:42 INFO request 1029 served in 384 ms
+
+        2026-10-03 09:00:45 INFO request 1030 served in 106 ms
+
+        2026-10-03 09:00:46 INFO request 1031 served in 271 ms
+
+        2026-10-03 09:00:47 DEBUG poll queue=6 lag=538ms
+
+        2026-10-03 09:00:50 INFO request 1033 served in 92 ms
+
+        2026-10-03 09:00:50 INFO request 1034 served in 156 ms
+
+        2026-10-03 09:00:52 INFO request 1035 served in 35 ms
+
+        2026-10-03 09:00:52 DEBUG poll queue=5 lag=806ms
+
+        2026-10-03 09:00:54 INFO request 1037 served in 97 ms
+
+        2026-10-03 09:00:56 INFO request 1038 served in 334 ms
+
+        2026-10-03 09:00:58 INFO request 1039 served in 315 ms
+
+        2026-10-03 09:01:00 DEBUG poll queue=9 lag=73ms
+
+        2026-10-03 09:01:02 INFO request 1041 served in 118 ms
+
+        2026-10-03 09:01:02 INFO request 1042 served in 7 ms
+
+        2026-10-03 09:01:02 INFO request 1043 served in 7 ms
+
+        2026-10-03 09:01:04 DEBUG poll queue=2 lag=42ms
+
+        2026-10-03 09:01:04 INFO request 1045 served in 271 ms
+
+        2026-10-03 09:01:06 INFO request 1046 served in 16 ms
+
+        2026-10-03 09:01:08 INFO request 1047 served in 217 ms
+
+        2026-10-03 09:01:08 DEBUG poll queue=1 lag=676ms
+
+        2026-10-03 09:01:09 INFO request 1049 served in 369 ms
+
+        2026-10-03 09:01:10 INFO request 1050 served in 388 ms
+
+        2026-10-03 09:01:13 INFO request 1051 served in 7 ms
+
+        2026-10-03 09:01:16 ERROR request 2659 failed with code E679 (MARK-1518)
+
+        2026-10-03 09:01:19 INFO request 1053 served in 281 ms
+
+        2026-10-03 09:01:22 INFO request 1054 served in 188 ms
+
+        2026-10-03 09:01:22 INFO request 1055 served in 352 ms
+
+        2026-10-03 09:01:25 DEBUG poll queue=9 lag=853ms
+
+        2026-10-03 09:01:28 INFO request 1057 served in 294 ms
+
+        2026-10-03 09:01:28 INFO request 1058 served in 268 ms
+
+        2026-10-03 09:01:29 INFO request 1059 served in 95 ms
+
+        2026-10-03 09:01:32 DEBUG poll queue=9 lag=897ms
+
+        2026-10-03 09:01:34 INFO request 1061 served in 21 ms
+
+        2026-10-03 09:01:35 INFO request 1062 served in 79 ms
+
+        2026-10-03 09:01:36 INFO request 1063 served in 325 ms
+
+        2026-10-03 09:01:38 DEBUG poll queue=8 lag=706ms
+
+        2026-10-03 09:01:38 INFO request 1065 served in 10 ms
+
+        2026-10-03 09:01:41 INFO request 1066 served in 31 ms
+
+        2026-10-03 09:01:43 INFO request 1067 served in 318 ms
+
+        2026-10-03 09:01:45 DEBUG poll queue=5 lag=34ms
+
+        2026-10-03 09:01:48 INFO request 1069 served in 110 ms
+
+        2026-10-03 09:01:49 INFO request 1070 served in 91 ms
+
+        2026-10-03 09:01:50 INFO request 1071 served in 323 ms
+
+        2026-10-03 09:01:53 DEBUG poll queue=7 lag=634ms
+
+        2026-10-03 09:01:54 INFO request 1073 served in 375 ms
+
+        2026-10-03 09:01:56 INFO request 1074 served in 19 ms
+
+        2026-10-03 09:01:56 INFO request 1075 served in 328 ms
+
+        2026-10-03 09:01:57 DEBUG poll queue=6 lag=753ms
+
+        2026-10-03 09:01:59 INFO request 1077 served in 70 ms
+
+        2026-10-03 09:01:59 INFO request 1078 served in 274 ms
+
+        2026-10-03 09:01:59 INFO request 1079 served in 110 ms
+
+        2026-10-03 09:02:02 DEBUG poll queue=5 lag=366ms
+
+        2026-10-03 09:02:03 INFO request 1081 served in 336 ms
+
+        2026-10-03 09:02:04 INFO request 1082 served in 132 ms
+
+        '
+    - type: text
+      text: Copy the full log line that contains MARK-1518 exactly as it appears in the service_logs result,
+        so I can search for it. Reply with that one line only.
+expected: 2026-10-03 09:01:16 ERROR request 2659 failed with code E679 (MARK-1518)

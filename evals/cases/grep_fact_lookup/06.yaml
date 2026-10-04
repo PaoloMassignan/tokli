@@ -1,0 +1,53 @@
+case_set: 2026-10-03.2
+family: grep_fact_lookup
+assumption: reads_grouped_search
+checker: exact_value
+request:
+  max_tokens: 400
+  tools:
+  - name: Grep
+    description: Searches the files of a synthetic repository for a pattern.
+    input_schema:
+      type: object
+      properties: {}
+  messages:
+  - role: user
+    content: Use the Grep tool, then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKECASE
+      name: Grep
+      input:
+        pattern: match
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKECASE
+      content: 'Found 10 matches
+
+        lib/core/client.ts:48:    harbor_cobalt = harbor(1)  # MARK-9309
+
+        lib/core/client.ts:59:    harbor_cobalt = harbor(11)
+
+        lib/core/client.ts:88:        harbor_indigo = harbor(44)
+
+        lib/core/loader.py:29:        harbor_juniper = harbor(80)
+
+        lib/core/loader.py:30:harbor_fjord = harbor(49)
+
+        lib/core/loader.py:33:        harbor_onyx = harbor(60)
+
+        lib/core/schema.sql:27:    harbor_fjord = harbor(50)
+
+        lib/core/schema.sql:31:    harbor_raven = harbor(70)
+
+        lib/core/schema.sql:58:harbor_garnet = harbor(98)
+
+        lib/core/schema.sql:75:harbor_lumen = harbor(7)
+
+        '
+    - type: text
+      text: In the Grep result, which file and line number contain the match with MARK-9309? Answer as
+        <path>:<line> exactly as the result writes the path, nothing else.
+expected: lib/core/client.ts:48

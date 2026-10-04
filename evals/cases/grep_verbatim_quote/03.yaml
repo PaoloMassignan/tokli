@@ -1,0 +1,66 @@
+case_set: 2026-10-03.2
+family: grep_verbatim_quote
+assumption: not_quoted_verbatim
+checker: verbatim_line
+request:
+  max_tokens: 400
+  tools:
+  - name: Grep
+    description: Searches the files of a synthetic repository for a pattern.
+    input_schema:
+      type: object
+      properties: {}
+  messages:
+  - role: user
+    content: Use the Grep tool, then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKECASE
+      name: Grep
+      input:
+        pattern: match
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKECASE
+      content: 'Found 16 matches
+
+        lib/core/config.py:31:        lumen_nimbus = lumen(43)
+
+        lib/core/config.py:46:lumen_amber = lumen(42)
+
+        lib/core/config.py:50:    lumen_cobalt = lumen(6)
+
+        lib/core/client.ts:64:    lumen_amber = lumen(1)
+
+        lib/core/client.ts:89:lumen_indigo = lumen(28)
+
+        lib/core/client.ts:104:        lumen_quartz = lumen(98)
+
+        lib/core/client.ts:113:        lumen_indigo = lumen(56)
+
+        lib/core/client.ts:141:        lumen_maple = lumen(66)
+
+        lib/core/loader.py:15:    lumen_juniper = lumen(45)
+
+        lib/core/loader.py:43:    lumen_nimbus = lumen(47)
+
+        lib/core/loader.py:72:        lumen_pebble = lumen(58)
+
+        lib/core/handler.cs:50:lumen_cobalt = lumen(23)
+
+        lib/core/handler.cs:53:    lumen_indigo = lumen(36)  # MARK-9927
+
+        lib/core/handler.cs:83:    lumen_cobalt = lumen(83)
+
+        lib/core/handler.cs:110:lumen_raven = lumen(34)
+
+        lib/core/handler.cs:139:        lumen_amber = lumen(13)
+
+        '
+    - type: text
+      text: 'I want to edit the line that contains MARK-9927 with an exact-match edit. Give me that line
+        exactly as it appears in the file: without the path and line-number prefix of the search result,
+        keeping its leading whitespace. Reply with that one line only.'
+expected: '    lumen_indigo = lumen(36)  # MARK-9927'

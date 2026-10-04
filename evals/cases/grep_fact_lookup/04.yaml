@@ -1,0 +1,61 @@
+case_set: 2026-10-03.2
+family: grep_fact_lookup
+assumption: reads_grouped_search
+checker: exact_value
+request:
+  max_tokens: 400
+  tools:
+  - name: Grep
+    description: Searches the files of a synthetic repository for a pattern.
+    input_schema:
+      type: object
+      properties: {}
+  messages:
+  - role: user
+    content: Use the Grep tool, then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKECASE
+      name: Grep
+      input:
+        pattern: match
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKECASE
+      content: 'Found 14 matches
+
+        C:/work/tools/client.ts:33:    amber_cobalt = amber(31)
+
+        C:/work/tools/client.ts:40:amber_cobalt = amber(85)
+
+        C:/work/tools/client.ts:56:amber_cobalt = amber(34)
+
+        C:/work/tools/client.ts:81:    amber_juniper = amber(96)
+
+        C:/work/tools/config.py:49:    amber_ember = amber(60)
+
+        C:/work/tools/config.py:57:    amber_indigo = amber(32)
+
+        C:/work/tools/config.py:66:        amber_birch = amber(60)
+
+        C:/work/tools/handler.cs:22:    amber_lumen = amber(26)
+
+        C:/work/tools/handler.cs:42:    amber_cobalt = amber(36)
+
+        C:/work/tools/handler.cs:58:    amber_birch = amber(53)
+
+        C:/work/tools/handler.cs:61:        amber_nimbus = amber(47)
+
+        C:/work/tools/loader.py:56:amber_amber = amber(10)
+
+        C:/work/tools/loader.py:80:    amber_amber = amber(51)  # MARK-1236
+
+        C:/work/tools/loader.py:93:        amber_amber = amber(31)
+
+        '
+    - type: text
+      text: In the Grep result, which file and line number contain the match with MARK-1236? Answer as
+        <path>:<line> exactly as the result writes the path, nothing else.
+expected: C:/work/tools/loader.py:80

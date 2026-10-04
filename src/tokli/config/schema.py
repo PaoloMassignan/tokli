@@ -104,12 +104,34 @@ class CompressorToggle(BaseModel):
     enabled: bool
 
 
+class SearchGroupOptions(BaseModel):
+    """SPEC 010 `search_group` (S8a-1)."""
+
+    model_config = _STRICT
+
+    enabled: bool = False  # no evaluation record yet (CC-020)
+    min_group_lines: int = Field(default=5, ge=2)
+    apply_to_verbatim_tools: bool = False  # CC-021 (b), S8a SCR-001
+
+
+class LogFilterOptions(BaseModel):
+    """SPEC 010 `log_filter` (S8a-1). SELECTIVE: never on by default (CC-002)."""
+
+    model_config = _STRICT
+
+    enabled: bool = False
+    debug_sample: int = Field(default=10, ge=1)
+    apply_to_verbatim_tools: bool = False  # CC-021 (b), S8a SCR-001
+
+
 class CompressorsSection(BaseModel):
     model_config = _STRICT
 
     json_minify: CompressorToggle = CompressorToggle(enabled=True)
     # On by default since its smoke record (E11, 2026-10-03) says no_measurable_damage (CC-020).
     duplicate_tool_results: CompressorToggle = CompressorToggle(enabled=True)
+    search_group: SearchGroupOptions = SearchGroupOptions()
+    log_filter: LogFilterOptions = LogFilterOptions()
 
 
 class PruningSection(BaseModel):
@@ -201,10 +223,12 @@ def _walk(model: type[BaseModel], prefix: tuple[str, ...], keys: dict[str, KeyIn
 
 
 def _ui_editable(key: str) -> bool:
-    """CF-009 (after S4 SCR-001): compressor toggles and the retention period."""
-    return (key.startswith("compressors.") and key.endswith(".enabled")) or (
-        key == "telemetry.retention_days"
+    """CF-009 (after S8a SCR-001): compressor toggles, the verbatim opt-in where a compressor
+    declares it, and the retention period."""
+    compressor_switch = key.startswith("compressors.") and key.endswith(
+        (".enabled", ".apply_to_verbatim_tools")
     )
+    return compressor_switch or key == "telemetry.retention_days"
 
 
 def schema_keys() -> dict[str, KeyInfo]:

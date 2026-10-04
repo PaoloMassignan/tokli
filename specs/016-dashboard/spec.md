@@ -4,6 +4,7 @@ Status: Draft · Slices: S3 (overview + compressors + recent), S4 (settings), S6
 Changed by S4 SCR-001 (2026-10-03): UI-004, UI-010, the Settings and Overview rows.
 Approved for S3 (2026-10-03): Overview, Compressors (read-only), Recent requests; UI-001, UI-002, UI-003 (without evaluation status), UI-006, UI-008, UI-009, UI-011.
 Approved for S4 (2026-10-03): Settings page; UI-003 (evaluation status), UI-004, UI-005, UI-010, AC-UI-3; saved tokens per compressor on the Overview.
+Approved for S8a-1 (2026-10-03): UI-012 (S8a SCR-001).
 
 ## Purpose
 Operational visibility first: how much is saved, by which compressor, at what latency. Then
@@ -33,6 +34,7 @@ simple control: policy and per-compressor enable/disable.
 | UI-008 | THE dashboard SHALL remain usable at 360 px width and SHALL respect `prefers-color-scheme`. |
 | UI-009 | THE Overview page SHALL show the overhead distribution per size bucket (TC-013) with the product target drawn as a reference line labelled "target (not a limit)". THE Compressors page SHALL show each compressor's `cost_class`, average latency and `skipped_budget` rate, next to the effective `request_budget_ms`. |
 | UI-011 | THE dashboard SHALL be served at `/tokli/` with its assets under `/tokli/ui/`, with explicit content types (never derived from the host's file-type registry), and `tokli serve` SHALL print the dashboard address at startup. |
+| UI-012 | WHERE a compressor declares `apply_to_verbatim_tools`, THE Settings page SHALL show a second toggle "Also on Read, Bash…" (listing the effective `verbatim_tools`), off by default. Next to it, the page SHALL state: "These tools' output is often copied back exactly by the agent (for example as an edit anchor). Changing it can make the agent's next tool call fail." (S8a SCR-001.) |
 | UI-010 | THE Settings page SHALL explain the kinds in these words: Lossless — "Keeps all information in the request: exactly, structurally (e.g. JSON whitespace), or by reference to an identical earlier tool result. This does not guarantee identical model behaviour. Defaults are chosen from evaluations." Selective / lossy — "Drops information: selective ones keep a declared part verbatim, lossy ones do not. Enable them only with evidence that your tasks are not affected." (S4 SCR-001.) |
 
 ## Acceptance criteria
@@ -49,4 +51,5 @@ Browser tests (AC-UI-2, UI-003, UI-008, UI-009) run with Playwright and headless
 `test_ui_policy_marks_non_lossless_not_permitted` · `test_ui_locked_settings_show_source` · `test_wheel_contains_ui_assets` ·
 `test_ui_assets_load_offline` · `test_debug_content_banner_visible` ·
 `test_ui_shows_equivalence_assumptions_and_eval_status` · `test_ui_overhead_target_is_reference_line` · `test_ui_policy_explanations_text` ·
-`test_ui_shows_kind_equivalence_and_assumptions` · `test_ui_usable_at_360px` · `test_ui_assets_served_with_explicit_content_types`
+`test_ui_shows_kind_equivalence_and_assumptions` · `test_ui_usable_at_360px` · `test_ui_assets_served_with_explicit_content_types` ·
+`test_ui_verbatim_opt_in_toggle`

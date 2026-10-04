@@ -1,0 +1,76 @@
+case_set: 2026-10-03.2
+family: grep_verbatim_quote
+assumption: not_quoted_verbatim
+checker: verbatim_line
+request:
+  max_tokens: 400
+  tools:
+  - name: Grep
+    description: Searches the files of a synthetic repository for a pattern.
+    input_schema:
+      type: object
+      properties: {}
+  messages:
+  - role: user
+    content: Use the Grep tool, then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKECASE
+      name: Grep
+      input:
+        pattern: match
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKECASE
+      content: 'Found 21 matches
+
+        lib/core/config.py:54:    birch_nimbus = birch(22)
+
+        lib/core/config.py:65:birch_indigo = birch(34)
+
+        lib/core/config.py:81:        birch_pebble = birch(89)
+
+        lib/core/loader.py:44:birch_maple = birch(57)
+
+        lib/core/loader.py:70:        birch_raven = birch(41)  # MARK-9826
+
+        lib/core/loader.py:78:        birch_fjord = birch(4)
+
+        lib/core/loader.py:98:    birch_indigo = birch(94)
+
+        lib/core/client.ts:16:    birch_cobalt = birch(92)
+
+        lib/core/client.ts:38:        birch_juniper = birch(76)
+
+        lib/core/client.ts:64:        birch_nimbus = birch(11)
+
+        lib/core/client.ts:92:birch_harbor = birch(41)
+
+        lib/core/client.ts:110:        birch_quartz = birch(28)
+
+        lib/core/worker.go:66:birch_cobalt = birch(2)
+
+        lib/core/worker.go:85:birch_lumen = birch(47)
+
+        lib/core/worker.go:104:birch_juniper = birch(59)
+
+        lib/core/worker.go:105:    birch_nimbus = birch(95)
+
+        lib/core/worker.go:111:birch_birch = birch(11)
+
+        lib/core/schema.sql:19:birch_onyx = birch(1)
+
+        lib/core/schema.sql:26:    birch_kelp = birch(17)
+
+        lib/core/schema.sql:33:birch_amber = birch(7)
+
+        lib/core/schema.sql:40:birch_onyx = birch(83)
+
+        '
+    - type: text
+      text: 'I want to edit the line that contains MARK-9826 with an exact-match edit. Give me that line
+        exactly as it appears in the file: without the path and line-number prefix of the search result,
+        keeping its leading whitespace. Reply with that one line only.'
+expected: '        birch_raven = birch(41)  # MARK-9826'

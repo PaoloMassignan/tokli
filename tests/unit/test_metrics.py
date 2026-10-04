@@ -74,6 +74,10 @@ def write(path: Path, items: list[tuple[RequestRecord, list[CompressorStatsRecor
     store.start()
     for record, rows in items:
         store.submit(record, rows)
+    # close() gives up waiting for a busy writer after a bounded time (S4.5 D4); on a slow CI
+    # runner (Windows / Python 3.13, S8a-1 CI) it returned while rows were still being written,
+    # and the queries below saw 11 of 75 requests. Wait for every queued row first.
+    store.flush(timeout_s=120)
     store.close()
 
 

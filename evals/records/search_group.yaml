@@ -1,0 +1,11 @@
+# Evaluation record (SPEC 012, QE-016), written by `tokli eval smoke`.
+compressor: search_group
+version: '2'
+tier: smoke
+assumptions_covered:
+- not_quoted_verbatim
+- reads_grouped_search
+verdict: no_measurable_damage
+model: claude-opus-5-5
+date: '2026-10-04'
+report: results/2026-10-04-search_group-claude-opus-5-5/report.md

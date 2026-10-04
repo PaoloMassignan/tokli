@@ -1,0 +1,67 @@
+case_set: 2026-10-03.2
+family: grep_fact_lookup
+assumption: reads_grouped_search
+checker: exact_value
+request:
+  max_tokens: 400
+  tools:
+  - name: Grep
+    description: Searches the files of a synthetic repository for a pattern.
+    input_schema:
+      type: object
+      properties: {}
+  messages:
+  - role: user
+    content: Use the Grep tool, then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKECASE
+      name: Grep
+      input:
+        pattern: match
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKECASE
+      content: 'Found 17 matches
+
+        src/app/schema.sql:5:        amber_fjord = amber(83)
+
+        src/app/schema.sql:8:    amber_nimbus = amber(28)
+
+        src/app/schema.sql:37:        amber_amber = amber(53)
+
+        src/app/client.ts:28:amber_cobalt = amber(25)
+
+        src/app/client.ts:34:        amber_nimbus = amber(18)
+
+        src/app/config.py:19:    amber_quartz = amber(19)
+
+        src/app/config.py:28:amber_delta = amber(46)
+
+        src/app/config.py:52:amber_onyx = amber(83)
+
+        src/app/config.py:66:amber_maple = amber(38)  # MARK-6659
+
+        src/app/handler.cs:30:amber_nimbus = amber(76)
+
+        src/app/handler.cs:35:        amber_juniper = amber(90)
+
+        src/app/handler.cs:44:amber_juniper = amber(53)
+
+        src/app/loader.py:36:amber_fjord = amber(84)
+
+        src/app/loader.py:58:        amber_raven = amber(68)
+
+        src/app/loader.py:72:    amber_quartz = amber(81)
+
+        src/app/loader.py:78:amber_raven = amber(95)
+
+        src/app/loader.py:84:        amber_fjord = amber(5)
+
+        '
+    - type: text
+      text: In the Grep result, which file and line number contain the match with MARK-6659? Answer as
+        <path>:<line> exactly as the result writes the path, nothing else.
+expected: src/app/config.py:66

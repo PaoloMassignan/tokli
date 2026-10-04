@@ -1,0 +1,63 @@
+case_set: 2026-10-03.2
+family: grep_fact_lookup
+assumption: reads_grouped_search
+checker: exact_value
+request:
+  max_tokens: 400
+  tools:
+  - name: Grep
+    description: Searches the files of a synthetic repository for a pattern.
+    input_schema:
+      type: object
+      properties: {}
+  messages:
+  - role: user
+    content: Use the Grep tool, then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKECASE
+      name: Grep
+      input:
+        pattern: match
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKECASE
+      content: 'Found 15 matches
+
+        \\build\share\repo\schema.sql:37:    harbor_harbor = harbor(85)
+
+        \\build\share\repo\schema.sql:60:    harbor_birch = harbor(94)
+
+        \\build\share\repo\schema.sql:82:        harbor_fjord = harbor(85)
+
+        \\build\share\repo\schema.sql:96:harbor_onyx = harbor(62)
+
+        \\build\share\repo\worker.go:41:harbor_ember = harbor(22)
+
+        \\build\share\repo\worker.go:66:harbor_quartz = harbor(54)
+
+        \\build\share\repo\client.ts:58:harbor_kelp = harbor(65)
+
+        \\build\share\repo\client.ts:83:        harbor_quartz = harbor(57)
+
+        \\build\share\repo\client.ts:90:    harbor_birch = harbor(74)
+
+        \\build\share\repo\config.py:39:        harbor_nimbus = harbor(96)
+
+        \\build\share\repo\config.py:66:        harbor_pebble = harbor(22)
+
+        \\build\share\repo\config.py:93:harbor_maple = harbor(35)  # MARK-4358
+
+        \\build\share\repo\config.py:98:harbor_juniper = harbor(27)
+
+        \\build\share\repo\loader.py:29:        harbor_fjord = harbor(93)
+
+        \\build\share\repo\loader.py:55:        harbor_maple = harbor(51)
+
+        '
+    - type: text
+      text: In the Grep result, which file and line number contain the match with MARK-4358? Answer as
+        <path>:<line> exactly as the result writes the path, nothing else.
+expected: \\build\share\repo\config.py:93

@@ -400,6 +400,25 @@ function isOn(c, config) {
   return s ? Boolean(s.value) : Boolean(c.enabled);
 }
 
+// UI-012 (S8a SCR-001): the per-compressor opt-in for verbatim tools, where a compressor declares it.
+function verbatimOptIn(c, config) {
+  const key = `compressors.${c.id}.apply_to_verbatim_tools`;
+  const s = settingOf(config, key);
+  if (!s) return null;
+  const tools = settingOf(config, "compression.verbatim_tools");
+  const names = tools && Array.isArray(tools.value) ? tools.value.join(", ") : "verbatim tools";
+  const input = el("input", { type: "checkbox", "data-toggle": "verbatim", "aria-label": `${c.name} also on ${names}` });
+  input.checked = Boolean(s.value);
+  input.disabled = Boolean(s.locked_by);
+  input.addEventListener("change", () => changeSettings({ [key]: input.checked }));
+  return el("div", { class: "verbatim-opt-in" },
+    el("label", { class: "switch" }, input, `Also on ${names}`),
+    el("div", { class: "warn" },
+      "These tools' output is often copied back exactly by the agent (for example as an edit anchor). " +
+      "Changing it can make the agent's next tool call fail."),
+    s.locked_by ? el("div", { class: "lock" }, `locked by ${s.locked_by}`) : null);
+}
+
 function renderSettings() {
   const { registry, config } = settingsState;
   document.getElementById("config-hash").textContent = config.config_hash.slice(0, 12);
@@ -407,7 +426,7 @@ function renderSettings() {
     const key = `compressors.${c.id}.enabled`;
     const s = settingOf(config, key);
     const locked = (s && s.locked_by) || c.locked_by;
-    const input = el("input", { type: "checkbox", "aria-label": `${c.name} on/off` });
+    const input = el("input", { type: "checkbox", "data-toggle": "enabled", "aria-label": `${c.name} on/off` });
     input.checked = isOn(c, config);
     input.disabled = Boolean(locked);
     input.addEventListener("change", () => changeSettings({ [key]: input.checked }));
@@ -416,6 +435,7 @@ function renderSettings() {
         el("label", { class: "switch" }, input, input.checked ? "on" : "off")),
       el("div", {}, kindBadge(c), " ", el("span", { class: "meta" }, c.availability)),
       c.kind !== "LOSSLESS" ? el("div", { class: "warn" }, "drops information") : null,
+      verbatimOptIn(c, config),
       el("div", { class: "meta" }, "Evaluation: ", evaluationText(c.evaluation)),
       el("div", { class: "meta" }, "Assumptions:"),
       el("ul", { class: "assumptions" }, c.assumptions.map((a) => el("li", {}, a))),

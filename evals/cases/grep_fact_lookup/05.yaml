@@ -1,0 +1,69 @@
+case_set: 2026-10-03.2
+family: grep_fact_lookup
+assumption: reads_grouped_search
+checker: exact_value
+request:
+  max_tokens: 400
+  tools:
+  - name: Grep
+    description: Searches the files of a synthetic repository for a pattern.
+    input_schema:
+      type: object
+      properties: {}
+  messages:
+  - role: user
+    content: Use the Grep tool, then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKECASE
+      name: Grep
+      input:
+        pattern: match
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKECASE
+      content: 'Found 18 matches
+
+        lib/core/client.ts:21:    maple_fjord = maple(17)
+
+        lib/core/client.ts:42:    maple_pebble = maple(90)
+
+        lib/core/client.ts:66:        maple_onyx = maple(90)
+
+        lib/core/loader.py:33:maple_quartz = maple(14)
+
+        lib/core/loader.py:55:    maple_lumen = maple(51)
+
+        lib/core/loader.py:58:    maple_maple = maple(20)
+
+        lib/core/worker.go:58:    maple_fjord = maple(5)
+
+        lib/core/worker.go:86:maple_garnet = maple(77)
+
+        lib/core/worker.go:106:        maple_harbor = maple(35)
+
+        lib/core/worker.go:114:    maple_ember = maple(96)  # MARK-7093
+
+        lib/core/worker.go:125:maple_birch = maple(39)
+
+        lib/core/config.py:47:        maple_maple = maple(68)
+
+        lib/core/config.py:63:maple_quartz = maple(62)
+
+        lib/core/config.py:68:    maple_delta = maple(6)
+
+        lib/core/config.py:86:maple_nimbus = maple(87)
+
+        lib/core/config.py:116:maple_lumen = maple(49)
+
+        lib/core/schema.sql:62:        maple_raven = maple(24)
+
+        lib/core/schema.sql:83:        maple_pebble = maple(90)
+
+        '
+    - type: text
+      text: In the Grep result, which file and line number contain the match with MARK-7093? Answer as
+        <path>:<line> exactly as the result writes the path, nothing else.
+expected: lib/core/worker.go:114

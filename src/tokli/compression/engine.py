@@ -18,6 +18,7 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Protocol
 
+from tokli.compression import text_shapes
 from tokli.compression.contract import (
     AnyCompressor,
     Applicability,
@@ -52,6 +53,7 @@ class EngineSettings:
     per_call_timeout_ms: float = 200.0
     verify_lossless: bool = False
     result_cache_bytes: int = 0
+    verbatim_opt_in: frozenset[str] = frozenset()  # CC-021 (b), S8a SCR-001
 
 
 @dataclass
@@ -187,9 +189,14 @@ def availability_of(requires: Sequence[str]) -> str:
 
 def _features(text: str, counter: Counter) -> Features:
     stripped = text.strip()
+    grep_lines, leveled, lines, crlf = text_shapes.shape_counts(text)
     return Features(
         tokens=counter.count(text),
         json_candidate=bool(stripped) and stripped[0] in "{[" and stripped[-1] in "}]",
+        grep_lines=grep_lines,
+        leveled_ratio=leveled / lines if lines else 0.0,
+        line_count=lines,
+        crlf=crlf,
     )
 
 
@@ -524,7 +531,8 @@ class Engine:
                 if segment.tool_name is None:
                     skip("verbatim_tool", "verbatim_tool(unresolved)")
                     continue
-                if segment.tool_name in settings.verbatim_tools:
+                opted_in = spec.id in settings.verbatim_opt_in  # CC-021 (b), S8a SCR-001
+                if segment.tool_name in settings.verbatim_tools and not opted_in:
                     skip("verbatim_tool")
                     continue
             if terminal_reached:

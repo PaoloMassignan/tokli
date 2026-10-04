@@ -3,6 +3,7 @@
 Status: Draft · Slice: S1 (minimal), S4/S8 (features for more compressors)
 Changed by SCR-001 (2026-10-02): AC-RT-1 measurement sizes.
 Approved for S1 (2026-09-30): RT-002…RT-006; RT-001 for the `tokens` and `json_candidate` features.
+Approved for S8a-1 (2026-10-03): RT-001 for `grep_lines`, `leveled_ratio`, `line_count`, `crlf`.
 
 ## Purpose
 Decide cheaply, per segment, which compressors are worth attempting, and prefer pass-through when
@@ -22,10 +23,10 @@ Evidence: TOKLI_EVIDENCE.md (hazards and measurements); per-requirement rational
 |---|---|---|
 | `tokens` | estimate via TokenCounter | min-size filter |
 | `json_candidate` | first non-ws char ∈ `{[` and last non-ws char ∈ `}]` | json_minify |
-| `grep_lines` | count of lines matching the path:line: pattern (POSIX/Windows/UNC) | search_group |
+| `grep_lines` | count of grep lines as defined for `search_group` (SPEC 010: POSIX, Windows drive-letter and UNC paths) | search_group |
 | `diff_shape` | `diff --git` present, OR (`@@ ` hunk header AND ≥1 `+`/`-` line) | diff_context_trim |
-| `leveled_ratio` | fraction of lines containing a log level keyword | log_filter |
-| `line_count`, `crlf` | | several |
+| `leveled_ratio` | fraction of lines containing a level keyword as defined for `log_filter` (SPEC 010: whole word, case-insensitive) | log_filter |
+| `line_count`, `crlf` | number of lines; whether every line ends with `\r\n` | search_group, log_filter |
 
 ## Requirements
 
@@ -46,7 +47,8 @@ Evidence: TOKLI_EVIDENCE.md (hazards and measurements); per-requirement rational
 
 ## Test scenarios
 `test_features_linear_time` · `test_cheap_filters_before_applicable` · `test_prose_only_request_passthrough` ·
-`test_routing_inputs_closed_and_no_ml` · `test_trace_shows_routing_counts` · `test_grep_feature_windows_paths`
+`test_routing_inputs_closed_and_no_ml` · `test_trace_shows_routing_counts` · `test_grep_feature_windows_paths` ·
+`test_leveled_ratio_feature` · `test_line_count_and_crlf_features`
 
 ## Open questions
 - Q10: Should historical effectiveness (e.g. a compressor's 30-day zero-benefit rate > 95 %) automatically raise its `min_tokens`? Deferred. If adopted, it will be a read-only analyzer input with its own spec, keeping telemetry out of decision code.

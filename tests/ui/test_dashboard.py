@@ -295,3 +295,39 @@ def test_ui_overview_shows_savings_per_compressor(page: Page) -> None:
     assert rows.count() >= 1
     text = page.locator("#per-compressor").inner_text()
     assert "JSON minify" in text
+
+
+# -- S8a-1: the verbatim opt-in (UI-012, S8a SCR-001) ------------------------------------------
+
+
+def test_ui_verbatim_opt_in_toggle(fresh: Tokli) -> None:
+    """UI-012: a compressor that declares `apply_to_verbatim_tools` gets a second toggle,
+    labelled with the effective verbatim tools and the warning; others do not."""
+    with sync_playwright() as p:
+        browser = p.chromium.launch()
+        page = open_settings(browser, fresh)
+        card = page.locator('[data-compressor="log_filter"]')
+        toggle = card.locator('input[data-toggle="verbatim"]')
+        assert not toggle.is_checked()
+        text = card.inner_text()
+        assert "Also on Read, Bash, shell, shell_command, container.exec" in text
+        assert (
+            "These tools' output is often copied back exactly by the agent (for example as an "
+            "edit anchor). Changing it can make the agent's next tool call fail." in text
+        )
+        assert (
+            page.locator('[data-compressor="json_minify"] input[data-toggle="verbatim"]').count()
+            == 0
+        )
+        with page.expect_response(
+            lambda r: r.url.endswith("/tokli/api/config") and r.request.method == "PATCH"
+        ) as info:
+            toggle.click()
+        assert info.value.status == 200
+        page.wait_for_selector(
+            '[data-compressor="log_filter"] input[data-toggle="verbatim"]:checked'
+        )
+        browser.close()
+    values = fresh.services.config.reload().values
+    assert values["compressors.log_filter.apply_to_verbatim_tools"] is True
+    assert values["compressors.log_filter.enabled"] is False  # the two toggles are independent

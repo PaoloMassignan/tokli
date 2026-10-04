@@ -161,6 +161,9 @@ th[title] { cursor: help; text-decoration: underline dotted; }
 .compressor-card .warn { color: var(--warn); font-size: 0.85rem; }
 .switch { display: inline-flex; align-items: center; gap: 6px; font-size: 0.9rem; white-space: nowrap; }
 .switch input { width: 18px; height: 18px; }
+.verbatim-opt-in { margin: 6px 0; }
+.verbatim-opt-in .switch { white-space: normal; overflow-wrap: anywhere; align-items: flex-start; }
+.verbatim-opt-in .switch input { flex: none; }
 .lock { color: var(--warn); font-size: 0.8rem; overflow-wrap: anywhere; }
 #lossless-only, .retention button {
   border: 1px solid var(--line); background: var(--card); color: var(--fg);

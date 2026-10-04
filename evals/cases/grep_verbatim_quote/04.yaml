@@ -1,0 +1,74 @@
+case_set: 2026-10-03.2
+family: grep_verbatim_quote
+assumption: not_quoted_verbatim
+checker: verbatim_line
+request:
+  max_tokens: 400
+  tools:
+  - name: Grep
+    description: Searches the files of a synthetic repository for a pattern.
+    input_schema:
+      type: object
+      properties: {}
+  messages:
+  - role: user
+    content: Use the Grep tool, then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKECASE
+      name: Grep
+      input:
+        pattern: match
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKECASE
+      content: 'Found 20 matches
+
+        C:\work\service\src\handler.cs:29:delta_fjord = delta(88)
+
+        C:\work\service\src\handler.cs:31:    delta_pebble = delta(49)
+
+        C:\work\service\src\handler.cs:43:    delta_juniper = delta(66)
+
+        C:\work\service\src\handler.cs:63:        delta_ember = delta(51)
+
+        C:\work\service\src\loader.py:49:    delta_amber = delta(44)
+
+        C:\work\service\src\loader.py:64:        delta_pebble = delta(27)
+
+        C:\work\service\src\loader.py:82:delta_amber = delta(79)
+
+        C:\work\service\src\loader.py:106:delta_harbor = delta(2)
+
+        C:\work\service\src\client.ts:34:delta_cobalt = delta(32)
+
+        C:\work\service\src\client.ts:43:        delta_kelp = delta(9)
+
+        C:\work\service\src\client.ts:56:        delta_indigo = delta(28)
+
+        C:\work\service\src\client.ts:86:    delta_quartz = delta(81)
+
+        C:\work\service\src\client.ts:114:        delta_quartz = delta(2)
+
+        C:\work\service\src\worker.go:57:        delta_juniper = delta(94)  # MARK-5074
+
+        C:\work\service\src\worker.go:85:    delta_maple = delta(95)
+
+        C:\work\service\src\worker.go:98:delta_cobalt = delta(50)
+
+        C:\work\service\src\config.py:53:        delta_birch = delta(5)
+
+        C:\work\service\src\config.py:72:delta_kelp = delta(98)
+
+        C:\work\service\src\config.py:97:    delta_juniper = delta(22)
+
+        C:\work\service\src\config.py:107:delta_delta = delta(6)
+
+        '
+    - type: text
+      text: 'I want to edit the line that contains MARK-5074 with an exact-match edit. Give me that line
+        exactly as it appears in the file: without the path and line-number prefix of the search result,
+        keeping its leading whitespace. Reply with that one line only.'
+expected: '        delta_juniper = delta(94)  # MARK-5074'

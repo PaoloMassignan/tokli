@@ -1,0 +1,69 @@
+case_set: 2026-10-03.2
+family: grep_fact_lookup
+assumption: reads_grouped_search
+checker: exact_value
+request:
+  max_tokens: 400
+  tools:
+  - name: Grep
+    description: Searches the files of a synthetic repository for a pattern.
+    input_schema:
+      type: object
+      properties: {}
+  messages:
+  - role: user
+    content: Use the Grep tool, then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKECASE
+      name: Grep
+      input:
+        pattern: match
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKECASE
+      content: 'Found 18 matches
+
+        src/app/schema.sql:35:    raven_birch = raven(90)
+
+        src/app/schema.sql:37:        raven_birch = raven(40)
+
+        src/app/schema.sql:61:    raven_delta = raven(78)
+
+        src/app/schema.sql:63:        raven_garnet = raven(60)
+
+        src/app/schema.sql:89:raven_maple = raven(41)
+
+        src/app/client.ts:31:        raven_juniper = raven(68)
+
+        src/app/client.ts:48:        raven_ember = raven(49)
+
+        src/app/client.ts:70:        raven_kelp = raven(43)
+
+        src/app/client.ts:93:raven_indigo = raven(86)
+
+        src/app/loader.py:36:    raven_quartz = raven(69)
+
+        src/app/loader.py:60:        raven_lumen = raven(61)
+
+        src/app/loader.py:90:        raven_cobalt = raven(32)
+
+        src/app/loader.py:100:raven_quartz = raven(87)
+
+        src/app/handler.cs:51:    raven_pebble = raven(27)
+
+        src/app/handler.cs:67:    raven_onyx = raven(77)  # MARK-1877
+
+        src/app/handler.cs:80:raven_onyx = raven(51)
+
+        src/app/worker.go:19:        raven_lumen = raven(39)
+
+        src/app/worker.go:37:raven_pebble = raven(50)
+
+        '
+    - type: text
+      text: In the Grep result, which file and line number contain the match with MARK-1877? Answer as
+        <path>:<line> exactly as the result writes the path, nothing else.
+expected: src/app/handler.cs:67

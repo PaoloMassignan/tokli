@@ -1,0 +1,73 @@
+case_set: 2026-10-03.2
+family: grep_fact_lookup
+assumption: reads_grouped_search
+checker: exact_value
+request:
+  max_tokens: 400
+  tools:
+  - name: Grep
+    description: Searches the files of a synthetic repository for a pattern.
+    input_schema:
+      type: object
+      properties: {}
+  messages:
+  - role: user
+    content: Use the Grep tool, then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKECASE
+      name: Grep
+      input:
+        pattern: match
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKECASE
+      content: 'Found 20 matches
+
+        lib/core/schema.sql:43:amber_nimbus = amber(44)
+
+        lib/core/schema.sql:71:    amber_nimbus = amber(4)
+
+        lib/core/schema.sql:93:amber_indigo = amber(69)
+
+        lib/core/schema.sql:97:        amber_juniper = amber(86)
+
+        lib/core/schema.sql:101:        amber_amber = amber(82)
+
+        lib/core/worker.go:47:    amber_onyx = amber(29)
+
+        lib/core/worker.go:48:        amber_fjord = amber(4)
+
+        lib/core/worker.go:52:    amber_maple = amber(74)
+
+        lib/core/worker.go:56:        amber_cobalt = amber(92)
+
+        lib/core/worker.go:65:        amber_pebble = amber(7)
+
+        lib/core/loader.py:25:    amber_maple = amber(36)
+
+        lib/core/loader.py:44:        amber_pebble = amber(98)
+
+        lib/core/loader.py:45:        amber_pebble = amber(38)
+
+        lib/core/handler.cs:58:amber_nimbus = amber(55)
+
+        lib/core/handler.cs:86:amber_raven = amber(70)
+
+        lib/core/handler.cs:112:    amber_maple = amber(96)
+
+        lib/core/handler.cs:120:        amber_onyx = amber(67)
+
+        lib/core/handler.cs:136:amber_delta = amber(93)
+
+        lib/core/config.py:30:    amber_maple = amber(10)  # MARK-1146
+
+        lib/core/config.py:55:        amber_maple = amber(79)
+
+        '
+    - type: text
+      text: In the Grep result, which file and line number contain the match with MARK-1146? Answer as
+        <path>:<line> exactly as the result writes the path, nothing else.
+expected: lib/core/config.py:30

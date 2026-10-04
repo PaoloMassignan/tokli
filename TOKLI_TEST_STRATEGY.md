@@ -116,7 +116,7 @@ Acceptance thresholds (initial, to be revisited with data):
 |---|---|---|
 | LOSSLESS (before v1: provisional default) | Tier 0 pass; smoke verdict `no_measurable_damage` for every declared assumption | Tier 0 pass |
 | LOSSLESS (at v1 release) | Tier 0 pass; Tier 2 non-inferiority: upper bound of the 95 % CI of the accuracy drop ≤ 2 pp; Tier 3: no increase in tool-call failure rate beyond noise (≤ +1 pp) | Tier 0 pass |
-| SELECTIVE / LOSSY | Not default-enabled in v1 | Tier 0 guarantees pass; Tier 2 run and published; drop CI upper bound ≤ 5 pp per category it applies to |
+| SELECTIVE / LOSSY | Not default-enabled in v1 | Tier 0 guarantees pass (CC-015). Before v1 a compressor may be available without an evaluation record (CC-020); the dashboard shows it as "not evaluated". At v1 release: Tier 2 run and published; drop CI upper bound ≤ 5 pp per category it applies to (S8a SCR-001) |
 
 Earlier measurements (TOKLI_EVIDENCE.md §2) are inputs to prioritisation only.
 

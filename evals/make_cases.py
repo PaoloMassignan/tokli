@@ -288,15 +288,206 @@ def reference_quote_case(rng: random.Random, n: int) -> dict[str, Any]:
     }
 
 
+# -- grep and log families (S8a-1): content in a tool outside the default verbatim_tools ------
+
+CASE_SET_S8A1 = "2026-10-03.2"
+GREP_ROOTS = [
+    "src/app",
+    "lib/core",
+    "C:\\work\\service\\src",
+    "C:/work/tools",
+    "\\\\build\\share\\repo",
+]
+GREP_FILES = ["config.py", "loader.py", "client.ts", "worker.go", "handler.cs", "schema.sql"]
+SEPARATOR = {"C:\\work\\service\\src": "\\", "\\\\build\\share\\repo": "\\"}
+
+
+def text_request(
+    tool: str, description: str, args: dict[str, Any], content: str, question: str
+) -> dict[str, Any]:
+    call_id = "toolu_01SMOKECASE"
+    return {
+        "max_tokens": 400,
+        "tools": [
+            {
+                "name": tool,
+                "description": description,
+                "input_schema": {"type": "object", "properties": {}},
+            }
+        ],
+        "messages": [
+            {"role": "user", "content": f"Use the {tool} tool, then answer my question."},
+            {
+                "role": "assistant",
+                "content": [{"type": "tool_use", "id": call_id, "name": tool, "input": args}],
+            },
+            {
+                "role": "user",
+                "content": [
+                    {"type": "tool_result", "tool_use_id": call_id, "content": content},
+                    {"type": "text", "text": question},
+                ],
+            },
+        ],
+    }
+
+
+def grep_output(rng: random.Random) -> tuple[str, str, str, int, str]:
+    """Search output over several files: (text, marker, path, line, content) of the marked
+    match."""
+    term = rng.choice(WORDS)
+    marker = f"MARK-{rng.randint(1000, 9999)}"
+    root = rng.choice(GREP_ROOTS)
+    sep = SEPARATOR.get(root, "/")
+    files = rng.sample(GREP_FILES, rng.randint(3, 5))
+    matches: list[tuple[str, int, str]] = []
+    for name in files:
+        path = f"{root}{sep}{name}"
+        line = rng.randint(1, 40)
+        for _ in range(rng.randint(2, 5)):
+            line += rng.randint(1, 30)
+            indent = " " * rng.choice([0, 4, 8])
+            matches.append(
+                (path, line, f"{indent}{term}_{rng.choice(WORDS)} = {term}({rng.randint(1, 99)})")
+            )
+    target = rng.randrange(len(matches))
+    path, line, content = matches[target]
+    content = f"{content}  # {marker}"
+    matches[target] = (path, line, content)
+    text = f"Found {len(matches)} matches\n" + "".join(f"{p}:{n}:{c}\n" for p, n, c in matches)
+    return text, marker, path, line, content
+
+
+def grep_request(term_question: str, text: str) -> dict[str, Any]:
+    return text_request(
+        "Grep",
+        "Searches the files of a synthetic repository for a pattern.",
+        {"pattern": "match"},
+        text,
+        term_question,
+    )
+
+
+def grep_fact_case(rng: random.Random, n: int) -> dict[str, Any]:
+    text, marker, path, line, _ = grep_output(rng)
+    question = (
+        f"In the Grep result, which file and line number contain the match with {marker}? "
+        "Answer as <path>:<line> exactly as the result writes the path, nothing else."
+    )
+    return {
+        "case_set": CASE_SET_S8A1,
+        "family": "grep_fact_lookup",
+        "assumption": "reads_grouped_search",
+        "checker": "exact_value",
+        "request": grep_request(question, text),
+        "expected": f"{path}:{line}",
+    }
+
+
+def grep_quote_case(rng: random.Random, n: int) -> dict[str, Any]:
+    text, marker, _, _, content = grep_output(rng)
+    question = (
+        f"I want to edit the line that contains {marker} with an exact-match edit. Give me that "
+        "line exactly as it appears in the file: without the path and line-number prefix of the "
+        "search result, keeping its leading whitespace. Reply with that one line only."
+    )
+    return {
+        "case_set": CASE_SET_S8A1,
+        "family": "grep_verbatim_quote",
+        "assumption": "not_quoted_verbatim",
+        "checker": "verbatim_line",
+        "request": grep_request(question, text),
+        "expected": content,
+    }
+
+
+def service_log(rng: random.Random) -> tuple[str, str, str, str]:
+    """A log with repeated routine lines and a few severe ones: (text, marker, code, error
+    line)."""
+    marker = f"MARK-{rng.randint(1000, 9999)}"
+    code = f"E{rng.randint(100, 999)}"
+    failed = rng.randint(2000, 2999)
+    error_at = rng.randint(30, 70)
+    warn_at = rng.randint(5, 25)
+    lines: list[str] = []
+    minute, second = 0, 0
+    error_line = ""
+    for i in range(rng.randint(80, 120)):
+        second += rng.randint(0, 3)
+        minute, second = minute + second // 60, second % 60
+        stamp = f"2026-10-03 09:{minute:02d}:{second:02d}"
+        if i == error_at:
+            error_line = f"{stamp} ERROR request {failed} failed with code {code} ({marker})"
+            lines.append(error_line)
+        elif i == warn_at:
+            lines.append(
+                f"{stamp} WARN pool {rng.choice(WORDS)} at {rng.randint(80, 99)} % capacity"
+            )
+        elif i % 4 == 0:
+            lines.append(
+                f"{stamp} DEBUG poll queue={rng.randint(0, 9)} lag={rng.randint(1, 900)}ms"
+            )
+        else:
+            lines.append(f"{stamp} INFO request {1000 + i} served in {rng.randint(3, 400)} ms")
+    return "\n".join(lines) + "\n", marker, code, error_line
+
+
+def log_request(question: str, text: str) -> dict[str, Any]:
+    return text_request(
+        "service_logs",
+        "Returns the recent logs of a synthetic service.",
+        {"service": "api"},
+        text,
+        question,
+    )
+
+
+def log_fact_case(rng: random.Random, n: int) -> dict[str, Any]:
+    text, marker, code, _ = service_log(rng)
+    question = (
+        f"In the service_logs result, which error code did the failed request marked {marker} "
+        "return? Answer with only the code, nothing else."
+    )
+    return {
+        "case_set": CASE_SET_S8A1,
+        "family": "log_fact_lookup",
+        "assumption": "omitted_log_lines_not_needed",
+        "checker": "exact_value",
+        "request": log_request(question, text),
+        "expected": code,
+    }
+
+
+def log_quote_case(rng: random.Random, n: int) -> dict[str, Any]:
+    text, marker, _, error_line = service_log(rng)
+    question = (
+        f"Copy the full log line that contains {marker} exactly as it appears in the service_logs "
+        "result, so I can search for it. Reply with that one line only."
+    )
+    return {
+        "case_set": CASE_SET_S8A1,
+        "family": "log_verbatim_quote",
+        "assumption": "not_quoted_verbatim",
+        "checker": "verbatim_line",
+        "request": log_request(question, text),
+        "expected": error_line,
+    }
+
+
 def main() -> None:
     import yaml
 
-    for family, make, seed in (
+    families = (
         ("json_fact_lookup", fact_case, 2501),
         ("json_verbatim_quote", quote_case, 2502),
         ("reference_fact_lookup", reference_fact_case, 2503),
         ("reference_verbatim_quote", reference_quote_case, 2504),
-    ):
+        ("grep_fact_lookup", grep_fact_case, 2505),
+        ("grep_verbatim_quote", grep_quote_case, 2506),
+        ("log_fact_lookup", log_fact_case, 2507),
+        ("log_verbatim_quote", log_quote_case, 2508),
+    )
+    for family, make, seed in families:
         rng = random.Random(seed)
         folder = ROOT / family
         folder.mkdir(parents=True, exist_ok=True)
@@ -304,7 +495,7 @@ def main() -> None:
             case = make(rng, n)
             text = yaml.safe_dump(case, sort_keys=False, allow_unicode=False, width=100)
             (folder / f"{n:02d}.yaml").write_text(text, encoding="utf-8", newline="\n")
-    print(f"wrote {4 * CASES_PER_FAMILY} cases to {ROOT}")
+    print(f"wrote {len(families) * CASES_PER_FAMILY} cases to {ROOT}")
 
 
 if __name__ == "__main__":

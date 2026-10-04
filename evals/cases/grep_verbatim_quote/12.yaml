@@ -1,0 +1,58 @@
+case_set: 2026-10-03.2
+family: grep_verbatim_quote
+assumption: not_quoted_verbatim
+checker: verbatim_line
+request:
+  max_tokens: 400
+  tools:
+  - name: Grep
+    description: Searches the files of a synthetic repository for a pattern.
+    input_schema:
+      type: object
+      properties: {}
+  messages:
+  - role: user
+    content: Use the Grep tool, then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKECASE
+      name: Grep
+      input:
+        pattern: match
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKECASE
+      content: 'Found 12 matches
+
+        C:/work/tools/client.ts:45:    onyx_lumen = onyx(33)
+
+        C:/work/tools/client.ts:56:onyx_pebble = onyx(82)
+
+        C:/work/tools/client.ts:62:    onyx_maple = onyx(30)
+
+        C:/work/tools/client.ts:65:onyx_amber = onyx(51)
+
+        C:/work/tools/client.ts:66:onyx_indigo = onyx(94)
+
+        C:/work/tools/loader.py:45:    onyx_quartz = onyx(22)
+
+        C:/work/tools/loader.py:67:    onyx_harbor = onyx(78)
+
+        C:/work/tools/loader.py:89:        onyx_garnet = onyx(8)
+
+        C:/work/tools/schema.sql:40:onyx_kelp = onyx(45)
+
+        C:/work/tools/schema.sql:64:        onyx_birch = onyx(35)
+
+        C:/work/tools/schema.sql:68:        onyx_pebble = onyx(97)  # MARK-6699
+
+        C:/work/tools/schema.sql:92:onyx_onyx = onyx(63)
+
+        '
+    - type: text
+      text: 'I want to edit the line that contains MARK-6699 with an exact-match edit. Give me that line
+        exactly as it appears in the file: without the path and line-number prefix of the search result,
+        keeping its leading whitespace. Reply with that one line only.'
+expected: '        onyx_pebble = onyx(97)  # MARK-6699'

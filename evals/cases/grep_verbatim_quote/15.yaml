@@ -1,0 +1,56 @@
+case_set: 2026-10-03.2
+family: grep_verbatim_quote
+assumption: not_quoted_verbatim
+checker: verbatim_line
+request:
+  max_tokens: 400
+  tools:
+  - name: Grep
+    description: Searches the files of a synthetic repository for a pattern.
+    input_schema:
+      type: object
+      properties: {}
+  messages:
+  - role: user
+    content: Use the Grep tool, then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKECASE
+      name: Grep
+      input:
+        pattern: match
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKECASE
+      content: 'Found 11 matches
+
+        C:\work\service\src\config.py:38:maple_birch = maple(66)
+
+        C:\work\service\src\config.py:66:        maple_lumen = maple(68)
+
+        C:\work\service\src\config.py:89:    maple_cobalt = maple(32)
+
+        C:\work\service\src\config.py:95:        maple_raven = maple(51)  # MARK-6234
+
+        C:\work\service\src\config.py:111:        maple_cobalt = maple(2)
+
+        C:\work\service\src\schema.sql:44:        maple_onyx = maple(8)
+
+        C:\work\service\src\schema.sql:51:    maple_quartz = maple(68)
+
+        C:\work\service\src\client.ts:22:        maple_garnet = maple(95)
+
+        C:\work\service\src\client.ts:30:maple_fjord = maple(90)
+
+        C:\work\service\src\worker.go:34:        maple_raven = maple(90)
+
+        C:\work\service\src\worker.go:52:        maple_garnet = maple(28)
+
+        '
+    - type: text
+      text: 'I want to edit the line that contains MARK-6234 with an exact-match edit. Give me that line
+        exactly as it appears in the file: without the path and line-number prefix of the search result,
+        keeping its leading whitespace. Reply with that one line only.'
+expected: '        maple_raven = maple(51)  # MARK-6234'

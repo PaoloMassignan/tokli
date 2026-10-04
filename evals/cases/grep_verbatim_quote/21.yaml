@@ -1,0 +1,56 @@
+case_set: 2026-10-03.2
+family: grep_verbatim_quote
+assumption: not_quoted_verbatim
+checker: verbatim_line
+request:
+  max_tokens: 400
+  tools:
+  - name: Grep
+    description: Searches the files of a synthetic repository for a pattern.
+    input_schema:
+      type: object
+      properties: {}
+  messages:
+  - role: user
+    content: Use the Grep tool, then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKECASE
+      name: Grep
+      input:
+        pattern: match
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKECASE
+      content: 'Found 11 matches
+
+        \\build\share\repo\worker.go:32:onyx_kelp = onyx(7)
+
+        \\build\share\repo\worker.go:37:    onyx_cobalt = onyx(19)  # MARK-8705
+
+        \\build\share\repo\worker.go:57:        onyx_lumen = onyx(84)
+
+        \\build\share\repo\worker.go:72:onyx_lumen = onyx(78)
+
+        \\build\share\repo\schema.sql:18:    onyx_maple = onyx(37)
+
+        \\build\share\repo\schema.sql:30:    onyx_kelp = onyx(53)
+
+        \\build\share\repo\schema.sql:46:    onyx_birch = onyx(76)
+
+        \\build\share\repo\config.py:39:onyx_kelp = onyx(2)
+
+        \\build\share\repo\config.py:47:    onyx_juniper = onyx(9)
+
+        \\build\share\repo\config.py:54:        onyx_harbor = onyx(1)
+
+        \\build\share\repo\config.py:55:onyx_pebble = onyx(47)
+
+        '
+    - type: text
+      text: 'I want to edit the line that contains MARK-8705 with an exact-match edit. Give me that line
+        exactly as it appears in the file: without the path and line-number prefix of the search result,
+        keeping its leading whitespace. Reply with that one line only.'
+expected: '    onyx_cobalt = onyx(19)  # MARK-8705'

@@ -107,7 +107,14 @@ def test_cases_load_by_assumption() -> None:
     spec = next(c.spec for c in REGISTRY if c.spec.id == "json_minify")
     cases = load_cases(CASES, spec.assumptions)
     families = {c.family for c in cases}
-    assert families == {"json_fact_lookup", "json_verbatim_quote"}
+    # QE-012: every family whose assumption the compressor declares. S8a-1 added two more
+    # families for `not_quoted_verbatim`; for json_minify they are not exercised (no JSON).
+    assert families == {
+        "json_fact_lookup",
+        "json_verbatim_quote",
+        "grep_verbatim_quote",
+        "log_verbatim_quote",
+    }
     assert sum(1 for c in cases if c.family == "json_fact_lookup") >= 20
     assert load_cases(CASES, ("an_assumption_without_cases",)) == []
     assert all(c.case_id.startswith(f"{c.family}/") for c in cases)
@@ -167,6 +174,39 @@ def test_overall_verdict() -> None:
     assert overall_verdict([ok, ok]) == "no_measurable_damage"
     assert overall_verdict([ok, few]) == "insufficient_data"
     assert overall_verdict([few, bad]) == "damage_detected"
+
+
+def unexercised(n: int, family: str = "other", assumption: str = "assume") -> list[CaseResult]:
+    return [
+        CaseResult(f"{family}/{i:02d}", family, assumption, (), (), not_exercised=True)
+        for i in range(n)
+    ]
+
+
+def test_unexercised_family_does_not_enter_verdict() -> None:
+    """QE-015 after S8a SCR-002: a family in which no case is exercised is `not_exercised`
+    and stays out of the overall verdict; a family with some exercised cases still needs
+    `smoke_min_cases` completed ones."""
+    idle = family_verdict(unexercised(22))
+    assert idle.verdict == "not_exercised" and idle.not_exercised == 22 and idle.n == 0
+    ok = family_verdict(results(20))
+    assert overall_verdict([ok, idle], assumptions=("assume",)) == "no_measurable_damage"
+    partly = family_verdict(results(5) + unexercised(17, family="fam"))
+    assert partly.verdict == "insufficient_data"
+
+
+def test_assumption_without_exercised_family_is_insufficient() -> None:
+    """QE-015 after S8a SCR-002: every declared assumption needs at least one family with an
+    exercised case."""
+    ok = family_verdict(results(20))
+    idle = family_verdict(unexercised(22, assumption="other_assumption"))
+    assert overall_verdict([ok, idle], assumptions=("assume", "other_assumption")) == (
+        "insufficient_data"
+    )
+    bad = family_verdict(results(20, b=2))
+    assert overall_verdict([bad, idle], assumptions=("assume", "other_assumption")) == (
+        "damage_detected"
+    )
 
 
 # -- records (QE-016, AC-QE-7) -----------------------------------------------------------------
@@ -252,3 +292,111 @@ def test_reference_families_exist_for_the_pruner() -> None:
     counts = {f: sum(1 for c in cases if c.family == f) for f in {c.family for c in cases}}
     assert counts == {"reference_fact_lookup": 22, "reference_verbatim_quote": 22}
     assert {c.checker for c in cases} == {"exact_value", "verbatim_line"}
+
+
+# -- S8a-1: grep and log families (SPEC 012) -----------------------------------------------------
+
+
+def _tool_results(case: Any) -> list[tuple[str, str]]:
+    """(tool name, result text) for every tool result of a case's request."""
+    names = {
+        block["id"]: block["name"]
+        for message in case.request["messages"]
+        if message["role"] == "assistant" and isinstance(message["content"], list)
+        for block in message["content"]
+        if block.get("type") == "tool_use"
+    }
+    return [
+        (names[block["tool_use_id"]], block["content"])
+        for message in case.request["messages"]
+        if message["role"] == "user" and isinstance(message["content"], list)
+        for block in message["content"]
+        if block.get("type") == "tool_result"
+    ]
+
+
+@pytest.mark.parametrize(
+    "cid, own",
+    [
+        (
+            "search_group",
+            {"grep_fact_lookup": "exact_value", "grep_verbatim_quote": "verbatim_line"},
+        ),
+        ("log_filter", {"log_fact_lookup": "exact_value", "log_verbatim_quote": "verbatim_line"}),
+    ],
+)
+def test_s8a1_families_exist(cid: str, own: dict[str, str]) -> None:
+    """SPEC 012 S8a-1 families: 22 cases each (>= smoke_min_cases), with their checker."""
+    spec = next(c.spec for c in REGISTRY if c.spec.id == cid)
+    cases = load_cases(CASES, spec.assumptions)
+    for family, checker in own.items():
+        mine = [c for c in cases if c.family == family]
+        assert len(mine) == 22, family
+        assert {c.checker for c in mine} == {checker}
+
+
+@pytest.mark.parametrize(
+    "families, cid",
+    [
+        (("grep_fact_lookup", "grep_verbatim_quote"), "search_group"),
+        (("log_fact_lookup", "log_verbatim_quote"), "log_filter"),
+    ],
+)
+def test_s8a1_cases_exercise_their_compressor(families: tuple[str, ...], cid: str) -> None:
+    """The cases put their content in a tool outside the default `verbatim_tools`, and the
+    compressor applies to it, so the smoke candidate arm is exercised with default options."""
+    from tests.helpers import FakeCounter
+    from tokli.compression.contract import SegmentView
+    from tokli.compression.engine import _features
+    from tokli.config.schema import TokliSettings
+    from tokli.domain.models import SegmentKind
+
+    verbatim = set(TokliSettings().compression.verbatim_tools)
+    compressor = next(c for c in REGISTRY if c.spec.id == cid)
+    cases = [c for c in load_cases(CASES, compressor.spec.assumptions) if c.family in families]
+    assert cases
+    for case in cases:
+        results = _tool_results(case)
+        assert results, case.case_id
+        exercised = False
+        for name, text in results:
+            assert name not in verbatim, case.case_id
+            view = SegmentView(SegmentKind.TOOL_RESULT, "user", name, False, ())
+            if compressor.applicable(text, view, _features(text, FakeCounter())).ok:
+                exercised = True
+        assert exercised, case.case_id
+
+
+@pytest.mark.parametrize(
+    "families, cid",
+    [
+        (("log_fact_lookup", "log_verbatim_quote"), "search_group"),
+        (("grep_fact_lookup", "grep_verbatim_quote"), "log_filter"),
+    ],
+)
+def test_s8a1_cases_do_not_exercise_the_other_compressor(
+    families: tuple[str, ...], cid: str
+) -> None:
+    """S8a SCR-003: `search_group` leaves the log cases alone (timestamps are not grep lines),
+    and `log_filter` leaves the grep cases alone, so a smoke run only spends calls on its own
+    families."""
+    from tests.helpers import FakeCounter
+    from tokli.compression.contract import SegmentView
+    from tokli.compression.engine import _features
+    from tokli.domain.models import SegmentKind
+
+    compressor = next(c for c in REGISTRY if c.spec.id == cid)
+    cases = [
+        c
+        for c in load_cases(
+            CASES, ("omitted_log_lines_not_needed", "reads_grouped_search", "not_quoted_verbatim")
+        )
+        if c.family in families
+    ]
+    assert cases
+    for case in cases:
+        for name, text in _tool_results(case):
+            view = SegmentView(SegmentKind.TOOL_RESULT, "user", name, False, ())
+            assert not compressor.applicable(text, view, _features(text, FakeCounter())).ok, (
+                case.case_id
+            )

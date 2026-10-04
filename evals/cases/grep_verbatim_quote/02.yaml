@@ -1,0 +1,64 @@
+case_set: 2026-10-03.2
+family: grep_verbatim_quote
+assumption: not_quoted_verbatim
+checker: verbatim_line
+request:
+  max_tokens: 400
+  tools:
+  - name: Grep
+    description: Searches the files of a synthetic repository for a pattern.
+    input_schema:
+      type: object
+      properties: {}
+  messages:
+  - role: user
+    content: Use the Grep tool, then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKECASE
+      name: Grep
+      input:
+        pattern: match
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKECASE
+      content: 'Found 15 matches
+
+        C:\work\service\src\loader.py:14:raven_juniper = raven(88)
+
+        C:\work\service\src\loader.py:28:    raven_fjord = raven(28)
+
+        C:\work\service\src\loader.py:39:    raven_ember = raven(24)
+
+        C:\work\service\src\loader.py:56:        raven_cobalt = raven(84)
+
+        C:\work\service\src\handler.cs:59:raven_raven = raven(92)
+
+        C:\work\service\src\handler.cs:86:    raven_amber = raven(10)
+
+        C:\work\service\src\handler.cs:102:raven_indigo = raven(6)
+
+        C:\work\service\src\config.py:43:    raven_lumen = raven(85)
+
+        C:\work\service\src\config.py:50:    raven_juniper = raven(77)  # MARK-4589
+
+        C:\work\service\src\config.py:54:raven_harbor = raven(4)
+
+        C:\work\service\src\config.py:61:raven_amber = raven(11)
+
+        C:\work\service\src\client.ts:47:    raven_amber = raven(71)
+
+        C:\work\service\src\client.ts:59:        raven_indigo = raven(45)
+
+        C:\work\service\src\client.ts:88:raven_raven = raven(71)
+
+        C:\work\service\src\client.ts:105:        raven_birch = raven(97)
+
+        '
+    - type: text
+      text: 'I want to edit the line that contains MARK-4589 with an exact-match edit. Give me that line
+        exactly as it appears in the file: without the path and line-number prefix of the search result,
+        keeping its leading whitespace. Reply with that one line only.'
+expected: '    raven_juniper = raven(77)  # MARK-4589'

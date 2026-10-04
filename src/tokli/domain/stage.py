@@ -15,6 +15,10 @@ class Features:
 
     tokens: int
     json_candidate: bool
+    grep_lines: int = 0  # S8a-1: grep lines as defined for search_group
+    leveled_ratio: float = 0.0  # S8a-1: share of lines with a log level keyword
+    line_count: int = 0
+    crlf: bool = False  # every line ends with CR LF
 
 
 @dataclass(frozen=True)

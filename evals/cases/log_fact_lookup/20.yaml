@@ -1,0 +1,259 @@
+case_set: 2026-10-03.2
+family: log_fact_lookup
+assumption: omitted_log_lines_not_needed
+checker: exact_value
+request:
+  max_tokens: 400
+  tools:
+  - name: service_logs
+    description: Returns the recent logs of a synthetic service.
+    input_schema:
+      type: object
+      properties: {}
+  messages:
+  - role: user
+    content: Use the service_logs tool, then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKECASE
+      name: service_logs
+      input:
+        service: api
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKECASE
+      content: '2026-10-03 09:00:03 DEBUG poll queue=6 lag=540ms
+
+        2026-10-03 09:00:03 INFO request 1001 served in 88 ms
+
+        2026-10-03 09:00:05 INFO request 1002 served in 138 ms
+
+        2026-10-03 09:00:07 INFO request 1003 served in 233 ms
+
+        2026-10-03 09:00:09 DEBUG poll queue=5 lag=353ms
+
+        2026-10-03 09:00:12 INFO request 1005 served in 392 ms
+
+        2026-10-03 09:00:12 INFO request 1006 served in 229 ms
+
+        2026-10-03 09:00:12 INFO request 1007 served in 166 ms
+
+        2026-10-03 09:00:12 DEBUG poll queue=7 lag=602ms
+
+        2026-10-03 09:00:13 INFO request 1009 served in 328 ms
+
+        2026-10-03 09:00:15 WARN pool kelp at 91 % capacity
+
+        2026-10-03 09:00:18 INFO request 1011 served in 319 ms
+
+        2026-10-03 09:00:19 DEBUG poll queue=9 lag=358ms
+
+        2026-10-03 09:00:22 INFO request 1013 served in 92 ms
+
+        2026-10-03 09:00:24 INFO request 1014 served in 127 ms
+
+        2026-10-03 09:00:26 INFO request 1015 served in 388 ms
+
+        2026-10-03 09:00:26 DEBUG poll queue=9 lag=468ms
+
+        2026-10-03 09:00:27 INFO request 1017 served in 312 ms
+
+        2026-10-03 09:00:28 INFO request 1018 served in 172 ms
+
+        2026-10-03 09:00:29 INFO request 1019 served in 229 ms
+
+        2026-10-03 09:00:30 DEBUG poll queue=6 lag=428ms
+
+        2026-10-03 09:00:30 INFO request 1021 served in 396 ms
+
+        2026-10-03 09:00:30 INFO request 1022 served in 87 ms
+
+        2026-10-03 09:00:31 INFO request 1023 served in 51 ms
+
+        2026-10-03 09:00:34 DEBUG poll queue=0 lag=340ms
+
+        2026-10-03 09:00:37 INFO request 1025 served in 188 ms
+
+        2026-10-03 09:00:40 INFO request 1026 served in 194 ms
+
+        2026-10-03 09:00:41 INFO request 1027 served in 21 ms
+
+        2026-10-03 09:00:44 DEBUG poll queue=9 lag=470ms
+
+        2026-10-03 09:00:44 INFO request 1029 served in 124 ms
+
+        2026-10-03 09:00:47 INFO request 1030 served in 280 ms
+
+        2026-10-03 09:00:49 INFO request 1031 served in 345 ms
+
+        2026-10-03 09:00:50 DEBUG poll queue=4 lag=845ms
+
+        2026-10-03 09:00:51 INFO request 1033 served in 135 ms
+
+        2026-10-03 09:00:51 INFO request 1034 served in 192 ms
+
+        2026-10-03 09:00:51 INFO request 1035 served in 236 ms
+
+        2026-10-03 09:00:51 DEBUG poll queue=7 lag=749ms
+
+        2026-10-03 09:00:53 INFO request 1037 served in 303 ms
+
+        2026-10-03 09:00:56 INFO request 1038 served in 32 ms
+
+        2026-10-03 09:00:57 INFO request 1039 served in 290 ms
+
+        2026-10-03 09:01:00 DEBUG poll queue=3 lag=139ms
+
+        2026-10-03 09:01:02 INFO request 1041 served in 45 ms
+
+        2026-10-03 09:01:04 INFO request 1042 served in 97 ms
+
+        2026-10-03 09:01:05 INFO request 1043 served in 67 ms
+
+        2026-10-03 09:01:06 DEBUG poll queue=2 lag=351ms
+
+        2026-10-03 09:01:07 INFO request 1045 served in 93 ms
+
+        2026-10-03 09:01:07 INFO request 1046 served in 341 ms
+
+        2026-10-03 09:01:09 INFO request 1047 served in 129 ms
+
+        2026-10-03 09:01:11 DEBUG poll queue=5 lag=63ms
+
+        2026-10-03 09:01:13 INFO request 1049 served in 41 ms
+
+        2026-10-03 09:01:13 INFO request 1050 served in 186 ms
+
+        2026-10-03 09:01:16 INFO request 1051 served in 84 ms
+
+        2026-10-03 09:01:18 DEBUG poll queue=7 lag=564ms
+
+        2026-10-03 09:01:19 INFO request 1053 served in 204 ms
+
+        2026-10-03 09:01:20 INFO request 1054 served in 127 ms
+
+        2026-10-03 09:01:20 INFO request 1055 served in 11 ms
+
+        2026-10-03 09:01:20 DEBUG poll queue=0 lag=90ms
+
+        2026-10-03 09:01:22 INFO request 1057 served in 263 ms
+
+        2026-10-03 09:01:22 INFO request 1058 served in 326 ms
+
+        2026-10-03 09:01:23 ERROR request 2540 failed with code E329 (MARK-5602)
+
+        2026-10-03 09:01:23 DEBUG poll queue=0 lag=533ms
+
+        2026-10-03 09:01:24 INFO request 1061 served in 257 ms
+
+        2026-10-03 09:01:27 INFO request 1062 served in 204 ms
+
+        2026-10-03 09:01:29 INFO request 1063 served in 362 ms
+
+        2026-10-03 09:01:31 DEBUG poll queue=5 lag=645ms
+
+        2026-10-03 09:01:34 INFO request 1065 served in 206 ms
+
+        2026-10-03 09:01:35 INFO request 1066 served in 161 ms
+
+        2026-10-03 09:01:38 INFO request 1067 served in 128 ms
+
+        2026-10-03 09:01:39 DEBUG poll queue=1 lag=47ms
+
+        2026-10-03 09:01:41 INFO request 1069 served in 207 ms
+
+        2026-10-03 09:01:44 INFO request 1070 served in 372 ms
+
+        2026-10-03 09:01:47 INFO request 1071 served in 221 ms
+
+        2026-10-03 09:01:48 DEBUG poll queue=6 lag=245ms
+
+        2026-10-03 09:01:49 INFO request 1073 served in 156 ms
+
+        2026-10-03 09:01:52 INFO request 1074 served in 290 ms
+
+        2026-10-03 09:01:55 INFO request 1075 served in 254 ms
+
+        2026-10-03 09:01:57 DEBUG poll queue=8 lag=64ms
+
+        2026-10-03 09:02:00 INFO request 1077 served in 397 ms
+
+        2026-10-03 09:02:00 INFO request 1078 served in 248 ms
+
+        2026-10-03 09:02:01 INFO request 1079 served in 164 ms
+
+        2026-10-03 09:02:03 DEBUG poll queue=5 lag=303ms
+
+        2026-10-03 09:02:06 INFO request 1081 served in 31 ms
+
+        2026-10-03 09:02:09 INFO request 1082 served in 378 ms
+
+        2026-10-03 09:02:10 INFO request 1083 served in 125 ms
+
+        2026-10-03 09:02:11 DEBUG poll queue=8 lag=613ms
+
+        2026-10-03 09:02:12 INFO request 1085 served in 121 ms
+
+        2026-10-03 09:02:12 INFO request 1086 served in 146 ms
+
+        2026-10-03 09:02:12 INFO request 1087 served in 29 ms
+
+        2026-10-03 09:02:14 DEBUG poll queue=3 lag=710ms
+
+        2026-10-03 09:02:17 INFO request 1089 served in 5 ms
+
+        2026-10-03 09:02:20 INFO request 1090 served in 54 ms
+
+        2026-10-03 09:02:20 INFO request 1091 served in 119 ms
+
+        2026-10-03 09:02:23 DEBUG poll queue=9 lag=410ms
+
+        2026-10-03 09:02:26 INFO request 1093 served in 111 ms
+
+        2026-10-03 09:02:28 INFO request 1094 served in 315 ms
+
+        2026-10-03 09:02:31 INFO request 1095 served in 315 ms
+
+        2026-10-03 09:02:34 DEBUG poll queue=5 lag=258ms
+
+        2026-10-03 09:02:35 INFO request 1097 served in 31 ms
+
+        2026-10-03 09:02:36 INFO request 1098 served in 196 ms
+
+        2026-10-03 09:02:37 INFO request 1099 served in 15 ms
+
+        2026-10-03 09:02:37 DEBUG poll queue=7 lag=859ms
+
+        2026-10-03 09:02:37 INFO request 1101 served in 339 ms
+
+        2026-10-03 09:02:39 INFO request 1102 served in 71 ms
+
+        2026-10-03 09:02:42 INFO request 1103 served in 330 ms
+
+        2026-10-03 09:02:42 DEBUG poll queue=5 lag=454ms
+
+        2026-10-03 09:02:45 INFO request 1105 served in 373 ms
+
+        2026-10-03 09:02:46 INFO request 1106 served in 314 ms
+
+        2026-10-03 09:02:49 INFO request 1107 served in 283 ms
+
+        2026-10-03 09:02:51 DEBUG poll queue=9 lag=724ms
+
+        2026-10-03 09:02:54 INFO request 1109 served in 68 ms
+
+        2026-10-03 09:02:54 INFO request 1110 served in 109 ms
+
+        2026-10-03 09:02:56 INFO request 1111 served in 372 ms
+
+        2026-10-03 09:02:59 DEBUG poll queue=0 lag=426ms
+
+        2026-10-03 09:02:59 INFO request 1113 served in 113 ms
+
+        '
+    - type: text
+      text: In the service_logs result, which error code did the failed request marked MARK-5602 return?
+        Answer with only the code, nothing else.
+expected: E329

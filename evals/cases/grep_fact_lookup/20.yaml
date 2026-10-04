@@ -1,0 +1,69 @@
+case_set: 2026-10-03.2
+family: grep_fact_lookup
+assumption: reads_grouped_search
+checker: exact_value
+request:
+  max_tokens: 400
+  tools:
+  - name: Grep
+    description: Searches the files of a synthetic repository for a pattern.
+    input_schema:
+      type: object
+      properties: {}
+  messages:
+  - role: user
+    content: Use the Grep tool, then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKECASE
+      name: Grep
+      input:
+        pattern: match
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKECASE
+      content: 'Found 18 matches
+
+        lib/core/config.py:34:garnet_birch = garnet(13)
+
+        lib/core/config.py:60:        garnet_onyx = garnet(63)
+
+        lib/core/config.py:79:    garnet_onyx = garnet(45)
+
+        lib/core/config.py:92:garnet_cobalt = garnet(20)
+
+        lib/core/config.py:120:    garnet_onyx = garnet(95)
+
+        lib/core/worker.go:29:        garnet_ember = garnet(32)
+
+        lib/core/worker.go:43:    garnet_onyx = garnet(34)
+
+        lib/core/worker.go:70:    garnet_garnet = garnet(81)
+
+        lib/core/schema.sql:59:    garnet_quartz = garnet(8)  # MARK-1826
+
+        lib/core/schema.sql:77:    garnet_harbor = garnet(76)
+
+        lib/core/schema.sql:80:        garnet_maple = garnet(97)
+
+        lib/core/schema.sql:100:garnet_amber = garnet(2)
+
+        lib/core/handler.cs:27:garnet_nimbus = garnet(33)
+
+        lib/core/handler.cs:44:garnet_maple = garnet(19)
+
+        lib/core/handler.cs:54:    garnet_harbor = garnet(23)
+
+        lib/core/loader.py:25:        garnet_nimbus = garnet(66)
+
+        lib/core/loader.py:37:    garnet_juniper = garnet(45)
+
+        lib/core/loader.py:48:        garnet_quartz = garnet(11)
+
+        '
+    - type: text
+      text: In the Grep result, which file and line number contain the match with MARK-1826? Answer as
+        <path>:<line> exactly as the result writes the path, nothing else.
+expected: lib/core/schema.sql:59

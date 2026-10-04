@@ -174,9 +174,17 @@ def test_routing_inputs_closed_and_no_ml() -> None:
 
     from tokli.domain.stage import Features
 
-    # The routing inputs are exactly the features of SPEC 011 (S1 subset), the segment view,
-    # the compressor specs and the engine settings (AC-RT-4).
-    assert {f.name for f in dataclasses.fields(Features)} == {"tokens", "json_candidate"}
+    # The routing inputs are exactly the features of SPEC 011 approved so far (S1 and S8a-1;
+    # `diff_shape` comes with S8a-2), the segment view, the compressor specs and the engine
+    # settings (AC-RT-4).
+    assert {f.name for f in dataclasses.fields(Features)} == {
+        "tokens",
+        "json_candidate",
+        "grep_lines",
+        "leveled_ratio",
+        "line_count",
+        "crlf",
+    }
     ml = re.compile(r"^\s*(?:import|from)\s+(transformers|torch|onnxruntime|sklearn)\b", re.M)
     storage = re.compile(r"^\s*(?:import|from)\s+(sqlite3|tokli\.telemetry)\b", re.M)
     for path in python_sources(SRC):

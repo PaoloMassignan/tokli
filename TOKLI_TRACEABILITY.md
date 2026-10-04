@@ -161,13 +161,13 @@ Evidence codes:
 | CC-012 | Brief§11 | AC-CC-8 | `test_compressor_stats_expected_fixture`, `prop_marginal_savings_sum_to_total` |
 | CC-013 | Brief§11 skip reasons | AC-CC-8 | `test_compressor_stats_expected_fixture` |
 | CC-014 | Brief§9 cheap before expensive; E9; R01§9 (budget = runtime control, provisional default) | AC-CC-8 | `test_budget_exhaustion_skips` |
-| CC-015 | H02: lossless is proven by a decoder | AC-CC-9 | `test_registry_contract_every_lossless_has_roundtrip_property` |
+| CC-015 | H02: lossless is proven by a decoder | AC-CC-9 | `test_registry_contract_every_lossless_has_roundtrip_property`, `test_registry_contract_every_selective_guarantee_has_a_named_test` (S8a-1) |
 | CC-016 | defence in depth | AC-CC-9 | `test_verify_lossless_rejects_decode_mismatch` |
 | CC-017 | ARCH §5 | AC-CM-7 | `test_import_contracts` |
 | CC-018 | superseding rewrites sent history (SPEC 019) | AC-PR-6 | `test_history_rewritten_flag` |
 | CC-019 | reference targets keep their content | AC-CC-10 | `test_reference_target_integrity_enforced` |
 | CC-020 | R01§2, §7: policy eligibility ≠ default enablement; every transformation relies on model behaviour | AC-CC-11 | `test_every_compressor_declares_assumptions`, `test_registry_default_enabled_requires_eval_record` |
-| CC-021 | the bytes stay verbatim in the target | AC-CC-12 | `test_duplicate_pruning_applies_to_verbatim_tools` |
+| CC-021 | the bytes stay verbatim in the target | AC-CC-12 | `test_duplicate_pruning_applies_to_verbatim_tools`; S8a SCR-001: `test_verbatim_opt_in_applies_compressor_to_verbatim_tool`, `test_verbatim_opt_in_defaults_off`, `test_verbatim_opt_in_only_for_declaring_compressors`, `test_verbatim_opt_in_does_not_cover_unresolved_tools`, `test_patch_verbatim_opt_in` |
 | CC-022 | S1 review P1 (POLICY, provisional) | AC-CC-3 | `test_min_segment_tokens_default` |
 | CC-023 | H04; S1 review P2 | AC-CC-12 | `test_unresolved_tool_name_treated_as_verbatim` |
 | CC-024 | S1 E9 large-request overhead; S1 Gate 2 decision 2 | AC-CC-13 | `test_result_cache_hit_gives_identical_output`, `test_result_cache_also_caches_not_applicable_and_no_gain`, `test_result_cache_key_includes_view_and_config`, `test_result_cache_still_checks_invariants`, `test_result_cache_bounded`, `test_result_cache_off`, `test_failed_result_is_not_cached`, `test_result_cache_is_safe_under_concurrent_requests` (S4.5, PX-015) |
@@ -201,10 +201,10 @@ Evidence codes:
 | CP-JM-003 | pass-through preference | " | `test_json_minify_not_applicable_on_mixed_text`, `test_json_minify_rejects_nan`, `test_json_minify_not_applicable_without_whitespace` |
 | CP-JM-004 | H04 | " | `test_json_minify_skipped_for_verbatim_tool` |
 | CP-JM-005 | correctness constraint: linear time (R01§9) | " | `test_json_minify_linear_time` |
-| CP-SG-001 | grep output repeats the path on every match line | search_group tests | `prop_search_group_decode_roundtrip` |
+| CP-SG-001 | grep output repeats the path on every match line | search_group tests | `prop_search_group_decode_roundtrip`, `test_search_group_groups_consecutive_same_path`, `test_search_group_min_group_lines_counts_whole_segment` (review A8), `test_search_group_no_group_reason`, `test_search_group_ignores_non_grep_lines`, `test_search_group_linear_time` |
 | CP-SG-002 | H02, H03 | " | `test_search_group_keeps_unparsed_lines_in_place` |
-| CP-SG-003 | H03, MD-11 | " | `test_search_group_windows_paths_roundtrip` |
-| CP-SG-004 | MD-12 | " | `test_search_group_crlf_roundtrip`, `test_search_group_escaping` |
+| CP-SG-003 | H03, MD-11 | " | `test_search_group_windows_paths_roundtrip`, `test_search_group_ignores_timestamps`, `test_search_group_ignores_non_grep_lines` (S8a SCR-003) |
+| CP-SG-004 | MD-12 | " | `test_search_group_crlf_roundtrip`, `test_search_group_mixed_line_endings_roundtrip`, `test_search_group_escaping`, `prop_search_group_decode_roundtrip` |
 | CP-DI-001 | dictionary evidence in TOKLI_EVIDENCE §2; algorithm fully specified (R01§B) | dictionary tests | `prop_dictionary_decode_roundtrip`, `test_dictionary_selection_deterministic_tie_break`, `test_dictionary_nested_symbol_decode_order`, `test_dictionary_no_gain_not_applied` |
 | CP-DI-002 | symbols colliding with input text would make decoding ambiguous | " | `test_dictionary_collision_guard` |
 | CP-DI-003 | lossless by decoder | " | `prop_dictionary_decode_roundtrip` |
@@ -214,15 +214,15 @@ Evidence codes:
 | CP-DT-003 | honesty to the model | " | `test_diff_trim_omission_note` |
 | CP-DT-004 | H11 | " | `test_diff_trim_false_positive_shapes` |
 | CP-LF-001 | retention contract of the selective log filter | log tests | `test_log_filter_keeps_error_and_warn`, `test_log_filter_keeps_unleveled_lines`, `test_log_filter_order_preserved` |
-| CP-LF-002 | safety gate | " | `test_log_filter_gate` |
-| CP-LF-003 | honesty to the model | " | `test_log_filter_omission_note` |
-| CP-LF-004 | selection rules defined in Tokli terms (R01§B) | " | `test_log_filter_normalisation_and_sampling`, `test_log_filter_mixed_keywords_kept_as_severe` |
+| CP-LF-002 | safety gate | " | `test_log_filter_gate`, `test_log_filter_keywords_are_whole_words`, `test_log_filter_keywords_case_insensitive` |
+| CP-LF-003 | honesty to the model | " | `test_log_filter_omission_note`, `test_log_filter_note_line_endings` (review A6), `test_log_filter_nothing_omitted_reason` |
+| CP-LF-004 | selection rules defined in Tokli terms (R01§B) | " | `test_log_filter_normalisation_and_sampling`, `test_log_filter_mixed_keywords_kept_as_severe`, `test_log_filter_most_verbose_routine_level_wins`, `test_log_filter_linear_time` |
 
 ## Routing (SPEC 011)
 
 | Req | Why | AC | Tests |
 |---|---|---|---|
-| RT-001 | cheap structural features; H11 (S1: `tokens`, `json_candidate`; `test_grep_feature_windows_paths` arrives with `search_group`, S8) | AC-RT-1 | `test_features_linear_time`, `test_grep_feature_windows_paths`, `test_features_stage_counts_and_json_candidate` |
+| RT-001 | cheap structural features; H11 (S1: `tokens`, `json_candidate`; `test_grep_feature_windows_paths` arrives with `search_group`, S8) | AC-RT-1 | `test_features_linear_time`, `test_grep_feature_windows_paths`, `test_leveled_ratio_feature`, `test_line_count_and_crlf_features` (S8a-1), `test_grep_feature_ignores_timestamps` (S8a SCR-003) |
 | RT-002 | Brief§9 cheap first | AC-RT-2 | `test_cheap_filters_before_applicable` |
 | RT-003 | Brief§9 prefer pass-through | AC-RT-3 | `test_prose_only_request_passthrough` |
 | RT-004 | Brief§9 | AC-RT-2 | `test_cheap_filters_before_applicable` |
@@ -245,9 +245,9 @@ Evidence codes:
 | QE-010 | same; no surprise spend | AC-QE-4 | `test_eval_stops_at_call_cap` (S2.5); `test_eval_stops_at_cost_cap` (S6) |
 | QE-011 | same; never automatic | AC-QE-4 | `test_eval_never_auto_starts`, `test_eval_requires_max_calls_without_pricing`, import contract `tokli.http \| tokli.eval` |
 | QE-012 | R01§8: behaviour-dependent defaults arrive in S4, before the S8 harness; S2.5 review A1–A3 | AC-QE-5 | `test_smoke_arms_differ_only_in_candidate`, `test_harness_uses_real_pipeline`, `test_case_not_exercised_is_excluded`, `test_cases_load_by_assumption`, `test_eval_temperature_default_omits_the_parameter`, `test_eval_temperature_zero_by_default` (S2.5 SCR-001) |
-| QE-013 | R01§8: one case format for smoke and full tiers; test-data hygiene | AC-QE-6 | `test_eval_cases_lint` |
+| QE-013 | R01§8: one case format for smoke and full tiers; test-data hygiene | AC-QE-6 | `test_eval_cases_lint`, `test_s8a1_families_exist`, `test_s8a1_cases_exercise_their_compressor` (S8a-1), `test_s8a1_cases_do_not_exercise_the_other_compressor` (S8a SCR-003) |
 | QE-014 | R01§8 deterministic recording of configuration, saving and outcome | AC-QE-3 | `test_harness_report_provenance` |
-| QE-015 | R01§8: explicit, honest verdict rule | AC-QE-5 | `test_smoke_verdict_rule`, `test_smoke_insufficient_data` |
+| QE-015 | R01§8: explicit, honest verdict rule | AC-QE-5 | `test_smoke_verdict_rule`, `test_smoke_insufficient_data`, `test_unexercised_family_does_not_enter_verdict`, `test_assumption_without_exercised_family_is_insufficient` (S8a SCR-002) |
 | QE-016 | R01§7: CC-020 needs a machine-readable record | AC-QE-7 | `test_eval_record_schema_and_provisional_rule`, `test_eval_record_invalidated_by_version_bump`, `test_harness_report_provenance`, `test_registry_default_enabled_requires_eval_record` |
 | QE-017 | the harness must prove it can detect damage | AC-QE-2 | `test_smoke_harness_self_test`, `test_smoke_harness_self_test_reference_families`, `test_reference_families_exist_for_the_pruner` |
 | QE-018 | no price book before S6; S2.5 review X1, P2 | AC-QE-8 | `test_eval_requires_max_calls_without_pricing`, `test_eval_requires_confirmation_or_yes`, `test_eval_stops_at_call_cap` |
@@ -324,6 +324,7 @@ Evidence codes:
 | UI-008 | usability | AC-UI-2 | `test_ui_usable_at_360px` |
 | UI-009 | R01§9: expensive compressors visible and controllable | AC-UI-2 | `test_ui_overhead_target_is_reference_line`, `test_compressor_aggregates_hand_computed` (cost class, average latency, budget-skip rate, `budget_ms`) |
 | UI-011 | S3 review M3, P8; Windows file-type registry | AC-UI-5 | `test_dashboard_served_at_tokli_root`, `test_ui_assets_served_with_explicit_content_types`, `test_serve_prints_dashboard_address` |
+| UI-012 | the verbatim opt-in is the user's informed choice (S8a SCR-001, E5b-lite) | — | `test_ui_verbatim_opt_in_toggle` |
 | UI-010 | honest wording (S4 SCR-001) | — | `test_ui_policy_explanations_text` |
 
 ## Configuration (SPEC 017)
@@ -338,7 +339,7 @@ Evidence codes:
 | CF-006 | fingerprint + telemetry; S4 SCR-002 (`pruning`) | AC-CF-4 | `test_config_hash_stable_and_sensitive`, `test_config_hash_changes_with_pruning_options`, `test_ui_override_changes_config_hash` |
 | CF-007 | H12, H14: no silent substitution | AC-CC-7 | `test_optional_capability_never_silently_substituted` |
 | CF-008 | MD-04, MD-07 | AC-PT-2 | `test_data_dir_resolution_per_platform`, `test_config_dir_resolution_per_platform`, `test_linux_xdg_fallbacks_use_home`, `test_missing_home_fails_clearly` |
-| CF-009 | Brief§8 UI; S4 SCR-001 | AC-API-3 | `test_keys_marked_ui_editable`, `test_patch_unknown_key_rejected` |
+| CF-009 | Brief§8 UI; S4 SCR-001 | AC-API-3 | `test_keys_marked_ui_editable`, `test_patch_unknown_key_rejected`, `test_s8a1_keys_and_defaults`, `test_patch_verbatim_opt_in` (S8a SCR-001) |
 | CF-010 | credential hygiene | AC-CF-5 | `test_secret_values_rejected_in_config` |
 | CF-011 | MD-05; S0 review M2, X2 | AC-CF-6 | `test_env_json_value_errors_name_variable`, `test_reserved_env_vars_only` |
 | CF-012 | S0 review M1 (YAML implicit types, duplicate keys) | AC-CF-7 | `test_duplicate_yaml_key_rejected`, `test_yaml_implicit_types_rejected`, `test_empty_config_file_is_an_empty_layer` |

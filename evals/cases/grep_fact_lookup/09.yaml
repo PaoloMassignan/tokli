@@ -1,0 +1,53 @@
+case_set: 2026-10-03.2
+family: grep_fact_lookup
+assumption: reads_grouped_search
+checker: exact_value
+request:
+  max_tokens: 400
+  tools:
+  - name: Grep
+    description: Searches the files of a synthetic repository for a pattern.
+    input_schema:
+      type: object
+      properties: {}
+  messages:
+  - role: user
+    content: Use the Grep tool, then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKECASE
+      name: Grep
+      input:
+        pattern: match
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKECASE
+      content: 'Found 10 matches
+
+        lib/core/loader.py:49:    indigo_lumen = indigo(67)
+
+        lib/core/loader.py:71:indigo_raven = indigo(17)
+
+        lib/core/config.py:25:        indigo_harbor = indigo(31)
+
+        lib/core/config.py:39:        indigo_harbor = indigo(60)
+
+        lib/core/config.py:58:indigo_raven = indigo(11)
+
+        lib/core/config.py:71:indigo_fjord = indigo(40)  # MARK-6343
+
+        lib/core/config.py:90:    indigo_juniper = indigo(50)
+
+        lib/core/client.ts:22:indigo_harbor = indigo(69)
+
+        lib/core/client.ts:41:        indigo_delta = indigo(25)
+
+        lib/core/client.ts:68:        indigo_pebble = indigo(47)
+
+        '
+    - type: text
+      text: In the Grep result, which file and line number contain the match with MARK-6343? Answer as
+        <path>:<line> exactly as the result writes the path, nothing else.
+expected: lib/core/config.py:71

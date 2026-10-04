@@ -4,6 +4,9 @@ Status: Draft (revised in Phase 0.1) · Slices: S1 (`json_minify`), S4 (`duplica
 Approved for S4 (2026-10-03): the `duplicate_tool_results` entry and its assumptions.
 Approved for S1 (2026-09-30): CP-JM-001…CP-JM-005.
 Changed by SCR-001 (2026-10-02): `test_json_minify_linear_time` measurement sizes.
+Approved for S8a-1 (2026-10-03): `search_group` (CP-SG-001…004) and `log_filter` (CP-LF-001…004) with the
+options, reason codes and clarifications of S8a review A6 and A8, and `apply_to_verbatim_tools` (S8a SCR-001).
+Changed by S8a SCR-003 (2026-10-04): the grep-line definition (no whitespace; a `/`, `\` or `.` in the path).
 Related: SPEC 009 (contract, preservation model, claim types), SPEC 012 (evaluation), PHASE0_1_REVIEW.md
 
 Every compressor here is a registry entry satisfying SPEC 009. Common engine-level rules
@@ -16,11 +19,11 @@ Every compressor here is a registry entry satisfying SPEC 009. Common engine-lev
 |---|---|---|---|---|---|---|---|---|
 | `json_minify` | LOSSLESS | structural | segment | yes | none (standard JSON) | kept on | **yes, provisional** until its S2.5 smoke-evaluation record exists (QE-016) | S1 |
 | `duplicate_tool_results` | LOSSLESS | reference | request | yes | reference stub | kept on | **yes**: smoke record `no_measurable_damage` on `claude-opus-5-5` (E11, 2026-10-03; CC-020) | S4 |
-| `search_group` | LOSSLESS | byte | segment | yes | `[file]` headers, `\` escapes | kept on | no (until an evaluation record exists; E8) | S8 |
-| `dictionary` | LOSSLESS | byte | segment | yes | `§X` symbols + legend | kept on | no (until E7/E8) | S8 |
-| `superseded_tool_results` | SELECTIVE | none | request | **no** | supersession stub | switched off | no | S8 |
-| `diff_context_trim` | SELECTIVE | none | segment | yes | omission note | switched off | no | S8 |
-| `log_filter` | SELECTIVE | none | segment | yes | omission note | switched off | no | S8 |
+| `search_group` | LOSSLESS | byte | segment | yes | `[file]` headers, `\` escapes | kept on | no (until an evaluation record exists; E8) | S8a-1 |
+| `dictionary` | LOSSLESS | byte | segment | yes | `§X` symbols + legend | kept on | no (until E7/E8) | S8a-2 |
+| `superseded_tool_results` | SELECTIVE | none | request | **no** | supersession stub | switched off | no | S8a-3 |
+| `diff_context_trim` | SELECTIVE | none | segment | yes | omission note | switched off | no | S8a-2 |
+| `log_filter` | SELECTIVE | none | segment | yes | omission note | switched off | no | S8a-1 |
 
 ### Assumption ids (behavioural; each is an evaluation case family in SPEC 012)
 
@@ -38,7 +41,10 @@ Every compressor here is a registry entry satisfying SPEC 009. Common engine-lev
 
 Default `compression.verbatim_tools` (HEURISTIC, config data): `["Read", "Bash", "shell",
 "shell_command", "container.exec"]`. These are tool results that agents are likely to quote back
-verbatim (file contents, command output reused in edits). E8 revises the list.
+verbatim (file contents, command output reused in edits). E8 revises the list. A compressor that
+declares the option `apply_to_verbatim_tools` can be applied to these tools too, when the user
+sets the option (default false; CC-021 after S8a SCR-001). In S8a-1 `search_group` and
+`log_filter` declare it.
 
 ---
 
@@ -91,13 +97,14 @@ prefix stability, unchanged structure and arguments. ASSUMPTION: `resolves_resul
 
 ---
 
-## `search_group` (S8)
+## `search_group` (S8a-1)
 
 **Problem.** grep/ripgrep output repeats the file path on every match line.
 
 **Grep line.** A line of the form `<path>:<line>:<content>`, where `<line>` is one or more ASCII
 digits and `<path>` is a POSIX path, a Windows drive-letter path (`C:\…`, `C:/…`) or a UNC path
-(`\\server\share\…`) containing no `:` other than the drive-letter colon.
+(`\\server\share\…`) that contains no `:` other than the drive-letter colon, no whitespace, and at
+least one `/`, `\` or `.` (S8a SCR-003: log timestamps such as `2026-10-03 09:00:01` are not paths).
 
 **Format (v1).** Consecutive runs (≥ 2 lines) with the same path become:
 ```text
@@ -109,6 +116,15 @@ All other lines, including `--` separators, headers and prose, stay **in place, 
 Escaping: an original line that starts with `[file] `, `\`, or two spaces followed by `digits:`
 is emitted with a leading `\`. Decoding reverses this exactly. Line endings are preserved per line
 (split with `keepends=True`).
+
+**Options (S8a-1).**
+- `compressors.search_group.min_group_lines` (default 5): the segment must contain at least this
+  many grep lines **in total**, not per group (S8a review A8). A group still needs ≥ 2
+  consecutive lines with the same path.
+- `compressors.search_group.apply_to_verbatim_tools` (default false).
+
+**Reason codes:** `not_applicable(too_few_grep_lines)`; `not_applicable(no_group)`, when no
+run of ≥ 2 consecutive same-path lines exists.
 
 **Claims.** PROVEN: byte round-trip; unparsed lines stay in place. ASSUMPTION:
 `reads_grouped_search`, `not_quoted_verbatim`.
@@ -125,7 +141,7 @@ Tests: `prop_search_group_decode_roundtrip` · `test_search_group_windows_paths_
 
 ---
 
-## `dictionary` (S8)
+## `dictionary` (S8a-2)
 
 **Problem.** Long phrases repeated many times inside one segment.
 
@@ -177,7 +193,7 @@ Tests: `prop_dictionary_decode_roundtrip` · `test_dictionary_collision_guard` �
 
 ---
 
-## `diff_context_trim` (S8, SELECTIVE)
+## `diff_context_trim` (S8a-2, SELECTIVE)
 
 **Applicability.** Only when the `diff_shape` feature (SPEC 011) holds.
 
@@ -205,7 +221,7 @@ prose, a lone `@@` in text: all `not_applicable`).
 
 ---
 
-## `log_filter` (S8, SELECTIVE)
+## `log_filter` (S8a-1, SELECTIVE)
 
 **Level keywords.** Whole-word, case-insensitive matches of `FATAL`, `CRITICAL`, `ERROR`,
 `EXCEPTION`, `WARN`, `WARNING` (severe class) and `INFO`, `NOTICE`, `DEBUG`, `TRACE` (routine
@@ -222,6 +238,17 @@ the first occurrence kept · for each normalised DEBUG/TRACE pattern, occurrence
 kept, with k = `debug_sample` (default 10) · applicable only if ≥ 10 % of lines are leveled ·
 line order preserved · omission note `[tokli: omitted <n> INFO, <n> NOTICE, <n> DEBUG, <n> TRACE lines]`
 listing only non-zero counts.
+
+**Omission note (S8a review A6).** The note is the last line of the output. Its line ending is
+`\r\n` when every line of the segment ends with `\r\n`, otherwise `\n`. When the segment does
+not end with a line break, one of the same kind is inserted before the note.
+
+**Options (S8a-1).**
+- `compressors.log_filter.debug_sample` (default 10).
+- `compressors.log_filter.apply_to_verbatim_tools` (default false).
+
+**Reason codes:** `not_applicable(too_few_leveled_lines)`; `not_applicable(nothing_omitted)`, when
+every line would be kept.
 
 **Claims.** PROVEN: the guarantees above. ASSUMPTION: `omitted_log_lines_not_needed`,
 `not_quoted_verbatim`. HEURISTIC: keyword classification and the 10 % gate.

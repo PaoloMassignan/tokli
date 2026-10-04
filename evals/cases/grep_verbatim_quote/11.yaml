@@ -1,0 +1,58 @@
+case_set: 2026-10-03.2
+family: grep_verbatim_quote
+assumption: not_quoted_verbatim
+checker: verbatim_line
+request:
+  max_tokens: 400
+  tools:
+  - name: Grep
+    description: Searches the files of a synthetic repository for a pattern.
+    input_schema:
+      type: object
+      properties: {}
+  messages:
+  - role: user
+    content: Use the Grep tool, then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKECASE
+      name: Grep
+      input:
+        pattern: match
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKECASE
+      content: 'Found 12 matches
+
+        \\build\share\repo\loader.py:40:    delta_juniper = delta(72)  # MARK-9478
+
+        \\build\share\repo\loader.py:42:delta_birch = delta(98)
+
+        \\build\share\repo\loader.py:62:delta_harbor = delta(42)
+
+        \\build\share\repo\loader.py:84:        delta_juniper = delta(29)
+
+        \\build\share\repo\schema.sql:39:        delta_indigo = delta(76)
+
+        \\build\share\repo\schema.sql:47:delta_indigo = delta(1)
+
+        \\build\share\repo\schema.sql:75:        delta_lumen = delta(69)
+
+        \\build\share\repo\config.py:15:    delta_birch = delta(89)
+
+        \\build\share\repo\config.py:36:    delta_maple = delta(48)
+
+        \\build\share\repo\handler.cs:33:        delta_juniper = delta(98)
+
+        \\build\share\repo\handler.cs:42:delta_indigo = delta(63)
+
+        \\build\share\repo\handler.cs:47:        delta_delta = delta(67)
+
+        '
+    - type: text
+      text: 'I want to edit the line that contains MARK-9478 with an exact-match edit. Give me that line
+        exactly as it appears in the file: without the path and line-number prefix of the search result,
+        keeping its leading whitespace. Reply with that one line only.'
+expected: '    delta_juniper = delta(72)  # MARK-9478'

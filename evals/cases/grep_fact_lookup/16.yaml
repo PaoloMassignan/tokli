@@ -1,0 +1,61 @@
+case_set: 2026-10-03.2
+family: grep_fact_lookup
+assumption: reads_grouped_search
+checker: exact_value
+request:
+  max_tokens: 400
+  tools:
+  - name: Grep
+    description: Searches the files of a synthetic repository for a pattern.
+    input_schema:
+      type: object
+      properties: {}
+  messages:
+  - role: user
+    content: Use the Grep tool, then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKECASE
+      name: Grep
+      input:
+        pattern: match
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKECASE
+      content: 'Found 14 matches
+
+        \\build\share\repo\schema.sql:59:    ember_juniper = ember(25)
+
+        \\build\share\repo\schema.sql:68:ember_fjord = ember(75)
+
+        \\build\share\repo\schema.sql:85:ember_lumen = ember(50)
+
+        \\build\share\repo\schema.sql:101:        ember_amber = ember(33)
+
+        \\build\share\repo\config.py:6:    ember_pebble = ember(42)  # MARK-3457
+
+        \\build\share\repo\config.py:25:    ember_amber = ember(30)
+
+        \\build\share\repo\config.py:27:    ember_raven = ember(11)
+
+        \\build\share\repo\config.py:43:        ember_kelp = ember(87)
+
+        \\build\share\repo\client.ts:23:    ember_juniper = ember(80)
+
+        \\build\share\repo\client.ts:44:ember_ember = ember(48)
+
+        \\build\share\repo\loader.py:53:    ember_nimbus = ember(9)
+
+        \\build\share\repo\loader.py:70:    ember_amber = ember(74)
+
+        \\build\share\repo\loader.py:75:        ember_birch = ember(16)
+
+        \\build\share\repo\loader.py:89:    ember_cobalt = ember(3)
+
+        '
+    - type: text
+      text: In the Grep result, which file and line number contain the match with MARK-3457? Answer as
+        <path>:<line> exactly as the result writes the path, nothing else.
+expected: \\build\share\repo\config.py:6

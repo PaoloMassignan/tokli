@@ -1,0 +1,71 @@
+case_set: 2026-10-03.2
+family: grep_fact_lookup
+assumption: reads_grouped_search
+checker: exact_value
+request:
+  max_tokens: 400
+  tools:
+  - name: Grep
+    description: Searches the files of a synthetic repository for a pattern.
+    input_schema:
+      type: object
+      properties: {}
+  messages:
+  - role: user
+    content: Use the Grep tool, then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKECASE
+      name: Grep
+      input:
+        pattern: match
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKECASE
+      content: 'Found 19 matches
+
+        C:\work\service\src\config.py:36:        quartz_garnet = quartz(50)
+
+        C:\work\service\src\config.py:55:        quartz_harbor = quartz(49)
+
+        C:\work\service\src\config.py:83:        quartz_garnet = quartz(95)
+
+        C:\work\service\src\config.py:88:    quartz_cobalt = quartz(54)
+
+        C:\work\service\src\config.py:89:        quartz_nimbus = quartz(54)
+
+        C:\work\service\src\worker.go:30:quartz_nimbus = quartz(68)
+
+        C:\work\service\src\worker.go:53:quartz_birch = quartz(16)
+
+        C:\work\service\src\worker.go:79:    quartz_cobalt = quartz(41)
+
+        C:\work\service\src\worker.go:88:quartz_lumen = quartz(65)  # MARK-3623
+
+        C:\work\service\src\client.ts:43:quartz_birch = quartz(21)
+
+        C:\work\service\src\client.ts:66:    quartz_ember = quartz(30)
+
+        C:\work\service\src\client.ts:68:        quartz_ember = quartz(75)
+
+        C:\work\service\src\client.ts:94:    quartz_kelp = quartz(86)
+
+        C:\work\service\src\client.ts:113:quartz_juniper = quartz(90)
+
+        C:\work\service\src\loader.py:55:quartz_fjord = quartz(68)
+
+        C:\work\service\src\loader.py:83:        quartz_ember = quartz(63)
+
+        C:\work\service\src\loader.py:89:        quartz_lumen = quartz(3)
+
+        C:\work\service\src\handler.cs:47:        quartz_pebble = quartz(37)
+
+        C:\work\service\src\handler.cs:68:    quartz_raven = quartz(65)
+
+        '
+    - type: text
+      text: In the Grep result, which file and line number contain the match with MARK-3623? Answer as
+        <path>:<line> exactly as the result writes the path, nothing else.
+expected: C:\work\service\src\worker.go:88

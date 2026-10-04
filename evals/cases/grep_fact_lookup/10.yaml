@@ -1,0 +1,67 @@
+case_set: 2026-10-03.2
+family: grep_fact_lookup
+assumption: reads_grouped_search
+checker: exact_value
+request:
+  max_tokens: 400
+  tools:
+  - name: Grep
+    description: Searches the files of a synthetic repository for a pattern.
+    input_schema:
+      type: object
+      properties: {}
+  messages:
+  - role: user
+    content: Use the Grep tool, then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKECASE
+      name: Grep
+      input:
+        pattern: match
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKECASE
+      content: 'Found 17 matches
+
+        lib/core/loader.py:29:        harbor_birch = harbor(20)
+
+        lib/core/loader.py:31:    harbor_delta = harbor(47)
+
+        lib/core/client.ts:27:harbor_raven = harbor(12)
+
+        lib/core/client.ts:54:harbor_juniper = harbor(18)  # MARK-6397
+
+        lib/core/worker.go:15:harbor_garnet = harbor(48)
+
+        lib/core/worker.go:19:        harbor_maple = harbor(6)
+
+        lib/core/worker.go:21:    harbor_kelp = harbor(22)
+
+        lib/core/worker.go:34:        harbor_amber = harbor(58)
+
+        lib/core/worker.go:42:harbor_delta = harbor(84)
+
+        lib/core/handler.cs:16:harbor_kelp = harbor(47)
+
+        lib/core/handler.cs:21:harbor_maple = harbor(24)
+
+        lib/core/handler.cs:47:    harbor_indigo = harbor(91)
+
+        lib/core/handler.cs:66:harbor_raven = harbor(54)
+
+        lib/core/config.py:46:harbor_kelp = harbor(98)
+
+        lib/core/config.py:55:        harbor_indigo = harbor(12)
+
+        lib/core/config.py:75:harbor_birch = harbor(98)
+
+        lib/core/config.py:78:    harbor_delta = harbor(32)
+
+        '
+    - type: text
+      text: In the Grep result, which file and line number contain the match with MARK-6397? Answer as
+        <path>:<line> exactly as the result writes the path, nothing else.
+expected: lib/core/client.ts:54

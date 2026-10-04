@@ -122,7 +122,10 @@ def write_results(
         "compressor": provenance.compressor,
         "version": provenance.compressor_version,
         "tier": "smoke",
-        "assumptions_covered": [f.assumption for f in families],
+        # Only families with an exercised case cover an assumption (QE-015, S8a SCR-002).
+        "assumptions_covered": sorted(
+            {f.assumption for f in families if f.verdict != "not_exercised"}
+        ),
         "verdict": verdict,
         "model": provenance.model,
         "date": provenance.date,

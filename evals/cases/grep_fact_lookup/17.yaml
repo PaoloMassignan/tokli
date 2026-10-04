@@ -1,0 +1,61 @@
+case_set: 2026-10-03.2
+family: grep_fact_lookup
+assumption: reads_grouped_search
+checker: exact_value
+request:
+  max_tokens: 400
+  tools:
+  - name: Grep
+    description: Searches the files of a synthetic repository for a pattern.
+    input_schema:
+      type: object
+      properties: {}
+  messages:
+  - role: user
+    content: Use the Grep tool, then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKECASE
+      name: Grep
+      input:
+        pattern: match
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKECASE
+      content: 'Found 14 matches
+
+        C:\work\service\src\schema.sql:43:onyx_garnet = onyx(23)
+
+        C:\work\service\src\schema.sql:63:    onyx_nimbus = onyx(14)
+
+        C:\work\service\src\schema.sql:78:    onyx_cobalt = onyx(20)
+
+        C:\work\service\src\worker.go:18:onyx_onyx = onyx(6)
+
+        C:\work\service\src\worker.go:42:        onyx_maple = onyx(57)  # MARK-9407
+
+        C:\work\service\src\worker.go:72:        onyx_cobalt = onyx(65)
+
+        C:\work\service\src\worker.go:92:onyx_indigo = onyx(78)
+
+        C:\work\service\src\worker.go:112:onyx_quartz = onyx(72)
+
+        C:\work\service\src\config.py:26:        onyx_lumen = onyx(19)
+
+        C:\work\service\src\config.py:31:onyx_kelp = onyx(85)
+
+        C:\work\service\src\handler.cs:27:onyx_pebble = onyx(84)
+
+        C:\work\service\src\handler.cs:55:onyx_juniper = onyx(21)
+
+        C:\work\service\src\loader.py:39:    onyx_raven = onyx(56)
+
+        C:\work\service\src\loader.py:52:        onyx_birch = onyx(52)
+
+        '
+    - type: text
+      text: In the Grep result, which file and line number contain the match with MARK-9407? Answer as
+        <path>:<line> exactly as the result writes the path, nothing else.
+expected: C:\work\service\src\worker.go:42

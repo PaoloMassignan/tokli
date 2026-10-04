@@ -5,6 +5,7 @@ Approved for S1 (2026-09-30): the keys in "Keys added in S1" and N-level key pat
 Approved for S2 (2026-10-02): the keys in "Keys added in S2".
 Changed by S4 SCR-002 (2026-10-03): CF-006 includes the `pruning` section.
 Approved for S4 (2026-10-03): CF-001 layer 5 (UI overrides), CF-002 (`ui` source), CF-009, the keys in "Keys added in S4".
+Changed by S8a SCR-001 (approved for S8a-1, 2026-10-03): CF-009 (the verbatim opt-in is UI-editable). Approved for S8a-1: the keys in "Keys added in S8a-1".
 
 ## Purpose
 Every behaviour-affecting setting has one definition, one precedence rule and a visible source.
@@ -87,6 +88,17 @@ defaults.
 
 UI-editable (CF-009): `compressors.<id>.enabled`, `telemetry.retention_days`.
 
+## Keys added in S8a-1
+
+| Key | Default |
+|---|---|
+| `compressors.search_group.enabled` | `false` (no evaluation record; CC-020) |
+| `compressors.search_group.min_group_lines` | `5` (SPEC 010) |
+| `compressors.search_group.apply_to_verbatim_tools` | `false` (CC-021, S8a SCR-001; UI-editable) |
+| `compressors.log_filter.enabled` | `false` (SELECTIVE, never on by default; CC-002) |
+| `compressors.log_filter.debug_sample` | `10` (SPEC 010) |
+| `compressors.log_filter.apply_to_verbatim_tools` | `false` (CC-021, S8a SCR-001; UI-editable) |
+
 ## Requirements
 
 | ID | EARS requirement |
@@ -99,7 +111,7 @@ UI-editable (CF-009): `compressors.<id>.enabled`, `telemetry.retention_days`.
 | CF-006 | THE SYSTEM SHALL compute `config_hash` over the canonical JSON of behaviour-affecting keys (sections `compression`, `compressors`, `pipeline`, `pruning`, `tokens`, `limits`, where present), excluding paths, ports and credentials. |
 | CF-007 | WHEN a configured optional capability cannot be provided (missing dependency or file), THE SYSTEM SHALL either fail at startup (if marked `required`) or report it as unavailable, and SHALL NOT substitute a different behaviour silently. |
 | CF-008 | THE SYSTEM SHALL resolve the data dir as `--data-dir` → `TOKLI_DATA_DIR` → platform default, and the config dir as `--config-dir` → `TOKLI_CONFIG_DIR` → platform default (table above), and SHALL print both at startup and in `tokli doctor`. |
-| CF-009 | THE configuration schema SHALL mark each key as `ui_editable` or not. v1 UI-editable keys: `compressors.<id>.enabled`, `telemetry.retention_days`. (S4 SCR-001: there is no policy key.) |
+| CF-009 | THE configuration schema SHALL mark each key as `ui_editable` or not. v1 UI-editable keys: `compressors.<id>.enabled`, `compressors.<id>.apply_to_verbatim_tools` (where it exists), `telemetry.retention_days`. (S4 SCR-001: there is no policy key. S8a SCR-001: the verbatim opt-in.) |
 | CF-010 | Secrets SHALL NOT be configurable by value in the config file. Only references (`key_env`, `key_file`) are allowed. |
 | CF-011 | WHEN an environment variable starting with `TOKLI_` is neither a reserved variable nor the name of a schema key, or its value does not parse for the key's type, THE SYSTEM SHALL refuse to start with an error naming the variable. |
 | CF-012 | THE config file reader SHALL reject duplicate keys and values whose YAML type does not match the schema type, naming the file, key and expected type. |

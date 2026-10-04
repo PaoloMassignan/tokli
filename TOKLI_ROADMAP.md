@@ -123,6 +123,42 @@ S5 keeps the second provider from building on them.
   matrix; overhead (E9) re-measured and compared with the S4 baseline.
 - **Accepted 2026-10-03** (`slices/S4.5/COMPLETION_REPORT.md`): D1–D3 as planned, D4 (store close under a busy writer) found by CI and fixed; E9 paired local run within 1.14× of S4.
 
+## S8a — Claude-complete compressors (before S5)
+
+Why here: the human asked to finish the Anthropic/Claude Code side before the second provider
+(2026-10-03). E5b-lite (`slices/S8a/SPEC_REVIEW.md` §10) measured the human's recent Claude Code
+traffic and set the order:
+- grep-shaped and log-shaped output are about 6 % each of the tool-result volume, mostly from `Bash`;
+- superseded reads are 1.7 %;
+- diffs are 0.4 %.
+
+Three sub-slices, each with its own gates:
+
+- **S8a-1:**
+  - `search_group` (LOSSLESS) and `log_filter` (SELECTIVE), both off by default;
+  - the per-compressor opt-in `apply_to_verbatim_tools` (S8a SCR-001) and its Settings toggle (UI-012);
+  - the features `grep_lines`, `leveled_ratio`, `line_count` and `crlf`;
+  - the smoke families `grep_fact_lookup`, `grep_verbatim_quote`, `log_fact_lookup` and
+    `log_verbatim_quote`.
+
+  Exit: Tier 0 tests green, smoke records for both compressors run by the human, savings measured
+  on dogfood.
+  **Accepted 2026-10-04** (`slices/S8a/COMPLETION_REPORT_S8a-1.md`):
+  - both smoke records are `no_measurable_damage`;
+  - the real saving is about 1.3 % of the tool-result volume with the opt-in;
+  - SCR-001, SCR-002, SCR-003;
+  - `search_group` stays off by default.
+- **S8a-2:** `diff_context_trim` (SELECTIVE) and `dictionary` (LOSSLESS) with their families; E7
+  as a smoke evaluation on Claude models.
+- **S8a-3:**
+  - `analyze.tool_resources` (Claude Code tools only);
+  - `superseded_tool_results` with the rule that a weak view never supersedes (review M1);
+  - `history_rewritten` and the cache marker (CC-018);
+  - E2-ext measured in tokens (exact usage); money comes in S6.
+
+Not in S8a: the arguments of `Edit`/`Write`, the largest resent item in E5b-lite. That is E10,
+a candidate for its own spec after S8a.
+
 ## S5 — OpenAI Responses (Codex, API key)
 
 - Adapter `openai_responses` (OR-*): `function_call_output`/`custom_tool_call_output`/`input_text`;
@@ -143,17 +179,16 @@ S5 keeps the second provider from building on them.
 - Adapter `openai_chat` (OC-*): `role:"tool"` + user text; usage only when the client asked.
 - Exit: SDK-based client works; compat corpus green.
 
-## S8 — Full quality evaluation + selective compressors
+## S8b — Full quality evaluation (multi-provider), Tier 3, Codex pruning rules
+
+The part of the original S8 that needs a second provider or agent tasks (split on 2026-10-03,
+`slices/S8a/SPEC_REVIEW.md` P2, P7):
 
 - Extend the S2.5 harness to the full tier: case generators, paired bootstrap CI, multi-model and
   multi-provider runs (Tier 2), Tier 3 protocol for agent tasks. Full-tier records for every
   compressor that is default-on at v1 (QE-006).
-- `diff_context_trim`, `log_filter` (SELECTIVE, off by default);
-  `dictionary` and `search_group` (LOSSLESS, off by default) with decoders.
-- `analyze.tool_resources` (Claude Code defaults + the shell-command classification of SPEC 019) and
-  `superseded_tool_results` (SELECTIVE, off by default).
-- E7, E8, E2-ext (cache cost of superseding), E10 (argument stubbing / pair removal) executed.
-  Default-enabled set decided from data.
+- The Codex shell-command classification (PR-014) for `analyze.tool_resources`.
+- E8 (Tier 3 verbatim-quoting) and E10(b). Default-enabled set decided from data.
 
 ## S9 — Diagnostics and reproducibility polish
 

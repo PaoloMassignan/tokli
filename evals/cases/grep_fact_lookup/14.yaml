@@ -1,0 +1,55 @@
+case_set: 2026-10-03.2
+family: grep_fact_lookup
+assumption: reads_grouped_search
+checker: exact_value
+request:
+  max_tokens: 400
+  tools:
+  - name: Grep
+    description: Searches the files of a synthetic repository for a pattern.
+    input_schema:
+      type: object
+      properties: {}
+  messages:
+  - role: user
+    content: Use the Grep tool, then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKECASE
+      name: Grep
+      input:
+        pattern: match
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKECASE
+      content: 'Found 11 matches
+
+        lib/core/schema.sql:8:    pebble_onyx = pebble(61)
+
+        lib/core/schema.sql:19:    pebble_juniper = pebble(76)
+
+        lib/core/schema.sql:31:        pebble_onyx = pebble(37)
+
+        lib/core/schema.sql:35:        pebble_nimbus = pebble(74)
+
+        lib/core/worker.go:15:        pebble_juniper = pebble(87)
+
+        lib/core/worker.go:39:pebble_cobalt = pebble(63)
+
+        lib/core/config.py:22:    pebble_amber = pebble(11)
+
+        lib/core/config.py:51:    pebble_lumen = pebble(81)  # MARK-7437
+
+        lib/core/config.py:81:        pebble_ember = pebble(82)
+
+        lib/core/loader.py:18:    pebble_nimbus = pebble(6)
+
+        lib/core/loader.py:36:pebble_quartz = pebble(5)
+
+        '
+    - type: text
+      text: In the Grep result, which file and line number contain the match with MARK-7437? Answer as
+        <path>:<line> exactly as the result writes the path, nothing else.
+expected: lib/core/config.py:51

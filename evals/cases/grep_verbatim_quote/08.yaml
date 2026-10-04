@@ -1,0 +1,62 @@
+case_set: 2026-10-03.2
+family: grep_verbatim_quote
+assumption: not_quoted_verbatim
+checker: verbatim_line
+request:
+  max_tokens: 400
+  tools:
+  - name: Grep
+    description: Searches the files of a synthetic repository for a pattern.
+    input_schema:
+      type: object
+      properties: {}
+  messages:
+  - role: user
+    content: Use the Grep tool, then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKECASE
+      name: Grep
+      input:
+        pattern: match
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKECASE
+      content: 'Found 14 matches
+
+        lib/core/worker.go:26:    cobalt_birch = cobalt(94)
+
+        lib/core/worker.go:47:    cobalt_quartz = cobalt(36)
+
+        lib/core/worker.go:50:        cobalt_indigo = cobalt(87)
+
+        lib/core/worker.go:65:        cobalt_kelp = cobalt(33)
+
+        lib/core/worker.go:84:        cobalt_kelp = cobalt(29)  # MARK-1010
+
+        lib/core/config.py:17:    cobalt_onyx = cobalt(91)
+
+        lib/core/config.py:40:        cobalt_nimbus = cobalt(31)
+
+        lib/core/config.py:66:    cobalt_harbor = cobalt(86)
+
+        lib/core/config.py:94:    cobalt_onyx = cobalt(97)
+
+        lib/core/schema.sql:43:        cobalt_quartz = cobalt(29)
+
+        lib/core/schema.sql:72:    cobalt_harbor = cobalt(17)
+
+        lib/core/loader.py:49:    cobalt_juniper = cobalt(46)
+
+        lib/core/loader.py:57:cobalt_juniper = cobalt(18)
+
+        lib/core/loader.py:79:        cobalt_birch = cobalt(15)
+
+        '
+    - type: text
+      text: 'I want to edit the line that contains MARK-1010 with an exact-match edit. Give me that line
+        exactly as it appears in the file: without the path and line-number prefix of the search result,
+        keeping its leading whitespace. Reply with that one line only.'
+expected: '        cobalt_kelp = cobalt(29)  # MARK-1010'

@@ -1,0 +1,64 @@
+case_set: 2026-10-03.2
+family: grep_verbatim_quote
+assumption: not_quoted_verbatim
+checker: verbatim_line
+request:
+  max_tokens: 400
+  tools:
+  - name: Grep
+    description: Searches the files of a synthetic repository for a pattern.
+    input_schema:
+      type: object
+      properties: {}
+  messages:
+  - role: user
+    content: Use the Grep tool, then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKECASE
+      name: Grep
+      input:
+        pattern: match
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKECASE
+      content: 'Found 15 matches
+
+        C:/work/tools/config.py:38:amber_delta = amber(74)
+
+        C:/work/tools/config.py:55:        amber_amber = amber(60)
+
+        C:/work/tools/config.py:76:        amber_amber = amber(63)
+
+        C:/work/tools/config.py:100:amber_juniper = amber(10)
+
+        C:/work/tools/handler.cs:43:        amber_raven = amber(33)
+
+        C:/work/tools/handler.cs:68:    amber_raven = amber(36)
+
+        C:/work/tools/client.ts:35:amber_raven = amber(79)
+
+        C:/work/tools/client.ts:63:    amber_pebble = amber(88)
+
+        C:/work/tools/client.ts:87:amber_indigo = amber(82)
+
+        C:/work/tools/worker.go:36:        amber_ember = amber(24)  # MARK-3621
+
+        C:/work/tools/worker.go:63:        amber_birch = amber(69)
+
+        C:/work/tools/schema.sql:22:    amber_pebble = amber(91)
+
+        C:/work/tools/schema.sql:27:        amber_delta = amber(45)
+
+        C:/work/tools/schema.sql:57:        amber_raven = amber(62)
+
+        C:/work/tools/schema.sql:81:        amber_nimbus = amber(41)
+
+        '
+    - type: text
+      text: 'I want to edit the line that contains MARK-3621 with an exact-match edit. Give me that line
+        exactly as it appears in the file: without the path and line-number prefix of the search result,
+        keeping its leading whitespace. Reply with that one line only.'
+expected: '        amber_ember = amber(24)  # MARK-3621'

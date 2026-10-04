@@ -64,7 +64,9 @@ def family_verdict(
     )
     errors_baseline = sum(1 for r in complete if _majority(r.baseline, "error"))
     errors_candidate = sum(1 for r in complete if _majority(r.candidate, "error"))
-    if len(judged) < min_cases:
+    if results and not exercised:
+        verdict = "not_exercised"  # S8a SCR-002: says nothing about this compressor
+    elif len(judged) < min_cases:
         verdict = "insufficient_data"
     elif b - c <= 1 and errors_candidate - errors_baseline <= 1:
         verdict = "no_measurable_damage"
@@ -85,11 +87,19 @@ def family_verdict(
     )
 
 
-def overall_verdict(families: Sequence[FamilyVerdict]) -> str:
-    """Damage in any family wins; then missing data; otherwise no measurable damage."""
-    verdicts = {f.verdict for f in families}
+def overall_verdict(
+    families: Sequence[FamilyVerdict], assumptions: Sequence[str] | None = None
+) -> str:
+    """Damage in any family wins; then missing data; otherwise no measurable damage. Families
+    with no exercised case stay out, but every declared assumption needs at least one family
+    with an exercised case (QE-015 after S8a SCR-002)."""
+    judged = [f for f in families if f.verdict != "not_exercised"]
+    verdicts = {f.verdict for f in judged}
     if "damage_detected" in verdicts:
         return "damage_detected"
-    if not families or "insufficient_data" in verdicts:
+    if not judged or "insufficient_data" in verdicts:
+        return "insufficient_data"
+    covered = {f.assumption for f in judged}
+    if assumptions is not None and not set(assumptions) <= covered:
         return "insufficient_data"
     return "no_measurable_damage"

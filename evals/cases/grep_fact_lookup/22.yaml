@@ -1,0 +1,69 @@
+case_set: 2026-10-03.2
+family: grep_fact_lookup
+assumption: reads_grouped_search
+checker: exact_value
+request:
+  max_tokens: 400
+  tools:
+  - name: Grep
+    description: Searches the files of a synthetic repository for a pattern.
+    input_schema:
+      type: object
+      properties: {}
+  messages:
+  - role: user
+    content: Use the Grep tool, then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKECASE
+      name: Grep
+      input:
+        pattern: match
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKECASE
+      content: 'Found 18 matches
+
+        src/app/loader.py:31:    nimbus_onyx = nimbus(35)
+
+        src/app/loader.py:33:    nimbus_onyx = nimbus(39)
+
+        src/app/loader.py:61:nimbus_juniper = nimbus(53)
+
+        src/app/handler.cs:37:    nimbus_cobalt = nimbus(80)
+
+        src/app/handler.cs:64:        nimbus_pebble = nimbus(19)
+
+        src/app/handler.cs:66:nimbus_lumen = nimbus(26)
+
+        src/app/handler.cs:73:nimbus_juniper = nimbus(61)
+
+        src/app/schema.sql:56:    nimbus_lumen = nimbus(39)
+
+        src/app/schema.sql:69:    nimbus_onyx = nimbus(18)
+
+        src/app/schema.sql:73:        nimbus_amber = nimbus(48)
+
+        src/app/schema.sql:88:        nimbus_cobalt = nimbus(71)
+
+        src/app/schema.sql:96:nimbus_cobalt = nimbus(84)
+
+        src/app/client.ts:26:        nimbus_harbor = nimbus(84)
+
+        src/app/client.ts:34:    nimbus_lumen = nimbus(96)
+
+        src/app/worker.go:40:        nimbus_cobalt = nimbus(73)
+
+        src/app/worker.go:41:nimbus_quartz = nimbus(83)  # MARK-5628
+
+        src/app/worker.go:54:        nimbus_quartz = nimbus(78)
+
+        src/app/worker.go:68:nimbus_garnet = nimbus(76)
+
+        '
+    - type: text
+      text: In the Grep result, which file and line number contain the match with MARK-5628? Answer as
+        <path>:<line> exactly as the result writes the path, nothing else.
+expected: src/app/worker.go:41

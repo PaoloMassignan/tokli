@@ -31,13 +31,47 @@ def cfg(tmp_path: Path, env: dict[str, str], *sets: str, config: str | None = No
 
 
 def test_keys_marked_ui_editable() -> None:
-    """CF-009 after S4 SCR-001: compressor toggles and the retention period only."""
+    """CF-009 after S8a SCR-001: compressor toggles, the verbatim opt-in where a compressor
+    declares it, and the retention period."""
     editable = {k for k, info in schema_keys().items() if info.ui_editable}
     assert editable == {
         "compressors.json_minify.enabled",
         "compressors.duplicate_tool_results.enabled",
+        "compressors.search_group.enabled",
+        "compressors.search_group.apply_to_verbatim_tools",
+        "compressors.log_filter.enabled",
+        "compressors.log_filter.apply_to_verbatim_tools",
         "telemetry.retention_days",
     }
+
+
+def test_s8a1_keys_and_defaults(tmp_path: Path, env: dict[str, str]) -> None:
+    """SPEC 017 "Keys added in S8a-1"."""
+    values = cfg(tmp_path, env).values
+    assert {
+        k: values[k]
+        for k in values
+        if k.startswith(("compressors.search_group", "compressors.log_filter"))
+    } == {
+        "compressors.search_group.enabled": False,
+        "compressors.search_group.min_group_lines": 5,
+        "compressors.search_group.apply_to_verbatim_tools": False,
+        "compressors.log_filter.enabled": False,
+        "compressors.log_filter.debug_sample": 10,
+        "compressors.log_filter.apply_to_verbatim_tools": False,
+    }
+
+
+@pytest.mark.parametrize("cid", ["json_minify", "duplicate_tool_results"])
+def test_verbatim_opt_in_only_for_declaring_compressors(
+    tmp_path: Path, env: dict[str, str], cid: str
+) -> None:
+    """CC-021 after S8a SCR-001: the option exists only for compressors that declare it."""
+    with pytest.raises(ConfigError):
+        cfg(tmp_path, env, f"compressors.{cid}.apply_to_verbatim_tools=true")
+    overrides(tmp_path / "data", f"compressors:\n  {cid}:\n    apply_to_verbatim_tools: true\n")
+    with pytest.raises(ConfigError):
+        cfg(tmp_path, env)
 
 
 def test_ui_override_only_when_not_pinned(tmp_path: Path, env: dict[str, str]) -> None:

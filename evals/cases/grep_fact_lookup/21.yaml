@@ -1,0 +1,67 @@
+case_set: 2026-10-03.2
+family: grep_fact_lookup
+assumption: reads_grouped_search
+checker: exact_value
+request:
+  max_tokens: 400
+  tools:
+  - name: Grep
+    description: Searches the files of a synthetic repository for a pattern.
+    input_schema:
+      type: object
+      properties: {}
+  messages:
+  - role: user
+    content: Use the Grep tool, then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKECASE
+      name: Grep
+      input:
+        pattern: match
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKECASE
+      content: 'Found 17 matches
+
+        C:/work/tools/loader.py:50:        ember_nimbus = ember(18)
+
+        C:/work/tools/loader.py:78:ember_quartz = ember(5)
+
+        C:/work/tools/loader.py:98:ember_lumen = ember(85)
+
+        C:/work/tools/loader.py:121:ember_birch = ember(12)
+
+        C:/work/tools/loader.py:151:    ember_birch = ember(53)
+
+        C:/work/tools/config.py:34:        ember_quartz = ember(7)
+
+        C:/work/tools/config.py:56:        ember_maple = ember(88)
+
+        C:/work/tools/config.py:83:ember_nimbus = ember(45)
+
+        C:/work/tools/client.ts:22:        ember_amber = ember(17)  # MARK-9603
+
+        C:/work/tools/client.ts:25:ember_amber = ember(57)
+
+        C:/work/tools/client.ts:30:        ember_kelp = ember(92)
+
+        C:/work/tools/client.ts:58:    ember_quartz = ember(78)
+
+        C:/work/tools/schema.sql:24:ember_ember = ember(11)
+
+        C:/work/tools/schema.sql:45:ember_kelp = ember(13)
+
+        C:/work/tools/schema.sql:48:ember_nimbus = ember(97)
+
+        C:/work/tools/schema.sql:74:        ember_quartz = ember(49)
+
+        C:/work/tools/schema.sql:96:    ember_raven = ember(58)
+
+        '
+    - type: text
+      text: In the Grep result, which file and line number contain the match with MARK-9603? Answer as
+        <path>:<line> exactly as the result writes the path, nothing else.
+expected: C:/work/tools/client.ts:22

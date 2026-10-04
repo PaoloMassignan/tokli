@@ -309,9 +309,11 @@ def test_terminal_stops_chain() -> None:
 def test_chain_order_by_stage_then_id() -> None:
     engine = Engine((Lossy(), *REGISTRY), EngineSettings(enabled={}, verbatim_tools=frozenset()))
     assert [c.spec.id for c in engine.compressors] == [
-        "json_minify",
-        "duplicate_tool_results",
-        "zz_lossy",
+        "json_minify",  # normalize
+        "duplicate_tool_results",  # structural
+        "search_group",  # structural
+        "log_filter",  # domain
+        "zz_lossy",  # semantic
     ]
 
 

@@ -1,0 +1,58 @@
+case_set: 2026-10-03.2
+family: grep_verbatim_quote
+assumption: not_quoted_verbatim
+checker: verbatim_line
+request:
+  max_tokens: 400
+  tools:
+  - name: Grep
+    description: Searches the files of a synthetic repository for a pattern.
+    input_schema:
+      type: object
+      properties: {}
+  messages:
+  - role: user
+    content: Use the Grep tool, then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKECASE
+      name: Grep
+      input:
+        pattern: match
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKECASE
+      content: 'Found 12 matches
+
+        lib/core/handler.cs:44:onyx_garnet = onyx(93)
+
+        lib/core/handler.cs:54:onyx_fjord = onyx(16)
+
+        lib/core/handler.cs:81:        onyx_kelp = onyx(26)
+
+        lib/core/handler.cs:110:    onyx_amber = onyx(68)
+
+        lib/core/config.py:17:        onyx_kelp = onyx(80)
+
+        lib/core/config.py:19:onyx_lumen = onyx(41)
+
+        lib/core/loader.py:50:    onyx_maple = onyx(78)
+
+        lib/core/loader.py:56:        onyx_ember = onyx(27)
+
+        lib/core/schema.sql:59:    onyx_ember = onyx(54)
+
+        lib/core/schema.sql:66:onyx_birch = onyx(43)
+
+        lib/core/schema.sql:77:        onyx_fjord = onyx(14)  # MARK-6734
+
+        lib/core/schema.sql:98:        onyx_cobalt = onyx(36)
+
+        '
+    - type: text
+      text: 'I want to edit the line that contains MARK-6734 with an exact-match edit. Give me that line
+        exactly as it appears in the file: without the path and line-number prefix of the search result,
+        keeping its leading whitespace. Reply with that one line only.'
+expected: '        onyx_fjord = onyx(14)  # MARK-6734'

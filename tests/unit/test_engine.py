@@ -396,11 +396,6 @@ def test_registry_default_enabled_requires_eval_record() -> None:
         assert report.is_file(), report
 
 
-def test_registry_lists_the_s4_compressors() -> None:
-    assert [c.spec.id for c in REGISTRY] == ["json_minify", "duplicate_tool_results"]
-    assert isinstance(REGISTRY[0], JsonMinify)
-
-
 @pytest.mark.parametrize("cid", [c.spec.id for c in REGISTRY])
 def test_registered_compressors_are_available(cid: str) -> None:
     assert Engine(REGISTRY, settings_for(cid)).availability()[cid] == "available"
@@ -416,3 +411,69 @@ def test_stats_record_tokens_in_of_accepted_calls() -> None:
     assert (stats.applicable, stats.accepted) == (2, 1)
     assert stats.tokens_in == 120 + len(no_gain)
     assert stats.tokens_in_accepted == 120
+
+
+# -- S8a-1: per-compressor opt-in for verbatim tools (CC-021 after S8a SCR-001) -----------------
+
+
+def test_verbatim_opt_in_applies_compressor_to_verbatim_tool() -> None:
+    """CC-021 (b): a compressor whose `apply_to_verbatim_tools` is set also runs on the
+    results of tools in `verbatim_tools`; the others are still skipped there."""
+    request = make_request(("TOOL_RESULT", "a b c " * 30), tool_names=("Bash",))
+    off = run(Engine([Fake()], settings_for("fake")), request)
+    assert off.patches == () and stats_of(off, "fake").skip_reasons == {"verbatim_tool": 1}
+    on = run(Engine([Fake()], settings_for("fake", verbatim_opt_in=frozenset({"fake"}))), request)
+    assert len(on.patches) == 1 and on.patches[0].produced_by == ("fake",)
+    other = Fake(cid="other")
+    both = run(
+        Engine([Fake(), other], settings_for("fake", "other", verbatim_opt_in=frozenset({"fake"}))),
+        request,
+    )
+    assert stats_of(both, "other").skip_reasons == {"verbatim_tool": 1}
+
+
+def test_verbatim_opt_in_does_not_cover_unresolved_tools() -> None:
+    """CC-023 is unchanged: an unresolved tool name stays verbatim even with the opt-in."""
+    request = make_request(("TOOL_RESULT", "a b c " * 30), tool_names=(None,))
+    result = run(
+        Engine([Fake()], settings_for("fake", verbatim_opt_in=frozenset({"fake"}))), request
+    )
+    assert result.patches == ()
+    assert stats_of(result, "fake").skip_reasons == {"verbatim_tool": 1}
+
+
+def test_verbatim_opt_in_defaults_off() -> None:
+    """CC-021: the option defaults to false for every compressor that declares it, and the
+    engine built from the default configuration has no opt-in."""
+    from tokli.config.schema import TokliSettings
+
+    compressors = TokliSettings().compressors.model_dump()
+    declaring = {
+        cid for cid, options in compressors.items() if "apply_to_verbatim_tools" in options
+    }
+    assert declaring == {"search_group", "log_filter"}
+    assert all(compressors[cid]["apply_to_verbatim_tools"] is False for cid in declaring)
+    assert EngineSettings(enabled={}, verbatim_tools=frozenset()).verbatim_opt_in == frozenset()
+
+
+def test_registry_lists_the_s8a1_compressors() -> None:
+    assert [c.spec.id for c in REGISTRY] == [
+        "json_minify",
+        "duplicate_tool_results",
+        "search_group",
+        "log_filter",
+    ]
+    assert isinstance(REGISTRY[0], JsonMinify)
+
+
+def test_registry_contract_every_selective_guarantee_has_a_named_test() -> None:
+    """CC-015: every SELECTIVE compressor ships a test per declared guarantee, named in the
+    guarantee text as `(test_name)`."""
+    sources = "\n".join(p.read_text(encoding="utf-8") for p in (ROOT / "tests").rglob("test_*.py"))
+    selective = [c.spec for c in REGISTRY if c.spec.kind == "SELECTIVE"]
+    assert selective, "S8a-1 registers log_filter"
+    for spec in selective:
+        assert spec.guarantees, spec.id
+        for guarantee in spec.guarantees:
+            name = guarantee.rsplit("(", 1)[-1].rstrip(")")
+            assert f"def {name}(" in sources, (spec.id, name)

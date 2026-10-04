@@ -213,6 +213,8 @@ def test_patches_visible_to_later_stages() -> None:
 def test_features_linear_time() -> None:
     import time
 
+    from tokli.compression.text_shapes import shape_counts
+
     # RT-001: linear in the *length* of a segment: one segment of 0.5 MB vs 5 MB, with a counter
     # that is itself O(n), so the measured cost is dominated by work proportional to the text.
     class LinearCounter:
@@ -233,6 +235,7 @@ def test_features_linear_time() -> None:
         view = StageView(texts={"s0": text}, spans={}, features={})
         best = float("inf")
         for _ in range(3):
+            shape_counts.cache_clear()  # S8a-1: measure the computation, not the cache hit
             start = time.perf_counter()
             stage.run(request, view, CTX)
             best = min(best, time.perf_counter() - start)

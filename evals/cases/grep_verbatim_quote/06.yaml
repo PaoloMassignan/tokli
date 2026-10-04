@@ -1,0 +1,70 @@
+case_set: 2026-10-03.2
+family: grep_verbatim_quote
+assumption: not_quoted_verbatim
+checker: verbatim_line
+request:
+  max_tokens: 400
+  tools:
+  - name: Grep
+    description: Searches the files of a synthetic repository for a pattern.
+    input_schema:
+      type: object
+      properties: {}
+  messages:
+  - role: user
+    content: Use the Grep tool, then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKECASE
+      name: Grep
+      input:
+        pattern: match
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKECASE
+      content: 'Found 18 matches
+
+        lib/core/config.py:39:        fjord_indigo = fjord(71)
+
+        lib/core/config.py:42:fjord_delta = fjord(89)
+
+        lib/core/config.py:64:    fjord_cobalt = fjord(21)
+
+        lib/core/config.py:85:        fjord_delta = fjord(2)
+
+        lib/core/config.py:102:        fjord_fjord = fjord(24)
+
+        lib/core/schema.sql:8:fjord_nimbus = fjord(23)
+
+        lib/core/schema.sql:29:    fjord_amber = fjord(60)
+
+        lib/core/schema.sql:46:fjord_raven = fjord(76)
+
+        lib/core/schema.sql:58:        fjord_harbor = fjord(68)
+
+        lib/core/client.ts:50:        fjord_cobalt = fjord(66)  # MARK-8470
+
+        lib/core/client.ts:52:        fjord_ember = fjord(50)
+
+        lib/core/client.ts:81:        fjord_lumen = fjord(82)
+
+        lib/core/handler.cs:34:        fjord_cobalt = fjord(93)
+
+        lib/core/handler.cs:46:fjord_quartz = fjord(36)
+
+        lib/core/worker.go:51:    fjord_amber = fjord(96)
+
+        lib/core/worker.go:67:    fjord_nimbus = fjord(50)
+
+        lib/core/worker.go:69:        fjord_quartz = fjord(20)
+
+        lib/core/worker.go:88:        fjord_quartz = fjord(25)
+
+        '
+    - type: text
+      text: 'I want to edit the line that contains MARK-8470 with an exact-match edit. Give me that line
+        exactly as it appears in the file: without the path and line-number prefix of the search result,
+        keeping its leading whitespace. Reply with that one line only.'
+expected: '        fjord_cobalt = fjord(66)  # MARK-8470'

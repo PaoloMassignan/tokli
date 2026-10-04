@@ -1,6 +1,6 @@
 Tokli doctor (normalized)
 
-Configuration  hash c9a7414ac70719b2
+Configuration  hash 4240b33a7a02e6a8
   server.host = "127.0.0.1"  [default]
   server.port = 8787  [default]
   server.allow_remote = false  [default]
@@ -21,6 +21,12 @@ Configuration  hash c9a7414ac70719b2
   compression.result_cache_mb = 64  [default]
   compressors.json_minify.enabled = true  [default]
   compressors.duplicate_tool_results.enabled = true  [default]
+  compressors.search_group.enabled = false  [default]
+  compressors.search_group.min_group_lines = 5  [default]
+  compressors.search_group.apply_to_verbatim_tools = false  [default]
+  compressors.log_filter.enabled = false  [default]
+  compressors.log_filter.debug_sample = 10  [default]
+  compressors.log_filter.apply_to_verbatim_tools = false  [default]
   pruning.duplicate_min_tokens = 64  [default]
   pruning.duplicate_require_same_call = false  [default]
   tokens.default = "o200k_base"  [default]
@@ -37,6 +43,8 @@ Auth
 Compressors
   json_minify  v1  LOSSLESS  enabled  available
   duplicate_tool_results  v1  LOSSLESS  enabled  available
+  search_group  v2  LOSSLESS  disabled  available
+  log_filter  v1  SELECTIVE  disabled  available
 
 Tokenizers
   o200k_base  missing  tiktoken:o200k_base@446a9538cb6c

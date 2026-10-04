@@ -1,0 +1,63 @@
+case_set: 2026-10-03.2
+family: grep_fact_lookup
+assumption: reads_grouped_search
+checker: exact_value
+request:
+  max_tokens: 400
+  tools:
+  - name: Grep
+    description: Searches the files of a synthetic repository for a pattern.
+    input_schema:
+      type: object
+      properties: {}
+  messages:
+  - role: user
+    content: Use the Grep tool, then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKECASE
+      name: Grep
+      input:
+        pattern: match
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKECASE
+      content: 'Found 15 matches
+
+        lib/core/handler.cs:45:    ember_garnet = ember(96)
+
+        lib/core/handler.cs:68:    ember_amber = ember(91)
+
+        lib/core/handler.cs:73:    ember_quartz = ember(20)
+
+        lib/core/handler.cs:97:        ember_amber = ember(56)
+
+        lib/core/worker.go:32:    ember_ember = ember(34)
+
+        lib/core/worker.go:34:        ember_pebble = ember(86)
+
+        lib/core/worker.go:45:        ember_harbor = ember(2)
+
+        lib/core/config.py:64:        ember_quartz = ember(62)
+
+        lib/core/config.py:69:ember_nimbus = ember(58)
+
+        lib/core/config.py:78:    ember_indigo = ember(42)  # MARK-7836
+
+        lib/core/config.py:83:    ember_onyx = ember(72)
+
+        lib/core/config.py:95:        ember_fjord = ember(16)
+
+        lib/core/schema.sql:20:        ember_amber = ember(34)
+
+        lib/core/schema.sql:26:    ember_cobalt = ember(67)
+
+        lib/core/schema.sql:30:ember_ember = ember(60)
+
+        '
+    - type: text
+      text: In the Grep result, which file and line number contain the match with MARK-7836? Answer as
+        <path>:<line> exactly as the result writes the path, nothing else.
+expected: lib/core/config.py:78

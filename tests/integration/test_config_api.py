@@ -280,3 +280,28 @@ def test_failed_write_leaves_no_temporary_file(
     data_dir = t.services.config.dirs.data_dir
     assert sorted(p.name for p in data_dir.iterdir() if p.name.startswith(UI_OVERRIDES_FILE)) == []
     assert httpx.get(t.url + "/tokli/api/config", timeout=10).json()["config_hash"] == before
+
+
+LOG = "".join(f"2026-10-03 12:00:{i:02d} INFO worker handled job {i}\n" for i in range(40)) + (
+    "2026-10-03 12:01:00 ERROR job 41 failed: TOKLI-CANARY-E42\n"
+)
+
+
+def test_patch_verbatim_opt_in(tokli: Start, upstream: FakeUpstream) -> None:
+    """CC-021 after S8a SCR-001, CF-009, UI-012: with `log_filter` on, a `Bash` result stays
+    verbatim until the user sets `apply_to_verbatim_tools` from the UI; then it is filtered."""
+    t = tokli()
+    assert patch(t, {"compressors.log_filter.enabled": True}).status_code == 200
+    send(t, conversation(LOG, tool="Bash"))
+    assert results_of(json.loads(upstream.received[-1].body))[0] == LOG
+    response = patch(t, {"compressors.log_filter.apply_to_verbatim_tools": True})
+    assert response.status_code == 200, response.text
+    opt_in = setting(response.json(), "compressors.log_filter.apply_to_verbatim_tools")
+    assert opt_in["value"] is True and opt_in["source"] == "ui" and opt_in["ui_editable"] is True
+    trace = send(t, conversation(LOG, tool="Bash"))
+    forwarded = results_of(json.loads(upstream.received[-1].body))[0]
+    assert forwarded != LOG
+    assert "ERROR job 41 failed: TOKLI-CANARY-E42" in forwarded
+    assert forwarded.endswith("[tokli: omitted 39 INFO lines]\n")
+    stats = {c["compressor_id"]: c for c in trace["compressors"]}["log_filter"]
+    assert stats["accepted"] == 1

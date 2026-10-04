@@ -1,0 +1,54 @@
+case_set: 2026-10-03.2
+family: grep_verbatim_quote
+assumption: not_quoted_verbatim
+checker: verbatim_line
+request:
+  max_tokens: 400
+  tools:
+  - name: Grep
+    description: Searches the files of a synthetic repository for a pattern.
+    input_schema:
+      type: object
+      properties: {}
+  messages:
+  - role: user
+    content: Use the Grep tool, then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKECASE
+      name: Grep
+      input:
+        pattern: match
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKECASE
+      content: 'Found 10 matches
+
+        src/app/schema.sql:22:        kelp_quartz = kelp(73)
+
+        src/app/schema.sql:33:        kelp_cobalt = kelp(80)  # MARK-4578
+
+        src/app/schema.sql:51:kelp_juniper = kelp(85)
+
+        src/app/handler.cs:22:    kelp_delta = kelp(16)
+
+        src/app/handler.cs:36:    kelp_quartz = kelp(42)
+
+        src/app/handler.cs:38:kelp_pebble = kelp(70)
+
+        src/app/handler.cs:44:kelp_harbor = kelp(40)
+
+        src/app/worker.go:50:        kelp_indigo = kelp(20)
+
+        src/app/worker.go:63:kelp_harbor = kelp(57)
+
+        src/app/worker.go:86:    kelp_maple = kelp(20)
+
+        '
+    - type: text
+      text: 'I want to edit the line that contains MARK-4578 with an exact-match edit. Give me that line
+        exactly as it appears in the file: without the path and line-number prefix of the search result,
+        keeping its leading whitespace. Reply with that one line only.'
+expected: '        kelp_cobalt = kelp(80)  # MARK-4578'

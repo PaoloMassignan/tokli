@@ -1,0 +1,223 @@
+case_set: 2026-10-03.2
+family: log_verbatim_quote
+assumption: not_quoted_verbatim
+checker: verbatim_line
+request:
+  max_tokens: 400
+  tools:
+  - name: service_logs
+    description: Returns the recent logs of a synthetic service.
+    input_schema:
+      type: object
+      properties: {}
+  messages:
+  - role: user
+    content: Use the service_logs tool, then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKECASE
+      name: service_logs
+      input:
+        service: api
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKECASE
+      content: '2026-10-03 09:00:03 DEBUG poll queue=4 lag=68ms
+
+        2026-10-03 09:00:05 INFO request 1001 served in 207 ms
+
+        2026-10-03 09:00:07 INFO request 1002 served in 175 ms
+
+        2026-10-03 09:00:10 INFO request 1003 served in 110 ms
+
+        2026-10-03 09:00:12 DEBUG poll queue=3 lag=414ms
+
+        2026-10-03 09:00:14 WARN pool harbor at 87 % capacity
+
+        2026-10-03 09:00:16 INFO request 1006 served in 38 ms
+
+        2026-10-03 09:00:16 INFO request 1007 served in 246 ms
+
+        2026-10-03 09:00:17 DEBUG poll queue=0 lag=742ms
+
+        2026-10-03 09:00:20 INFO request 1009 served in 83 ms
+
+        2026-10-03 09:00:23 INFO request 1010 served in 30 ms
+
+        2026-10-03 09:00:25 INFO request 1011 served in 345 ms
+
+        2026-10-03 09:00:28 DEBUG poll queue=3 lag=496ms
+
+        2026-10-03 09:00:29 INFO request 1013 served in 279 ms
+
+        2026-10-03 09:00:30 INFO request 1014 served in 27 ms
+
+        2026-10-03 09:00:30 INFO request 1015 served in 147 ms
+
+        2026-10-03 09:00:33 DEBUG poll queue=5 lag=338ms
+
+        2026-10-03 09:00:36 INFO request 1017 served in 252 ms
+
+        2026-10-03 09:00:39 INFO request 1018 served in 21 ms
+
+        2026-10-03 09:00:41 INFO request 1019 served in 112 ms
+
+        2026-10-03 09:00:42 DEBUG poll queue=0 lag=645ms
+
+        2026-10-03 09:00:44 INFO request 1021 served in 141 ms
+
+        2026-10-03 09:00:46 INFO request 1022 served in 132 ms
+
+        2026-10-03 09:00:49 INFO request 1023 served in 247 ms
+
+        2026-10-03 09:00:49 DEBUG poll queue=4 lag=887ms
+
+        2026-10-03 09:00:50 INFO request 1025 served in 298 ms
+
+        2026-10-03 09:00:51 INFO request 1026 served in 377 ms
+
+        2026-10-03 09:00:51 INFO request 1027 served in 175 ms
+
+        2026-10-03 09:00:54 DEBUG poll queue=7 lag=860ms
+
+        2026-10-03 09:00:57 INFO request 1029 served in 275 ms
+
+        2026-10-03 09:00:58 ERROR request 2844 failed with code E519 (MARK-4035)
+
+        2026-10-03 09:01:00 INFO request 1031 served in 280 ms
+
+        2026-10-03 09:01:00 DEBUG poll queue=5 lag=540ms
+
+        2026-10-03 09:01:01 INFO request 1033 served in 372 ms
+
+        2026-10-03 09:01:02 INFO request 1034 served in 153 ms
+
+        2026-10-03 09:01:03 INFO request 1035 served in 332 ms
+
+        2026-10-03 09:01:05 DEBUG poll queue=4 lag=30ms
+
+        2026-10-03 09:01:05 INFO request 1037 served in 382 ms
+
+        2026-10-03 09:01:05 INFO request 1038 served in 83 ms
+
+        2026-10-03 09:01:07 INFO request 1039 served in 294 ms
+
+        2026-10-03 09:01:08 DEBUG poll queue=6 lag=198ms
+
+        2026-10-03 09:01:10 INFO request 1041 served in 165 ms
+
+        2026-10-03 09:01:12 INFO request 1042 served in 148 ms
+
+        2026-10-03 09:01:14 INFO request 1043 served in 99 ms
+
+        2026-10-03 09:01:16 DEBUG poll queue=9 lag=645ms
+
+        2026-10-03 09:01:17 INFO request 1045 served in 188 ms
+
+        2026-10-03 09:01:19 INFO request 1046 served in 194 ms
+
+        2026-10-03 09:01:21 INFO request 1047 served in 252 ms
+
+        2026-10-03 09:01:22 DEBUG poll queue=6 lag=694ms
+
+        2026-10-03 09:01:22 INFO request 1049 served in 391 ms
+
+        2026-10-03 09:01:23 INFO request 1050 served in 162 ms
+
+        2026-10-03 09:01:26 INFO request 1051 served in 339 ms
+
+        2026-10-03 09:01:26 DEBUG poll queue=4 lag=735ms
+
+        2026-10-03 09:01:28 INFO request 1053 served in 250 ms
+
+        2026-10-03 09:01:30 INFO request 1054 served in 63 ms
+
+        2026-10-03 09:01:30 INFO request 1055 served in 281 ms
+
+        2026-10-03 09:01:32 DEBUG poll queue=4 lag=448ms
+
+        2026-10-03 09:01:34 INFO request 1057 served in 50 ms
+
+        2026-10-03 09:01:37 INFO request 1058 served in 231 ms
+
+        2026-10-03 09:01:39 INFO request 1059 served in 150 ms
+
+        2026-10-03 09:01:40 DEBUG poll queue=9 lag=818ms
+
+        2026-10-03 09:01:40 INFO request 1061 served in 50 ms
+
+        2026-10-03 09:01:40 INFO request 1062 served in 108 ms
+
+        2026-10-03 09:01:42 INFO request 1063 served in 168 ms
+
+        2026-10-03 09:01:42 DEBUG poll queue=8 lag=708ms
+
+        2026-10-03 09:01:42 INFO request 1065 served in 134 ms
+
+        2026-10-03 09:01:43 INFO request 1066 served in 141 ms
+
+        2026-10-03 09:01:45 INFO request 1067 served in 229 ms
+
+        2026-10-03 09:01:47 DEBUG poll queue=3 lag=437ms
+
+        2026-10-03 09:01:47 INFO request 1069 served in 331 ms
+
+        2026-10-03 09:01:47 INFO request 1070 served in 106 ms
+
+        2026-10-03 09:01:47 INFO request 1071 served in 354 ms
+
+        2026-10-03 09:01:48 DEBUG poll queue=3 lag=41ms
+
+        2026-10-03 09:01:49 INFO request 1073 served in 129 ms
+
+        2026-10-03 09:01:50 INFO request 1074 served in 8 ms
+
+        2026-10-03 09:01:51 INFO request 1075 served in 159 ms
+
+        2026-10-03 09:01:54 DEBUG poll queue=5 lag=117ms
+
+        2026-10-03 09:01:55 INFO request 1077 served in 212 ms
+
+        2026-10-03 09:01:58 INFO request 1078 served in 366 ms
+
+        2026-10-03 09:02:01 INFO request 1079 served in 319 ms
+
+        2026-10-03 09:02:02 DEBUG poll queue=1 lag=281ms
+
+        2026-10-03 09:02:04 INFO request 1081 served in 291 ms
+
+        2026-10-03 09:02:05 INFO request 1082 served in 222 ms
+
+        2026-10-03 09:02:08 INFO request 1083 served in 204 ms
+
+        2026-10-03 09:02:08 DEBUG poll queue=6 lag=454ms
+
+        2026-10-03 09:02:09 INFO request 1085 served in 330 ms
+
+        2026-10-03 09:02:12 INFO request 1086 served in 83 ms
+
+        2026-10-03 09:02:12 INFO request 1087 served in 59 ms
+
+        2026-10-03 09:02:12 DEBUG poll queue=0 lag=583ms
+
+        2026-10-03 09:02:12 INFO request 1089 served in 232 ms
+
+        2026-10-03 09:02:12 INFO request 1090 served in 338 ms
+
+        2026-10-03 09:02:14 INFO request 1091 served in 101 ms
+
+        2026-10-03 09:02:15 DEBUG poll queue=9 lag=27ms
+
+        2026-10-03 09:02:18 INFO request 1093 served in 355 ms
+
+        2026-10-03 09:02:20 INFO request 1094 served in 34 ms
+
+        2026-10-03 09:02:21 INFO request 1095 served in 158 ms
+
+        '
+    - type: text
+      text: Copy the full log line that contains MARK-4035 exactly as it appears in the service_logs result,
+        so I can search for it. Reply with that one line only.
+expected: 2026-10-03 09:00:58 ERROR request 2844 failed with code E519 (MARK-4035)

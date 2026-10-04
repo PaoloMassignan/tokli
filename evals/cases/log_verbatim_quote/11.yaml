@@ -1,0 +1,241 @@
+case_set: 2026-10-03.2
+family: log_verbatim_quote
+assumption: not_quoted_verbatim
+checker: verbatim_line
+request:
+  max_tokens: 400
+  tools:
+  - name: service_logs
+    description: Returns the recent logs of a synthetic service.
+    input_schema:
+      type: object
+      properties: {}
+  messages:
+  - role: user
+    content: Use the service_logs tool, then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKECASE
+      name: service_logs
+      input:
+        service: api
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKECASE
+      content: '2026-10-03 09:00:01 DEBUG poll queue=3 lag=784ms
+
+        2026-10-03 09:00:02 INFO request 1001 served in 22 ms
+
+        2026-10-03 09:00:02 INFO request 1002 served in 50 ms
+
+        2026-10-03 09:00:02 INFO request 1003 served in 115 ms
+
+        2026-10-03 09:00:05 DEBUG poll queue=6 lag=883ms
+
+        2026-10-03 09:00:08 INFO request 1005 served in 140 ms
+
+        2026-10-03 09:00:11 INFO request 1006 served in 204 ms
+
+        2026-10-03 09:00:12 INFO request 1007 served in 131 ms
+
+        2026-10-03 09:00:15 DEBUG poll queue=1 lag=711ms
+
+        2026-10-03 09:00:16 INFO request 1009 served in 212 ms
+
+        2026-10-03 09:00:16 INFO request 1010 served in 23 ms
+
+        2026-10-03 09:00:16 INFO request 1011 served in 326 ms
+
+        2026-10-03 09:00:18 DEBUG poll queue=9 lag=274ms
+
+        2026-10-03 09:00:21 INFO request 1013 served in 333 ms
+
+        2026-10-03 09:00:24 INFO request 1014 served in 349 ms
+
+        2026-10-03 09:00:24 INFO request 1015 served in 171 ms
+
+        2026-10-03 09:00:27 DEBUG poll queue=8 lag=570ms
+
+        2026-10-03 09:00:29 INFO request 1017 served in 86 ms
+
+        2026-10-03 09:00:30 INFO request 1018 served in 247 ms
+
+        2026-10-03 09:00:31 INFO request 1019 served in 375 ms
+
+        2026-10-03 09:00:32 DEBUG poll queue=8 lag=454ms
+
+        2026-10-03 09:00:33 INFO request 1021 served in 394 ms
+
+        2026-10-03 09:00:36 INFO request 1022 served in 53 ms
+
+        2026-10-03 09:00:38 INFO request 1023 served in 158 ms
+
+        2026-10-03 09:00:39 WARN pool nimbus at 93 % capacity
+
+        2026-10-03 09:00:40 INFO request 1025 served in 91 ms
+
+        2026-10-03 09:00:41 INFO request 1026 served in 325 ms
+
+        2026-10-03 09:00:43 INFO request 1027 served in 148 ms
+
+        2026-10-03 09:00:46 DEBUG poll queue=7 lag=120ms
+
+        2026-10-03 09:00:47 INFO request 1029 served in 311 ms
+
+        2026-10-03 09:00:47 INFO request 1030 served in 282 ms
+
+        2026-10-03 09:00:48 INFO request 1031 served in 4 ms
+
+        2026-10-03 09:00:48 DEBUG poll queue=1 lag=188ms
+
+        2026-10-03 09:00:49 INFO request 1033 served in 188 ms
+
+        2026-10-03 09:00:51 INFO request 1034 served in 64 ms
+
+        2026-10-03 09:00:53 INFO request 1035 served in 130 ms
+
+        2026-10-03 09:00:56 DEBUG poll queue=8 lag=477ms
+
+        2026-10-03 09:00:58 INFO request 1037 served in 26 ms
+
+        2026-10-03 09:01:01 INFO request 1038 served in 189 ms
+
+        2026-10-03 09:01:04 INFO request 1039 served in 399 ms
+
+        2026-10-03 09:01:05 DEBUG poll queue=5 lag=815ms
+
+        2026-10-03 09:01:07 INFO request 1041 served in 330 ms
+
+        2026-10-03 09:01:09 INFO request 1042 served in 21 ms
+
+        2026-10-03 09:01:11 INFO request 1043 served in 360 ms
+
+        2026-10-03 09:01:12 DEBUG poll queue=9 lag=115ms
+
+        2026-10-03 09:01:12 ERROR request 2202 failed with code E776 (MARK-2171)
+
+        2026-10-03 09:01:13 INFO request 1046 served in 306 ms
+
+        2026-10-03 09:01:15 INFO request 1047 served in 165 ms
+
+        2026-10-03 09:01:18 DEBUG poll queue=9 lag=508ms
+
+        2026-10-03 09:01:20 INFO request 1049 served in 134 ms
+
+        2026-10-03 09:01:21 INFO request 1050 served in 102 ms
+
+        2026-10-03 09:01:24 INFO request 1051 served in 119 ms
+
+        2026-10-03 09:01:27 DEBUG poll queue=8 lag=417ms
+
+        2026-10-03 09:01:30 INFO request 1053 served in 223 ms
+
+        2026-10-03 09:01:32 INFO request 1054 served in 178 ms
+
+        2026-10-03 09:01:32 INFO request 1055 served in 184 ms
+
+        2026-10-03 09:01:34 DEBUG poll queue=7 lag=422ms
+
+        2026-10-03 09:01:35 INFO request 1057 served in 342 ms
+
+        2026-10-03 09:01:37 INFO request 1058 served in 85 ms
+
+        2026-10-03 09:01:40 INFO request 1059 served in 349 ms
+
+        2026-10-03 09:01:42 DEBUG poll queue=2 lag=3ms
+
+        2026-10-03 09:01:44 INFO request 1061 served in 34 ms
+
+        2026-10-03 09:01:45 INFO request 1062 served in 91 ms
+
+        2026-10-03 09:01:47 INFO request 1063 served in 308 ms
+
+        2026-10-03 09:01:48 DEBUG poll queue=7 lag=248ms
+
+        2026-10-03 09:01:49 INFO request 1065 served in 276 ms
+
+        2026-10-03 09:01:52 INFO request 1066 served in 71 ms
+
+        2026-10-03 09:01:54 INFO request 1067 served in 178 ms
+
+        2026-10-03 09:01:55 DEBUG poll queue=7 lag=64ms
+
+        2026-10-03 09:01:57 INFO request 1069 served in 354 ms
+
+        2026-10-03 09:02:00 INFO request 1070 served in 167 ms
+
+        2026-10-03 09:02:01 INFO request 1071 served in 236 ms
+
+        2026-10-03 09:02:01 DEBUG poll queue=7 lag=393ms
+
+        2026-10-03 09:02:02 INFO request 1073 served in 115 ms
+
+        2026-10-03 09:02:04 INFO request 1074 served in 48 ms
+
+        2026-10-03 09:02:05 INFO request 1075 served in 55 ms
+
+        2026-10-03 09:02:07 DEBUG poll queue=9 lag=417ms
+
+        2026-10-03 09:02:07 INFO request 1077 served in 276 ms
+
+        2026-10-03 09:02:09 INFO request 1078 served in 387 ms
+
+        2026-10-03 09:02:11 INFO request 1079 served in 175 ms
+
+        2026-10-03 09:02:11 DEBUG poll queue=9 lag=779ms
+
+        2026-10-03 09:02:14 INFO request 1081 served in 277 ms
+
+        2026-10-03 09:02:16 INFO request 1082 served in 393 ms
+
+        2026-10-03 09:02:17 INFO request 1083 served in 46 ms
+
+        2026-10-03 09:02:17 DEBUG poll queue=7 lag=810ms
+
+        2026-10-03 09:02:18 INFO request 1085 served in 17 ms
+
+        2026-10-03 09:02:19 INFO request 1086 served in 151 ms
+
+        2026-10-03 09:02:22 INFO request 1087 served in 130 ms
+
+        2026-10-03 09:02:25 DEBUG poll queue=0 lag=715ms
+
+        2026-10-03 09:02:27 INFO request 1089 served in 298 ms
+
+        2026-10-03 09:02:28 INFO request 1090 served in 14 ms
+
+        2026-10-03 09:02:30 INFO request 1091 served in 57 ms
+
+        2026-10-03 09:02:30 DEBUG poll queue=0 lag=463ms
+
+        2026-10-03 09:02:30 INFO request 1093 served in 143 ms
+
+        2026-10-03 09:02:31 INFO request 1094 served in 282 ms
+
+        2026-10-03 09:02:33 INFO request 1095 served in 344 ms
+
+        2026-10-03 09:02:35 DEBUG poll queue=0 lag=393ms
+
+        2026-10-03 09:02:37 INFO request 1097 served in 162 ms
+
+        2026-10-03 09:02:37 INFO request 1098 served in 111 ms
+
+        2026-10-03 09:02:37 INFO request 1099 served in 316 ms
+
+        2026-10-03 09:02:37 DEBUG poll queue=1 lag=358ms
+
+        2026-10-03 09:02:38 INFO request 1101 served in 39 ms
+
+        2026-10-03 09:02:38 INFO request 1102 served in 280 ms
+
+        2026-10-03 09:02:40 INFO request 1103 served in 197 ms
+
+        2026-10-03 09:02:41 DEBUG poll queue=2 lag=358ms
+
+        '
+    - type: text
+      text: Copy the full log line that contains MARK-2171 exactly as it appears in the service_logs result,
+        so I can search for it. Reply with that one line only.
+expected: 2026-10-03 09:01:12 ERROR request 2202 failed with code E776 (MARK-2171)

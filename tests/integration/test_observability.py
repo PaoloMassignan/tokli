@@ -250,8 +250,13 @@ def test_api_contract_schemas(tokli: Start) -> None:
 
 def test_every_api_token_field_has_method(tokli: Start) -> None:
     t = tokli()
-    record = trace_of(t, send(t))["record"]
+    view = trace_of(t, send(t))
+    record = view["record"]
+    # Seen once on Windows / Python 3.13 (S8a-1 CI, not reproduced on re-run): the record had no
+    # engine report. Show the trace's decisions and stage outcomes if it happens again.
+    why = json.dumps(view["trace"].get("decisions"), default=str)[:2000]
     for field in ("est_original_tokens", "est_forwarded_tokens"):
+        assert "method" in record[field], (field, record[field], why)
         assert record[field]["method"] == "estimate"
         assert isinstance(record[field]["value"], int)
     for field in ("est_request_tokens_original", "est_request_tokens_forwarded"):

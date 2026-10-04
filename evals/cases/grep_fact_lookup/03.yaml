@@ -1,0 +1,53 @@
+case_set: 2026-10-03.2
+family: grep_fact_lookup
+assumption: reads_grouped_search
+checker: exact_value
+request:
+  max_tokens: 400
+  tools:
+  - name: Grep
+    description: Searches the files of a synthetic repository for a pattern.
+    input_schema:
+      type: object
+      properties: {}
+  messages:
+  - role: user
+    content: Use the Grep tool, then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKECASE
+      name: Grep
+      input:
+        pattern: match
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKECASE
+      content: 'Found 10 matches
+
+        \\build\share\repo\handler.cs:32:    birch_amber = birch(95)
+
+        \\build\share\repo\handler.cs:39:birch_birch = birch(78)
+
+        \\build\share\repo\handler.cs:53:birch_kelp = birch(4)
+
+        \\build\share\repo\handler.cs:77:        birch_birch = birch(74)
+
+        \\build\share\repo\config.py:54:        birch_garnet = birch(24)
+
+        \\build\share\repo\config.py:76:    birch_fjord = birch(90)
+
+        \\build\share\repo\config.py:81:        birch_maple = birch(77)
+
+        \\build\share\repo\loader.py:43:birch_amber = birch(78)  # MARK-1273
+
+        \\build\share\repo\loader.py:63:    birch_pebble = birch(11)
+
+        \\build\share\repo\loader.py:88:birch_lumen = birch(66)
+
+        '
+    - type: text
+      text: In the Grep result, which file and line number contain the match with MARK-1273? Answer as
+        <path>:<line> exactly as the result writes the path, nothing else.
+expected: \\build\share\repo\loader.py:43

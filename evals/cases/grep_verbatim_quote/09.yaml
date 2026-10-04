@@ -1,0 +1,54 @@
+case_set: 2026-10-03.2
+family: grep_verbatim_quote
+assumption: not_quoted_verbatim
+checker: verbatim_line
+request:
+  max_tokens: 400
+  tools:
+  - name: Grep
+    description: Searches the files of a synthetic repository for a pattern.
+    input_schema:
+      type: object
+      properties: {}
+  messages:
+  - role: user
+    content: Use the Grep tool, then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKECASE
+      name: Grep
+      input:
+        pattern: match
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKECASE
+      content: 'Found 10 matches
+
+        lib/core/loader.py:61:    juniper_quartz = juniper(72)
+
+        lib/core/loader.py:78:juniper_maple = juniper(29)
+
+        lib/core/loader.py:85:    juniper_fjord = juniper(54)
+
+        lib/core/config.py:29:juniper_maple = juniper(92)
+
+        lib/core/config.py:45:juniper_birch = juniper(1)
+
+        lib/core/config.py:56:        juniper_onyx = juniper(8)  # MARK-4703
+
+        lib/core/config.py:68:        juniper_amber = juniper(97)
+
+        lib/core/client.ts:57:        juniper_juniper = juniper(79)
+
+        lib/core/client.ts:62:        juniper_amber = juniper(27)
+
+        lib/core/client.ts:88:juniper_pebble = juniper(61)
+
+        '
+    - type: text
+      text: 'I want to edit the line that contains MARK-4703 with an exact-match edit. Give me that line
+        exactly as it appears in the file: without the path and line-number prefix of the search result,
+        keeping its leading whitespace. Reply with that one line only.'
+expected: '        juniper_onyx = juniper(8)  # MARK-4703'

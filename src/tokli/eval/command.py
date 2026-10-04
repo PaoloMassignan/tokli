@@ -107,14 +107,14 @@ def smoke(
         run_smoke(plan, arms, api_key=key, max_calls=options.max_calls, progress=progress)
     )
     families = _families(result.cases)
-    verdict = overall_verdict(families)
+    verdict = overall_verdict(families, spec.assumptions)
     provenance = Provenance(
         tokli_version=options.tokli_version,
         compressor=spec.id,
         compressor_version=spec.version,
         model=options.model,
         date=datetime.now(UTC).date().isoformat(),
-        case_set=cases[0].case_set,
+        case_set=", ".join(sorted({case.case_set for case in cases})),
         repetitions=options.repetitions,
         temperature=options.temperature,
         config_hash_baseline=baseline_config.config_hash,

@@ -1,0 +1,64 @@
+case_set: 2026-10-03.2
+family: grep_verbatim_quote
+assumption: not_quoted_verbatim
+checker: verbatim_line
+request:
+  max_tokens: 400
+  tools:
+  - name: Grep
+    description: Searches the files of a synthetic repository for a pattern.
+    input_schema:
+      type: object
+      properties: {}
+  messages:
+  - role: user
+    content: Use the Grep tool, then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKECASE
+      name: Grep
+      input:
+        pattern: match
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKECASE
+      content: 'Found 15 matches
+
+        C:\work\service\src\worker.go:28:quartz_pebble = quartz(59)  # MARK-9226
+
+        C:\work\service\src\worker.go:32:        quartz_quartz = quartz(45)
+
+        C:\work\service\src\client.ts:53:    quartz_onyx = quartz(8)
+
+        C:\work\service\src\client.ts:82:quartz_harbor = quartz(69)
+
+        C:\work\service\src\client.ts:84:    quartz_indigo = quartz(51)
+
+        C:\work\service\src\client.ts:90:        quartz_onyx = quartz(53)
+
+        C:\work\service\src\client.ts:103:quartz_kelp = quartz(47)
+
+        C:\work\service\src\handler.cs:40:        quartz_indigo = quartz(20)
+
+        C:\work\service\src\handler.cs:42:    quartz_ember = quartz(15)
+
+        C:\work\service\src\handler.cs:58:        quartz_birch = quartz(89)
+
+        C:\work\service\src\schema.sql:28:        quartz_fjord = quartz(28)
+
+        C:\work\service\src\schema.sql:37:quartz_garnet = quartz(14)
+
+        C:\work\service\src\schema.sql:52:quartz_nimbus = quartz(16)
+
+        C:\work\service\src\config.py:41:    quartz_onyx = quartz(91)
+
+        C:\work\service\src\config.py:46:    quartz_kelp = quartz(44)
+
+        '
+    - type: text
+      text: 'I want to edit the line that contains MARK-9226 with an exact-match edit. Give me that line
+        exactly as it appears in the file: without the path and line-number prefix of the search result,
+        keeping its leading whitespace. Reply with that one line only.'
+expected: 'quartz_pebble = quartz(59)  # MARK-9226'

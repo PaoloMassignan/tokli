@@ -25,7 +25,7 @@ from tokli.compressors.json_minify import SPEC as JSON_SPEC
 from tokli.domain.stage import Features
 from tokli.eval.cases import load_cases
 from tokli.eval.runner import Arm, plan_run, run_smoke
-from tokli.eval.verdict import family_verdict
+from tokli.eval.verdict import family_verdict, overall_verdict
 from tokli.pipeline.pipeline import Pipeline
 from tokli.pipeline.reminders import RemindersStage
 
@@ -143,6 +143,20 @@ def by_family(result) -> dict[str, Any]:  # type: ignore[no-untyped-def]
     return {name: family_verdict(items) for name, items in families.items()}
 
 
+# S8a-1 added families for `not_quoted_verbatim` whose content json_minify never changes; after
+# S8a SCR-002 they are reported `not_exercised` and stay out of the verdict.
+UNEXERCISED_FOR_JSON = {"grep_verbatim_quote", "log_verbatim_quote"}
+
+
+def judged(result) -> dict[str, Any]:  # type: ignore[no-untyped-def]
+    """The families with at least one exercised case; asserts that the others are exactly the
+    families json_minify cannot change."""
+    families = by_family(result)
+    idle = {name for name, v in families.items() if v.verdict == "not_exercised"}
+    assert idle == UNEXERCISED_FOR_JSON, idle
+    return {name: v for name, v in families.items() if name not in idle}
+
+
 # -- tests ----------------------------------------------------------------------------------
 
 
@@ -159,11 +173,13 @@ def test_smoke_harness_self_test(tmp_path: Path, upstream: FakeUpstream) -> None
     ):
         candidate = Arm("candidate", services_with(base, compressor))
         _, result = run((baseline, candidate))
-        verdicts = {v.verdict for v in by_family(result).values()}
+        families = judged(result)
+        verdicts = {v.verdict for v in families.values()}
         if expected == "damage_detected":
             assert "damage_detected" in verdicts, (compressor.spec.id, verdicts)
         else:
             assert verdicts == {"no_measurable_damage"}, verdicts
+        assert overall_verdict(list(by_family(result).values()), ASSUMPTIONS) == expected
 
 
 def test_harness_uses_real_pipeline(tmp_path: Path, upstream: FakeUpstream) -> None:
@@ -171,12 +187,14 @@ def test_harness_uses_real_pipeline(tmp_path: Path, upstream: FakeUpstream) -> N
     seen: list[dict[str, Any]] = []
     oracle_upstream(upstream, seen)
     plan, result = run(real_arms(tmp_path, upstream.url))
-    assert result.calls == plan.calls == 2 * len(plan.cases)
-    verdicts = by_family(result)
+    exercised = len(plan.cases) - plan.not_exercised
+    assert plan.not_exercised == 44  # grep_verbatim_quote and log_verbatim_quote: no JSON
+    assert result.calls == plan.calls == 2 * exercised  # unexercised cases make no call
+    verdicts = judged(result)
     assert {v.verdict for v in verdicts.values()} == {"no_measurable_damage"}
     assert all(v.n >= 20 for v in verdicts.values())
     minified = [s for s in seen if "\n  " not in _tool_result_and_question(s["body"])[0]]
-    assert len(minified) == len(plan.cases)  # the candidate arm's bodies were minified
+    assert len(minified) == exercised  # the candidate arm's bodies were minified
     for sent in seen:
         assert sent["body"]["model"] == "claude-test"
         assert sent["body"]["temperature"] == 0 and sent["body"]["stream"] is False
@@ -185,7 +203,7 @@ def test_harness_uses_real_pipeline(tmp_path: Path, upstream: FakeUpstream) -> N
 def test_smoke_arms_differ_only_in_candidate(tmp_path: Path, upstream: FakeUpstream) -> None:
     oracle_upstream(upstream)
     baseline, candidate = real_arms(tmp_path, upstream.url)
-    case = load_cases(CASES, ASSUMPTIONS)[0]
+    case = next(c for c in load_cases(CASES, ASSUMPTIONS) if c.family.startswith("json_"))
     body = json.dumps({**case.request, "model": "m", "temperature": 0, "stream": False}).encode()
     base, cand = baseline.prepare(body), candidate.prepare(body)
     assert base.body == body  # every compressor off: the request is forwarded as built
@@ -202,7 +220,7 @@ def test_eval_stops_at_call_cap(tmp_path: Path, upstream: FakeUpstream) -> None:
     oracle_upstream(upstream, seen)
     _, result = run(real_arms(tmp_path, upstream.url), max_calls=10)
     assert len(seen) == 10 and result.calls == 10 and result.stopped_by_cap
-    assert {v.verdict for v in by_family(result).values()} == {"insufficient_data"}
+    assert {v.verdict for v in judged(result).values()} == {"insufficient_data"}
 
 
 def test_eval_sends_key_only_as_header(tmp_path: Path, upstream: FakeUpstream) -> None:

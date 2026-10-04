@@ -5,6 +5,7 @@ Approved for S1 (2026-09-30): CC-001…CC-008, CC-010…CC-017, CC-020 (provisio
 Approved for S2 (2026-10-02): CC-024.
 Changed by S4 SCR-001 (2026-10-03): CC-002 (the policy is a shortcut, not a gate), AC-CC-1, AC-CC-11, the eligibility column.
 Approved for S4 (2026-10-03): CC-002 (SCR-001), CC-003, CC-009, CC-015 and CC-016 for `reference`, CC-019, CC-021, the request scope.
+Changed by S8a SCR-001 (approved for S8a-1, 2026-10-03): CC-021 (per-compressor opt-in for verbatim tools).
 
 ## Purpose
 Define what a compressor is, what "lossless" means in Tokli, how the global policy constrains
@@ -160,7 +161,7 @@ for segment in mutable segments (document order):
 | CC-017 | THE compression packages SHALL NOT import protocol, upstream, auth, HTTP, pricing, telemetry-storage or UI modules. |
 | CC-019 | WHILE a reference stub is part of the forwarded request, THE SYSTEM SHALL ensure that the named target segment precedes the stub in the same request and that the target's forwarded text equals its original text under byte or structural equivalence. IF any later transformation would violate this, THEN THE SYSTEM SHALL reject that transformation with `rejected_invariant(reference_target_modified)`. This check SHALL always run, independent of `verify_lossless`. |
 | CC-020 | EVERY compressor SHALL declare its behavioural `assumptions`. A compressor with `default_enabled: true` SHALL have an evaluation record (SPEC 012, QE-016) that covers every declared assumption with verdict `no_measurable_damage`, or a `provisional` record permitted by QE-016. Whether the user may enable a compressor SHALL NOT depend on evaluation records. |
-| CC-021 | THE engine SHALL apply the `verbatim_tools` filter to every compressor except those with equivalence `reference`, because a reference stub leaves the original bytes verbatim in the target segment. Such compressors SHALL declare the assumption `quotes_from_reference_target`. |
+| CC-021 | THE engine SHALL apply the `verbatim_tools` filter to every compressor except (a) those with equivalence `reference`, because a reference stub leaves the original bytes verbatim in the target segment, and such compressors SHALL declare the assumption `quotes_from_reference_target`; and (b) a compressor whose option `compressors.<id>.apply_to_verbatim_tools` is true. That option SHALL default to false, SHALL exist only for compressors that declare it, and SHALL NOT be true by default for any compressor. (S8a SCR-001.) |
 
 ## Invariants (property-tested)
 Token non-increase (CC-005) · determinism and context-freedom (CC-006) · protected spans (CC-007) ·
@@ -201,6 +202,8 @@ each invocation is logged as `(segment_id, kind, compressor, decision, t_in, t_o
 `test_import_contracts` · `test_request_scope_runs_before_segment_scope` · `test_history_rewritten_flag` ·
 `test_reference_target_integrity_enforced` · `test_every_compressor_declares_assumptions` ·
 `test_registry_default_enabled_requires_eval_record` · `test_verbatim_tools_exempt_only_reference_equivalence` ·
+`test_verbatim_opt_in_applies_compressor_to_verbatim_tool` · `test_verbatim_opt_in_defaults_off` ·
+`test_verbatim_opt_in_only_for_declaring_compressors` ·
 `test_min_segment_tokens_default` · `test_unresolved_tool_name_treated_as_verbatim` · `test_late_result_discarded_as_timeout` ·
 `test_result_cache_hit_gives_identical_output` · `test_result_cache_key_includes_view_and_config` ·
 `test_result_cache_bounded` · `test_result_cache_off`

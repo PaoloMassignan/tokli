@@ -1,0 +1,71 @@
+case_set: 2026-10-03.2
+family: grep_fact_lookup
+assumption: reads_grouped_search
+checker: exact_value
+request:
+  max_tokens: 400
+  tools:
+  - name: Grep
+    description: Searches the files of a synthetic repository for a pattern.
+    input_schema:
+      type: object
+      properties: {}
+  messages:
+  - role: user
+    content: Use the Grep tool, then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKECASE
+      name: Grep
+      input:
+        pattern: match
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKECASE
+      content: 'Found 19 matches
+
+        lib/core/loader.py:32:        cobalt_kelp = cobalt(28)
+
+        lib/core/loader.py:61:    cobalt_cobalt = cobalt(47)
+
+        lib/core/loader.py:70:    cobalt_fjord = cobalt(17)
+
+        lib/core/worker.go:27:cobalt_fjord = cobalt(70)
+
+        lib/core/worker.go:42:        cobalt_onyx = cobalt(70)
+
+        lib/core/worker.go:60:    cobalt_amber = cobalt(95)
+
+        lib/core/worker.go:89:cobalt_nimbus = cobalt(92)  # MARK-1654
+
+        lib/core/worker.go:104:    cobalt_pebble = cobalt(54)
+
+        lib/core/config.py:47:        cobalt_ember = cobalt(79)
+
+        lib/core/config.py:66:    cobalt_ember = cobalt(67)
+
+        lib/core/config.py:96:cobalt_quartz = cobalt(27)
+
+        lib/core/config.py:116:cobalt_raven = cobalt(68)
+
+        lib/core/config.py:141:        cobalt_pebble = cobalt(33)
+
+        lib/core/schema.sql:22:cobalt_fjord = cobalt(28)
+
+        lib/core/schema.sql:33:    cobalt_cobalt = cobalt(68)
+
+        lib/core/schema.sql:55:cobalt_onyx = cobalt(43)
+
+        lib/core/handler.cs:40:cobalt_nimbus = cobalt(7)
+
+        lib/core/handler.cs:68:        cobalt_fjord = cobalt(81)
+
+        lib/core/handler.cs:69:    cobalt_raven = cobalt(39)
+
+        '
+    - type: text
+      text: In the Grep result, which file and line number contain the match with MARK-1654? Answer as
+        <path>:<line> exactly as the result writes the path, nothing else.
+expected: lib/core/worker.go:89

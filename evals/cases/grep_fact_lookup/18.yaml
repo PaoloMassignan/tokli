@@ -1,0 +1,55 @@
+case_set: 2026-10-03.2
+family: grep_fact_lookup
+assumption: reads_grouped_search
+checker: exact_value
+request:
+  max_tokens: 400
+  tools:
+  - name: Grep
+    description: Searches the files of a synthetic repository for a pattern.
+    input_schema:
+      type: object
+      properties: {}
+  messages:
+  - role: user
+    content: Use the Grep tool, then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKECASE
+      name: Grep
+      input:
+        pattern: match
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKECASE
+      content: 'Found 11 matches
+
+        C:/work/tools/config.py:35:    raven_birch = raven(61)
+
+        C:/work/tools/config.py:42:    raven_maple = raven(83)  # MARK-4454
+
+        C:/work/tools/config.py:48:        raven_quartz = raven(52)
+
+        C:/work/tools/config.py:58:raven_pebble = raven(50)
+
+        C:/work/tools/handler.cs:49:        raven_raven = raven(18)
+
+        C:/work/tools/handler.cs:60:        raven_delta = raven(69)
+
+        C:/work/tools/handler.cs:69:    raven_ember = raven(7)
+
+        C:/work/tools/handler.cs:76:raven_harbor = raven(87)
+
+        C:/work/tools/client.ts:62:    raven_nimbus = raven(53)
+
+        C:/work/tools/client.ts:85:        raven_juniper = raven(13)
+
+        C:/work/tools/client.ts:100:    raven_pebble = raven(52)
+
+        '
+    - type: text
+      text: In the Grep result, which file and line number contain the match with MARK-4454? Answer as
+        <path>:<line> exactly as the result writes the path, nothing else.
+expected: C:/work/tools/config.py:42

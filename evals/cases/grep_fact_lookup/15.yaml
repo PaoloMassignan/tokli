@@ -1,0 +1,53 @@
+case_set: 2026-10-03.2
+family: grep_fact_lookup
+assumption: reads_grouped_search
+checker: exact_value
+request:
+  max_tokens: 400
+  tools:
+  - name: Grep
+    description: Searches the files of a synthetic repository for a pattern.
+    input_schema:
+      type: object
+      properties: {}
+  messages:
+  - role: user
+    content: Use the Grep tool, then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKECASE
+      name: Grep
+      input:
+        pattern: match
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKECASE
+      content: 'Found 10 matches
+
+        C:\work\service\src\config.py:37:amber_garnet = amber(76)
+
+        C:\work\service\src\config.py:38:    amber_amber = amber(53)
+
+        C:\work\service\src\config.py:41:amber_fjord = amber(87)
+
+        C:\work\service\src\client.ts:26:        amber_onyx = amber(11)
+
+        C:\work\service\src\client.ts:51:amber_nimbus = amber(14)
+
+        C:\work\service\src\client.ts:64:        amber_harbor = amber(59)
+
+        C:\work\service\src\schema.sql:35:    amber_lumen = amber(26)
+
+        C:\work\service\src\schema.sql:50:        amber_fjord = amber(19)
+
+        C:\work\service\src\loader.py:9:        amber_maple = amber(81)  # MARK-5886
+
+        C:\work\service\src\loader.py:16:        amber_delta = amber(63)
+
+        '
+    - type: text
+      text: In the Grep result, which file and line number contain the match with MARK-5886? Answer as
+        <path>:<line> exactly as the result writes the path, nothing else.
+expected: C:\work\service\src\loader.py:9

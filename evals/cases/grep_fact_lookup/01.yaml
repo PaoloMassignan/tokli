@@ -1,0 +1,73 @@
+case_set: 2026-10-03.2
+family: grep_fact_lookup
+assumption: reads_grouped_search
+checker: exact_value
+request:
+  max_tokens: 400
+  tools:
+  - name: Grep
+    description: Searches the files of a synthetic repository for a pattern.
+    input_schema:
+      type: object
+      properties: {}
+  messages:
+  - role: user
+    content: Use the Grep tool, then answer my question.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01SMOKECASE
+      name: Grep
+      input:
+        pattern: match
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01SMOKECASE
+      content: 'Found 20 matches
+
+        \\build\share\repo\handler.cs:18:        juniper_pebble = juniper(95)
+
+        \\build\share\repo\handler.cs:21:juniper_delta = juniper(70)
+
+        \\build\share\repo\handler.cs:49:        juniper_lumen = juniper(59)
+
+        \\build\share\repo\handler.cs:78:juniper_ember = juniper(92)
+
+        \\build\share\repo\config.py:14:juniper_maple = juniper(41)
+
+        \\build\share\repo\config.py:34:    juniper_maple = juniper(80)
+
+        \\build\share\repo\config.py:48:        juniper_maple = juniper(25)
+
+        \\build\share\repo\config.py:64:        juniper_onyx = juniper(65)
+
+        \\build\share\repo\config.py:70:        juniper_maple = juniper(72)
+
+        \\build\share\repo\schema.sql:35:        juniper_pebble = juniper(99)
+
+        \\build\share\repo\schema.sql:42:    juniper_kelp = juniper(75)
+
+        \\build\share\repo\client.ts:43:        juniper_onyx = juniper(50)  # MARK-8997
+
+        \\build\share\repo\client.ts:57:juniper_juniper = juniper(76)
+
+        \\build\share\repo\client.ts:82:        juniper_pebble = juniper(85)
+
+        \\build\share\repo\client.ts:96:juniper_maple = juniper(48)
+
+        \\build\share\repo\client.ts:97:    juniper_lumen = juniper(22)
+
+        \\build\share\repo\worker.go:43:juniper_lumen = juniper(64)
+
+        \\build\share\repo\worker.go:45:    juniper_cobalt = juniper(6)
+
+        \\build\share\repo\worker.go:56:juniper_onyx = juniper(58)
+
+        \\build\share\repo\worker.go:71:        juniper_lumen = juniper(4)
+
+        '
+    - type: text
+      text: In the Grep result, which file and line number contain the match with MARK-8997? Answer as
+        <path>:<line> exactly as the result writes the path, nothing else.
+expected: \\build\share\repo\client.ts:43
