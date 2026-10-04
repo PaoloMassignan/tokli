@@ -11,7 +11,7 @@ from typing import Any
 
 import yaml
 
-from tokli.eval.checkers import CHECKERS, TOOL_CHECKERS
+from tokli.eval.checkers import CHECKERS, TOOL_CHECKER_FIELDS, TOOL_CHECKERS
 
 REQUIRED = ("case_set", "family", "assumption", "checker", "request", "expected")
 # Synthetic cases only: no developer paths, no credential-shaped strings (AC-QE-6). The text is
@@ -30,7 +30,8 @@ class Case:
     checker: str
     request: dict[str, Any]
     expected: str
-    expected_read_path: str | None = None  # `answer_or_read` (S8c)
+    expected_read_path: str | None = None  # `answer_or_read` (S8c), `edit_anchor` (S8e)
+    current_file: str | None = None  # `edit_anchor` (S8e): the file after the edits
 
 
 def lint_case(data: Any, source: str) -> list[str]:
@@ -41,8 +42,9 @@ def lint_case(data: Any, source: str) -> list[str]:
         errors.append(f"{source}: unknown checker '{data.get('checker')}'")
     if "expected" in data and not isinstance(data["expected"], str):
         errors.append(f"{source}: 'expected' must be a string")
-    if data.get("checker") in TOOL_CHECKERS and not isinstance(data.get("expected_read_path"), str):
-        errors.append(f"{source}: 'expected_read_path' is required by '{data.get('checker')}'")
+    for field_name in TOOL_CHECKER_FIELDS.get(str(data.get("checker")), ()):
+        if not isinstance(data.get(field_name), str):
+            errors.append(f"{source}: '{field_name}' is required by '{data.get('checker')}'")
     request = data.get("request")
     if "request" in data:
         if not isinstance(request, dict) or not isinstance(request.get("messages"), list):
@@ -94,6 +96,7 @@ def load_cases(root: Path, assumptions: Iterable[str]) -> list[Case]:
                 request=data["request"],
                 expected=data["expected"],
                 expected_read_path=data.get("expected_read_path"),
+                current_file=data.get("current_file"),
             )
         )
     return cases

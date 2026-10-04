@@ -292,11 +292,14 @@ def test_read_timeout_between_chunks(tokli: Start, upstream: FakeUpstream) -> No
 
     upstream.responder = responder
     content = json.dumps({**json.loads(body("string_content")), "stream": True}).encode()
+    # Start Tokli first: the bound concerns the read timeout, not start-up. With the clock
+    # started before `tokli(...)`, a slow Windows runner's start-up made this fail once (9 s).
+    url = tokli("upstreams.anthropic.read_timeout_s=0.5").url + "/anthropic/v1/messages"
     start = time.monotonic()
     got = b""
     with httpx.stream(
         "POST",
-        tokli("upstreams.anthropic.read_timeout_s=0.5").url + "/anthropic/v1/messages",
+        url,
         content=content,
         headers=CLIENT_HEADERS,
         timeout=10,

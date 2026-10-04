@@ -15,7 +15,9 @@ from tests.unit.test_resume_pruning import FILE, body, human
 
 HEADERS = {"x-api-key": "sk-ant-api03-TOKLI-CANARY", "anthropic-version": "2023-06-01"}
 Start = Callable[..., Tokli]
-ON = ("compressors.edit_args_on_resume.enabled=true",)
+# The wall-clock request budget (CC-014) is lifted: on a slow CI runner it skipped the pruner
+# (macOS / 3.11, run 37228678522), which says nothing about the behaviour under test.
+ON = ("compressors.edit_args_on_resume.enabled=true", "compression.request_budget_ms=100000")
 
 
 def send(t: Tokli, data: dict[str, Any]) -> dict[str, Any]:

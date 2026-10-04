@@ -288,12 +288,12 @@ async def _call(
     answer = _answer(payload)
     if payload.get("stop_reason") == "refusal":
         return "error", tokens, answer, status, _error("refusal"), stop
-    if case.checker in TOOL_CHECKERS:  # S8c: a tool call can be the answer (`answer_or_read`)
+    if case.checker in TOOL_CHECKERS:  # S8c/S8e: a tool call can be the answer
         calls = _tool_calls(payload)
         if not answer and not calls:
             return "error", tokens, answer, status, _error("empty_answer"), stop
         seen = answer + "".join(f"\n[tool_use {name} {json.dumps(args)}]" for name, args in calls)
-        passed = TOOL_CHECKERS[case.checker](answer, case.expected, calls, case.expected_read_path)
+        passed = TOOL_CHECKERS[case.checker](answer, calls, case)
         return ("pass" if passed else "fail"), tokens, seen, status, None, stop
     if not answer:
         return "error", tokens, answer, status, _error("empty_answer"), stop

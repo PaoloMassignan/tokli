@@ -582,6 +582,170 @@ def reread_case(rng: random.Random, n: int) -> dict[str, Any]:
     }
 
 
+# -- re-read families (S8e): read, edit one function, read again; then work on another function --
+
+CASE_SET_S8E = "2026-10-04.3"
+REREAD_EDIT_TOOLS = [tool for tool in REREAD_TOOLS if tool["name"] in ("Read", "Edit")]
+
+
+def reread_module(rng: random.Random, marker: str, marked: int) -> tuple[list[str], dict[str, str]]:
+    """A synthetic module of 36 functions; returns its lines and each function's default factor."""
+    lines = ['"""Synthetic service module."""', "", "import math", ""]
+    factors: dict[str, str] = {}
+    for n in range(36):
+        name = f"{rng.choice(WORDS)}_{n:02d}"
+        factor = str(rng.randint(2, 99))
+        factors[name] = factor
+        lines += [
+            f"def {name}(value, factor={factor}):",
+            f'    """Compute the {rng.choice(WORDS)} score."""',
+            f"    base = value * factor + {rng.randint(1, 99)}",
+        ]
+        if n == marked:
+            lines.append(f"    timeout = {rng.randint(10, 60)}  # {marker}")
+        lines += [
+            f"    if base > {rng.randint(100, 900)}:",
+            "        base = math.sqrt(base)",
+            "    return base",
+            "",
+        ]
+    return lines, factors
+
+
+def reread_history(rng: random.Random, n: int) -> dict[str, Any]:
+    marker = f"MARK-{rng.randint(1000, 9999)}"
+    marked = rng.choice([3, 4, 5, 30, 31, 32])  # far from the edited function (17)
+    old, factors = reread_module(rng, marker, marked)
+    path = f"service_{rng.choice(WORDS)}_{n:02d}.py"
+    edited = next(i for i, line in enumerate(old) if line.startswith("def ") and "_17(" in line)
+    target = edited + 2
+    new = [*old[:target], old[target], "    base = round(base, 3)", *old[target + 1 :]]
+    function = old[edited].split("(")[0][4:]
+    numbered_old = "\n".join(f"{k:>6}\t{line}" for k, line in enumerate(old, start=1))
+    numbered_new = "\n".join(f"{k:>6}\t{line}" for k, line in enumerate(new, start=1))
+    messages: list[dict[str, Any]] = [
+        {"role": "user", "content": f"Look at {path}."},
+        {
+            "role": "assistant",
+            "content": [
+                {
+                    "type": "tool_use",
+                    "id": "toolu_01REREAD1",
+                    "name": "Read",
+                    "input": {"file_path": path},
+                }
+            ],
+        },
+        {
+            "role": "user",
+            "content": [
+                {"type": "tool_result", "tool_use_id": "toolu_01REREAD1", "content": numbered_old}
+            ],
+        },
+        {"role": "assistant", "content": "I have read it."},
+        {
+            "role": "user",
+            "content": f"In {function}, round base to 3 decimals right after it is computed.",
+        },
+        {
+            "role": "assistant",
+            "content": [
+                {
+                    "type": "tool_use",
+                    "id": "toolu_01REEDIT1",
+                    "name": "Edit",
+                    "input": {
+                        "file_path": path,
+                        "old_string": old[target],
+                        "new_string": old[target] + "\n    base = round(base, 3)",
+                    },
+                }
+            ],
+        },
+        {
+            "role": "user",
+            "content": [
+                {
+                    "type": "tool_result",
+                    "tool_use_id": "toolu_01REEDIT1",
+                    "content": "The file has been updated.",
+                }
+            ],
+        },
+        {
+            "role": "assistant",
+            "content": [
+                {
+                    "type": "tool_use",
+                    "id": "toolu_01REREAD2",
+                    "name": "Read",
+                    "input": {"file_path": path},
+                }
+            ],
+        },
+        {
+            "role": "user",
+            "content": [
+                {"type": "tool_result", "tool_use_id": "toolu_01REREAD2", "content": numbered_new}
+            ],
+        },
+        {"role": "assistant", "content": "The change is in place."},
+    ]
+    asked = rng.choice([name for name in factors if name.endswith(("_02", "_06", "_28", "_33"))])
+    return {
+        "path": path,
+        "messages": messages,
+        "marker": marker,
+        "marker_line": next(line for line in new if marker in line),
+        "current": "\n".join(new) + "\n",
+        "asked": asked,
+        "factor": factors[asked],
+    }
+
+
+def reread_fact_case(rng: random.Random, n: int) -> dict[str, Any]:
+    history = reread_history(rng, n)
+    question = (
+        f"In {history['path']}, what is the default value of factor in {history['asked']}? "
+        "Reply with the number only."
+    )
+    return {
+        "case_set": CASE_SET_S8E,
+        "family": "reread_fact_lookup",
+        "assumption": "reads_partial_reference",
+        "checker": "answer_or_read",
+        "request": {
+            "max_tokens": 1024,
+            "tools": REREAD_EDIT_TOOLS,
+            "messages": [*history["messages"], {"role": "user", "content": question}],
+        },
+        "expected": history["factor"],
+        "expected_read_path": history["path"],
+    }
+
+
+def reread_edit_case(rng: random.Random, n: int) -> dict[str, Any]:
+    history = reread_history(rng, n)
+    task = (
+        f"Now, in {history['path']}, change the line with {history['marker']} so that the timeout "
+        "is 90. Use the Edit tool directly."
+    )
+    return {
+        "case_set": CASE_SET_S8E,
+        "family": "reread_edit_anchor",
+        "assumption": "quotes_from_reference_target",
+        "checker": "edit_anchor",
+        "request": {
+            "max_tokens": 1024,
+            "tools": REREAD_EDIT_TOOLS,
+            "messages": [*history["messages"], {"role": "user", "content": task}],
+        },
+        "expected": history["marker_line"],
+        "expected_read_path": history["path"],
+        "current_file": history["current"],
+    }
+
+
 def main() -> None:
     import yaml
 
@@ -595,6 +759,8 @@ def main() -> None:
         ("log_fact_lookup", log_fact_case, 2507),
         ("log_verbatim_quote", log_quote_case, 2508),
         ("reread_after_pruned_edit", reread_case, 2509),
+        ("reread_fact_lookup", reread_fact_case, 2510),
+        ("reread_edit_anchor", reread_edit_case, 2511),
     )
     for family, make, seed in families:
         rng = random.Random(seed)

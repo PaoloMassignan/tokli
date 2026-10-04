@@ -290,8 +290,17 @@ def test_reference_families_exist_for_the_pruner() -> None:
     spec = next(c.spec for c in REGISTRY if c.spec.id == "duplicate_tool_results")
     cases = load_cases(CASES, spec.assumptions)
     counts = {f: sum(1 for c in cases if c.family == f) for f in {c.family for c in cases}}
-    assert counts == {"reference_fact_lookup": 22, "reference_verbatim_quote": 22}
-    assert {c.checker for c in cases} == {"exact_value", "verbatim_line"}
+    # S8e added `reread_edit_anchor` for `quotes_from_reference_target`; the duplicate pruner
+    # does not change those cases (the two reads differ), so a run reports them `not_exercised`.
+    assert counts == {
+        "reference_fact_lookup": 22,
+        "reference_verbatim_quote": 22,
+        "reread_edit_anchor": 22,
+    }
+    assert {c.checker for c in cases if c.family.startswith("reference_")} == {
+        "exact_value",
+        "verbatim_line",
+    }
 
 
 # -- S8a-1: grep and log families (SPEC 012) -----------------------------------------------------
@@ -464,3 +473,83 @@ def test_reread_cases_exercise_the_pruner() -> None:
         result = engine.run(request, view_of(request), FakeCounter(), None)
         assert result.patches, case.case_id
         assert case.expected not in "".join(p.new_text for p in result.patches)
+
+
+# -- S8e: `edit_anchor` and the re-read families (SPEC 012) ----------------------------------------
+
+
+def test_checker_edit_anchor() -> None:
+    """QE-020 `edit_anchor`: an `Edit` of the case's file whose `old_string` occurs exactly once
+    in the current file and contains the expected line."""
+    from tokli.eval.checkers import edit_anchor
+
+    current = "def a():\n    timeout = 30  # MARK\n    return 1\n\ndef b():\n    return 1\n"
+    line = "    timeout = 30  # MARK"
+    edit = lambda old: [("Edit", {"file_path": "m.py", "old_string": old, "new_string": "x"})]  # noqa: E731
+    assert edit_anchor("", line, edit(line), "m.py", current)
+    assert edit_anchor("", line, edit("def a():\n" + line), "m.py", current)
+    assert not edit_anchor("", line, edit("    return 1"), "m.py", current)  # not unique
+    assert not edit_anchor(
+        "", line, edit("    timeout = 30  # MARK  "), "m.py", current
+    )  # not found
+    assert not edit_anchor("", line, edit("     2\t" + line), "m.py", current)  # with a line number
+    assert not edit_anchor(
+        "", line, [("Edit", {"file_path": "other.py", "old_string": line})], "m.py", current
+    )
+    assert not edit_anchor(line, line, [], "m.py", current)  # text alone is not an edit
+
+
+def test_edit_anchor_case_needs_its_fields() -> None:
+    case = {
+        "case_set": "x",
+        "family": "reread_edit_anchor",
+        "assumption": "quotes_from_reference_target",
+        "checker": "edit_anchor",
+        "request": {"messages": []},
+        "expected": "    timeout = 30",
+        "expected_read_path": "m.py",
+    }
+    assert any("current_file" in e for e in lint_case(case, "c"))
+    assert lint_case({**case, "current_file": "x"}, "c") == []
+
+
+def test_reread_families_exist_for_the_pruner() -> None:
+    spec = next(c.spec for c in REGISTRY if c.spec.id == "reread_by_reference")
+    cases = load_cases(CASES, spec.assumptions)
+    counts = collections_counter(c.family for c in cases)
+    assert counts["reread_fact_lookup"] == 22 and counts["reread_edit_anchor"] == 22
+    assert {c.checker for c in cases if c.family == "reread_edit_anchor"} == {"edit_anchor"}
+    assert all(
+        c.current_file and c.expected_read_path for c in cases if c.family == "reread_edit_anchor"
+    )
+
+
+def collections_counter(items):  # type: ignore[no-untyped-def]
+    import collections
+
+    return collections.Counter(items)
+
+
+def test_reread_families_exercise_reread_by_reference() -> None:
+    """Every case of both families has a re-read that the pruner sends by reference."""
+    import json as _json
+
+    from tests.helpers import FakeCounter, view_of
+    from tests.unit.test_engine import settings_for
+    from tokli.compression.engine import Engine
+    from tokli.compressors.reread_by_reference import RereadByReference
+    from tokli.domain.models import SegmentKind
+    from tokli.protocols.anthropic_messages import parse
+
+    kinds = frozenset({SegmentKind.TOOL_RESULT, SegmentKind.USER_TEXT})
+    engine = Engine([RereadByReference()], settings_for("reread_by_reference"))
+    cases = [
+        c
+        for c in load_cases(CASES, ("reads_partial_reference", "quotes_from_reference_target"))
+        if c.family.startswith("reread_")
+    ]
+    assert len(cases) == 44
+    for case in cases:
+        request = parse(_json.dumps({**case.request, "model": "m"}).encode(), mutable_kinds=kinds)
+        result = engine.run(request, view_of(request), FakeCounter(), None)
+        assert any("[tokli: lines" in p.new_text for p in result.patches), case.case_id

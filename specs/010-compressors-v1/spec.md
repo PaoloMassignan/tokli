@@ -24,6 +24,7 @@ Every compressor here is a registry entry satisfying SPEC 009. Common engine-lev
 | `superseded_tool_results` | SELECTIVE | none | request | **no** | supersession stub | switched off | no | S8a-3 |
 | `diff_context_trim` | SELECTIVE | none | segment | yes | omission note | switched off | no | S8a-2 |
 | `log_filter` | SELECTIVE | none | segment | yes | omission note | switched off | no | S8a-1 |
+| `reread_by_reference` | LOSSLESS | reference | request | yes | line-range notes | kept on | **yes**: smoke record `no_measurable_damage` on `claude-opus-5-5` (2026-10-04; CC-020) | S8e (SPEC 019) |
 | `edit_args_on_resume` | SELECTIVE | none | request | **no** (prunes only when the cache is rewritten anyway) | edit-omitted stub | switched off | no | S8c (SPEC 019) |
 
 ### Assumption ids (behavioural; each is an evaluation case family in SPEC 012)
@@ -39,6 +40,7 @@ Every compressor here is a registry entry satisfying SPEC 009. Common engine-lev
 | `outdated_content_not_needed` | Once a newer full view of a resource exists, the model does not need the older one. | `superseded_tool_results` |
 | `context_lines_not_needed` | Unchanged diff context beyond `max_context` lines is not needed, and the diff is not applied mechanically from the transformed text (hunk line counts no longer match). | `diff_context_trim` |
 | `omitted_log_lines_not_needed` | Repeated INFO/NOTICE lines beyond the first per pattern, and unsampled DEBUG/TRACE lines, are not needed for the task. | `log_filter` |
+| `reads_partial_reference` | The model reads a re-read file as its changed lines plus the earlier lines that the notes name. | `reread_by_reference` (S8e) |
 | `edit_content_not_needed` | Hours after writing or editing a file, the agent does not need the exact text it wrote; when it needs the file it reads it again. | `edit_args_on_resume` (S8c) |
 
 Default `compression.verbatim_tools` (HEURISTIC, config data): `["Read", "Bash", "shell",

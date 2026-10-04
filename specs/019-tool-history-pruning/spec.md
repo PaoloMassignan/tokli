@@ -3,6 +3,7 @@
 Status: Draft (revised in Phase 0.1) · Slices: S4 (`duplicate_tool_results`, LOSSLESS by reference), S8 (`superseded_tool_results`, SELECTIVE)
 Approved for S4 (2026-10-03): PR-001…PR-005, PR-009 (never set by duplicates), PR-010…PR-013, PR-015. PR-006…PR-008, PR-014 in S8.
 Approved for S8c (2026-10-04): `edit_args_on_resume`, PR-005 (as changed), PR-020…PR-026, AC-PR-11…AC-PR-16; ADR 0012.
+Approved for S8e (2026-10-04): `reread_by_reference`, PR-030…PR-036, AC-PR-20…AC-PR-26; ADR 0013.
 Related: SPEC 001 (canonical model), 009 (compression core, preservation model), 010 (catalogue), 012 (evaluation), PHASE0_1_REVIEW.md
 
 ## Purpose
@@ -126,6 +127,13 @@ saving is at least `pruning.superseded_min_saving_tokens` (default 8,000).
 | PR-013 | THE `duplicate_tool_results` pruner SHALL consider TOOL_RESULT segments of tools listed in `verbatim_tools` (CC-021). |
 | PR-015 | THE `duplicate_tool_results` stub SHALL keep every protected span of the replaced text, verbatim and in order, after the stub line, AND the pruner SHALL consider only tool results whose whole content is one text segment, as stub and as target. `reference_stubs` (TC-014) SHALL count the accepted stubs of the forwarded request. (S4 review P6, P7, A5.) |
 | PR-014 | THE shell-command classification for Codex tools SHALL be exactly the rules in "Shell-command classification" below. A command that matches no rule SHALL get `action: other`. New rules SHALL be added only by a spec change with a test case per rule. |
+| PR-030 | THE `reread_by_reference` pruner SHALL be LOSSLESS with equivalence `reference`, request scope, `prefix_stable: true`, and SHALL be off by default until a smoke record allows its default (CC-020). |
+| PR-031 | WHEN a result of a tool in `pruning.reread_tools` names a file path for which an earlier record of the same request holds original text (a whole result of a re-read tool, or the `content` of a `Write`), THE pruner SHALL take the latest such record as source and SHALL replace each run of at least `pruning.reread_min_run_lines` consecutive numbered lines whose contents equal, in order, consecutive source lines with one note in the exact format of this section, keeping every other line verbatim and in place. |
+| PR-032 | THE pruner SHALL apply only to results whose numbered lines all carry the prefix `"{n:>6}\t"` with consecutive numbers; otherwise it SHALL report `not_applicable(nonstandard_numbering)`. Without a source it SHALL report `not_applicable(no_source)`, and without a qualifying run `not_applicable(no_run)`. |
+| PR-033 | THE pruner SHALL NOT use as source a text that a reference pruner changed, so that notes never point to notes. |
+| PR-034 | THE pruner's decode SHALL rebuild the original result byte for byte from the notes and the source, AND every source SHALL be a reference target under CC-019. |
+| PR-035 | THE pruner SHALL NOT consider a result or a source with more than `pruning.reread_max_lines` lines, and its time SHALL grow at most linearly with the lines of a typical re-read (a run-dominated alignment). |
+| PR-036 | THE `reread_by_reference` pruner SHALL keep every protected span of the result verbatim and in order, and SHALL be exempt from `verbatim_tools` under CC-021. |
 | PR-020 | THE `edit_args_on_resume` pruner SHALL be SELECTIVE, request scope, `prefix_stable: false`, off by default, and SHALL run only when enabled (CC-002). |
 | PR-021 | WHEN a request's conversation (key per ADR 0012) was last seen more than `pruning.resume_after_s` seconds ago, or is not known to Tokli, THE SYSTEM SHALL treat the request as a resume; otherwise it SHALL NOT. |
 | PR-022 | AT a resume, THE `edit_args_on_resume` pruner SHALL replace with the stub every argument string listed in `pruning.resume_edit_fields` for its tool, of at least `pruning.resume_min_tokens` tokens, in every tool call followed by at least `pruning.resume_min_age_turns` human turns, and SHALL keep every other key and value, the call id and the block order. |
@@ -173,6 +181,44 @@ Claims:
 | The agent does not need, hours later, the exact text it wrote, and re-reads the file when it does (`edit_content_not_needed`) | ASSUMPTION | smoke family `reread_after_pruned_edit` (SPEC 012) |
 | The provider accepts a history whose edit arguments were changed | ASSUMPTION | E10(a), before code |
 
+## `reread_by_reference` — LOSSLESS (equivalence: reference, S8e)
+
+Rationale: TOKLI_EVIDENCE §2 (repeated reads; E10(e)).
+- In the developer's sessions, 12.7 % of the `Read` volume can be rebuilt exactly from the
+  request: the last read with the agent's edits applied, or the agent's own `Write`.
+- A re-read that sends only its changed lines and refers to the earlier text for the unchanged
+  runs kept every edit anchor exact, with no refusal (E10(e)).
+
+**Rule (ADR 0013).** For a result of a tool in `pruning.reread_tools` (default `Read`) that names
+a file path, the **source** is the latest earlier record of the same normalised path in the same
+request whose text is still original:
+- a whole result of a re-read tool;
+- the `content` argument of a `Write`.
+
+Each run of at least `pruning.reread_min_run_lines` (default 5) consecutive numbered lines whose
+contents equal, in order, consecutive lines of the source is replaced by one note. Every other
+line stays verbatim in place, including `<system-reminder>` blocks.
+
+**Note** (one line per replaced run):
+```text
+[tokli: lines <a>-<b> unchanged — identical to lines <c>-<d> of the read in call <id>]
+```
+For a `Write` source: `… identical to lines <c>-<d> of the content written in call <id>]`.
+
+**Decode:** each note is replaced by the source's lines `c`-`d`, renumbered `a`-`b` with the
+`"{n:>6}\t"` prefix. The whole-request decode restores every original text.
+
+Claims:
+
+| Claim | Type | Backed by |
+|---|---|---|
+| Whole-request decode restores every original result byte for byte | PROVEN | `prop_reread_by_reference_decodes_whole_request` |
+| Sources precede the result, are original, and stay intact (CC-019) | PROVEN | `test_reread_source_integrity_enforced` |
+| Prefix stability; structure unchanged | PROVEN | `test_reread_prefix_stable_across_turns` |
+| The model reads the current file from the changed lines plus the referenced earlier lines (`reads_partial_reference`) | ASSUMPTION | smoke family `reread_fact_lookup` |
+| The agent copies edit anchors for unchanged lines exactly from the referenced earlier text (`quotes_from_reference_target`) | ASSUMPTION | smoke family `reread_edit_anchor` (E10(e): 20/20) |
+
+## Default tool semantics (config data, revisable)
 
 | Client | Tool | Resource argument | Action |
 |---|---|---|---|
@@ -218,6 +264,13 @@ superseding.
 - AC-PR-8 (PR-012): read(F) → read(F) identical → full read(F) with different content, with both pruners on: the second read is a duplicate stub naming the first; `superseded_tool_results` is rejected on the first read with `reference_target_modified`; the whole-request decode restores every original text.
 - AC-PR-9 (PR-013): a duplicate `Read` result (a tool in `verbatim_tools`) is stubbed.
 - AC-PR-10 (PR-014): a table-driven test covers every rule row, each rejection in step 2, and argv vs string forms (bash/PowerShell wrappers, Windows and POSIX paths).
+- AC-PR-20 (PR-031): read(F) → edit one line of F → read(F): the second read keeps the changed lines and becomes two notes with the right line ranges (the ranges shift after an inserted line); the whole-request decode equals the original.
+- AC-PR-21 (PR-031): write(F, text) → read(F) unchanged except one line: the notes name the `Write` call ("content written").
+- AC-PR-22 (PR-032): a result with another numbering, or no earlier record of F, is not changed, with the stated reason.
+- AC-PR-23 (PR-033): read1(F) → read2(F) referenced → read3(F): the notes of read3 name read1, never read2.
+- AC-PR-24 (PR-034, CC-019): a later compressor that would change a source is rejected with `reference_target_modified`.
+- AC-PR-25 (PR-036): a `<system-reminder>` appended to the re-read stays verbatim; `Read` (a verbatim tool) is handled.
+- AC-PR-26 (PR-035): the alignment of a 5,000-line and a 50,000-line re-read with one changed line keeps a time ratio of at most 15 (best of 3), and results over `reread_max_lines` are skipped.
 - AC-PR-11 (PR-021, PR-022): a conversation with a `Write` and an `Edit` at turn 1 and six more human turns; with a clock two hours after the previous request → `content`, `old_string` and `new_string` are stubbed, `file_path`, ids and structure are unchanged. One hour minus a second → nothing changes.
 - AC-PR-12 (PR-023): after a resume, a request one minute later with one more turn → the forwarded body before the new turn is byte-identical to the previous forwarded body, and no newly old call is pruned.
 - AC-PR-13 (PR-021): an unknown conversation is a resume (S8c review P5).
@@ -240,7 +293,10 @@ superseding.
 `test_duplicate_stub_keeps_protected_spans` · `test_multi_block_results_not_pruned` · `test_reference_stubs_counted` ·
 `test_resume_pruning_keeps_structure_and_paths` · `test_resume_pruning_stable_between_resumes` ·
 `test_resume_pruning_only_at_resume_and_old_calls` · `test_unknown_conversation_is_resume` ·
-`test_conversation_store_bounded_and_memory_only` · `test_human_turn_definition` · `test_resume_pruning_off_by_default`
+`test_conversation_store_bounded_and_memory_only` · `test_human_turn_definition` · `test_resume_pruning_off_by_default` ·
+`prop_reread_by_reference_decodes_whole_request` · `test_reread_notes_after_edit` · `test_reread_source_write` ·
+`test_reread_not_applicable_reasons` · `test_reread_never_chains_notes` · `test_reread_source_integrity_enforced` ·
+`test_reread_keeps_reminders_and_verbatim_tool` · `test_reread_linear_time` · `test_reread_prefix_stable_across_turns`
 
 ## Open questions
 - Q14: How much of the pruning saving measured in E5a (TOKLI_EVIDENCE §2) came from Edit/Write **arguments** rather than results? It needs a per-part count. E5b records tokens by segment kind, including TOOL_CALL_ARGS (read-only).

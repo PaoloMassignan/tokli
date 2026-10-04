@@ -23,8 +23,8 @@ model's reasoning, or anything in the response.
 - **Segment compressors** look at one segment at a time: `json_minify`, `search_group`,
   `dictionary`, `diff_context_trim`, `log_filter`.
 - **Request compressors ("pruners")** look at the whole tool history of the request:
-  `duplicate_tool_results`, `superseded_tool_results`, `edit_args_on_resume`. They never delete a
-  tool call or a message.
+  `duplicate_tool_results`, `reread_by_reference`, `superseded_tool_results`, `edit_args_on_resume`.
+  They never delete a tool call or a message.
   - The first two replace the *content* of a tool result with a short **stub**.
   - `edit_args_on_resume` replaces old strings inside the *arguments* of `Write`/`Edit` calls.
 
@@ -80,6 +80,7 @@ not count (S8a SCR-002).
 | `json_minify` | Removes indentation and line breaks from JSON | lossless · structural | on | no measurable damage (2026-10-03) | built (S1) |
 | `duplicate_tool_results` | Replaces a tool result identical to an earlier one with a one-line pointer | lossless · by reference | on | no measurable damage (E11, 2026-10-03) | built (S4) |
 | `search_group` | Writes the file path once for a run of search matches in the same file | lossless · exact | off | no measurable damage (v2, 2026-10-04) | built (S8a-1) |
+| `reread_by_reference` | When a file is read again after a change, sends only the changed lines and points to the earlier read for the rest | lossless · by reference | **on** | no measurable damage (2026-10-04) | built (S8e) |
 | `log_filter` | Keeps every error, warning and unlabelled log line, and drops repeated routine lines | selective | off (never on by default in v1) | no measurable damage (2026-10-04) | built (S8a-1) |
 | `dictionary` | Replaces long phrases repeated in a segment with short symbols plus a legend | lossless · exact | off | — | planned (S8a-2) |
 | `diff_context_trim` | Keeps every changed line of a diff, and only 1 unchanged line around each change | selective | off | — | planned (S8a-2) |
@@ -214,6 +215,68 @@ attention to it. This is exactly what the evaluation measures.
 "unchanged" message, so the real gain is mostly on repeated shell output, and it is modest (§12).
 
 ---
+
+## 4a. `reread_by_reference` (S8e)
+
+**In one sentence.** When the agent reads a file again after changing a line of it, only the
+changed lines are sent; every unchanged run of lines becomes a one-line pointer to the same lines
+in the earlier read.
+
+**Problem.** After editing a method, agents read the whole file again to check it. Claude Code
+skips a re-read only when the file is unchanged, so after any edit the whole file is resent, and
+then resent again on every turn. In the developer's sessions, 12.7 % of what `Read` returns
+could be rebuilt exactly from the conversation itself.
+
+**How it works.**
+1. **Source:** for a `Read` of a file that the conversation already holds (an earlier `Read`, or
+   the content of the agent's own `Write`), the pruner takes the latest copy that is still
+   original. It never takes a re-read that was itself turned into pointers.
+2. **Comparison:** it compares the new read with that copy line by line. Each run of at least 5
+   identical lines becomes one note; changed lines stay in full, with their line numbers.
+3. **What stays:** anything else in the result, such as a `<system-reminder>` that Claude Code
+   appends, stays verbatim.
+
+**Example** (one line inserted after line 30 of a 60-line file):
+
+```text
+[tokli: lines 1-30 unchanged — identical to lines 1-30 of the read in call toolu_07]
+    31	    base = round(base, 3)
+[tokli: lines 32-61 unchanged — identical to lines 31-60 of the read in call toolu_07]
+```
+
+**Proven.**
+- Replacing every note with the lines it names rebuilds the original read byte for byte.
+- At run time Tokli checks that the earlier copy is still there and unchanged (reference
+  integrity).
+- The decision is made when the re-read first appears and never changes, so the provider cache
+  stays valid.
+
+**Assumed.**
+- The model reads the file as "changed lines plus the referenced earlier lines"
+  (`reads_partial_reference`).
+- When it must quote an unchanged line exactly, for example as an edit anchor, it copies it
+  correctly from the earlier read (`quotes_from_reference_target`).
+
+Experiment E10(e) on `claude-opus-5-5`: 20 of 20 edits with exact anchors, no refusal, and a
+request 42 % smaller.
+
+**Does not run when.**
+- There is no earlier copy of the file in the request.
+- No run of 5 identical lines exists.
+- The line numbering is not the standard `cat -n` one.
+- The file is above 20,000 lines.
+
+**Evaluation.** Smoke, 2026-10-04: no measurable damage in all three families (re-read facts,
+exact edit anchors, verbatim quotes), no refusal, 40 % fewer input tokens on those cases. It is
+on by default.
+
+**Settings.** `compressors.reread_by_reference.enabled` (on),
+`pruning.reread_tools` (`Read`), `pruning.reread_min_run_lines` (5), `pruning.reread_max_lines`
+(20,000).
+
+**Why this works when pruning did not.** Every form that **removed** information from the
+conversation drew provider refusals (S8c, S8d). This one removes nothing: the earlier read is
+still in the request, as with `duplicate_tool_results`.
 
 ## 5. `search_group`
 

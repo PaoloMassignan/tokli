@@ -141,6 +141,9 @@ def _compression(config: EffectiveConfig, selector: Selector) -> _Compression:
             resume_after_s=settings.pruning.resume_after_s,
             resume_min_age_turns=settings.pruning.resume_min_age_turns,
             resume_min_tokens=settings.pruning.resume_min_tokens,
+            reread_tools=tuple(settings.pruning.reread_tools),
+            reread_min_run_lines=settings.pruning.reread_min_run_lines,
+            reread_max_lines=settings.pruning.reread_max_lines,
         ),
         EngineSettings(
             enabled=enabled,

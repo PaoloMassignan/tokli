@@ -191,6 +191,13 @@ Evidence codes:
 | PR-013 | verbatim tools | AC-PR-9 | `test_duplicate_pruning_applies_to_verbatim_tools` |
 | PR-015 | Claude Code reminders inside results; ambiguous multi-block results (S4 review P6, P7, A5) | — | `test_duplicate_stub_keeps_protected_spans`, `test_multi_block_results_not_pruned`, `test_reference_stubs_counted`, `test_duplicate_require_same_call_option`, `test_pruner_records_why_it_did_not_stub` |
 | PR-014 | shell-command classification defined in the spec; Codex Windows/Unix shapes (MD-13) | AC-PR-10 | `test_shell_command_classification_rules` |
+| PR-030 | lossless by reference, prefix-stable; default only after evaluation (CC-020) | AC-PR-20 | `test_reread_on_by_default_and_declared`, `test_reread_by_reference_on_by_default`, `test_registry_default_enabled_requires_eval_record` |
+| PR-031 | E10(e): a re-read by reference keeps edit anchors exact; 12.7 % of `Read` volume rebuildable | AC-PR-20, AC-PR-21 | `test_reread_notes_after_edit`, `test_reread_source_write`, `test_reread_by_reference_end_to_end` |
+| PR-032 | only the standard numbering can be decoded | AC-PR-22 | `test_reread_not_applicable_reasons` |
+| PR-033 | notes never point to notes (as for duplicates) | AC-PR-23 | `test_reread_never_chains_notes` |
+| PR-034 | lossless proven by decode; sources intact (CC-019) | AC-PR-24 | `prop_reread_by_reference_decodes_whole_request`, `test_reread_source_integrity_enforced` |
+| PR-035 | bounded cost on large files | AC-PR-26 | `test_reread_linear_time`, `test_reread_not_applicable_reasons` (too_large) |
+| PR-036 | reminders kept; exempt from verbatim tools as a reference (CC-021) | AC-PR-25 | `test_reread_keeps_reminders_and_verbatim_tool` |
 | PR-020 | SELECTIVE, off by default (E5b-lite; S8c review P4) | AC-PR-14 | `test_resume_pruning_off_by_default`, `test_resume_pruning_off_by_default_end_to_end` |
 | PR-021 | prune only when the cache is rewritten anyway (E5b-lite: 76 % of cache writes follow pauses over an hour) | AC-PR-11, AC-PR-13 | `test_resume_pruning_only_at_resume_and_old_calls`, `test_unknown_conversation_is_resume`, `test_conversation_key` |
 | PR-022 | E10(a): the provider accepts stubbed edit arguments and the model re-reads | AC-PR-11, AC-PR-16 | `test_resume_pruning_keeps_structure_and_paths`, `test_resume_pruning_only_at_resume_and_old_calls` |
@@ -252,14 +259,14 @@ Evidence codes:
 | QE-010 | same; no surprise spend | AC-QE-4 | `test_eval_stops_at_call_cap` (S2.5); `test_eval_stops_at_cost_cap` (S6) |
 | QE-011 | same; never automatic | AC-QE-4 | `test_eval_never_auto_starts`, `test_eval_requires_max_calls_without_pricing`, import contract `tokli.http \| tokli.eval` |
 | QE-012 | R01§8: behaviour-dependent defaults arrive in S4, before the S8 harness; S2.5 review A1–A3 | AC-QE-5 | `test_smoke_arms_differ_only_in_candidate`, `test_harness_uses_real_pipeline`, `test_case_not_exercised_is_excluded`, `test_cases_load_by_assumption`, `test_eval_temperature_default_omits_the_parameter`, `test_eval_temperature_zero_by_default` (S2.5 SCR-001) |
-| QE-013 | R01§8: one case format for smoke and full tiers; test-data hygiene | AC-QE-6 | `test_eval_cases_lint`, `test_s8a1_families_exist`, `test_s8a1_cases_exercise_their_compressor` (S8a-1), `test_s8a1_cases_do_not_exercise_the_other_compressor` (S8a SCR-003) |
+| QE-013 | R01§8: one case format for smoke and full tiers; test-data hygiene | AC-QE-6 | `test_eval_cases_lint`, `test_s8a1_families_exist`, `test_s8a1_cases_exercise_their_compressor` (S8a-1), `test_s8a1_cases_do_not_exercise_the_other_compressor` (S8a SCR-003); S8e: `test_reread_families_exist_for_the_pruner`, `test_reread_families_exercise_reread_by_reference` |
 | QE-014 | R01§8 deterministic recording of configuration, saving and outcome | AC-QE-3 | `test_harness_report_provenance` |
 | QE-015 | R01§8: explicit, honest verdict rule | AC-QE-5 | `test_smoke_verdict_rule`, `test_smoke_insufficient_data`, `test_unexercised_family_does_not_enter_verdict`, `test_assumption_without_exercised_family_is_insufficient` (S8a SCR-002) |
 | QE-016 | R01§7: CC-020 needs a machine-readable record | AC-QE-7 | `test_eval_record_schema_and_provisional_rule`, `test_eval_record_invalidated_by_version_bump`, `test_harness_report_provenance`, `test_registry_default_enabled_requires_eval_record` |
 | QE-017 | the harness must prove it can detect damage | AC-QE-2 | `test_smoke_harness_self_test`, `test_smoke_harness_self_test_reference_families`, `test_reference_families_exist_for_the_pruner` |
 | QE-018 | no price book before S6; S2.5 review X1, P2 | AC-QE-8 | `test_eval_requires_max_calls_without_pricing`, `test_eval_requires_confirmation_or_yes`, `test_eval_stops_at_call_cap` |
 | QE-019 | the proxy never holds credentials; S2.5 review X2, P3; ADR 0008 | AC-QE-8 | `test_eval_api_key_from_named_env_only`, `test_eval_never_writes_the_key`, `test_eval_sends_key_only_as_header` |
-| QE-020 | H23: checkers that cannot hide removed content; S2.5 review A5; S4 P9 | AC-QE-8 | `test_checker_exact_value`, `test_checker_json_structural`, `test_checker_verbatim_line`; S8c: `test_checker_answer_or_read`, `test_answer_or_read_case_needs_a_read_path`, `test_answer_or_read_counts_a_read_call` |
+| QE-020 | H23: checkers that cannot hide removed content; S2.5 review A5; S4 P9 | AC-QE-8 | `test_checker_exact_value`, `test_checker_json_structural`, `test_checker_verbatim_line`; S8c: `test_checker_answer_or_read`, `test_answer_or_read_case_needs_a_read_path`, `test_answer_or_read_counts_a_read_call`; S8e: `test_checker_edit_anchor`, `test_edit_anchor_case_needs_its_fields`, `test_edit_anchor_counts_an_exact_edit` |
 
 ## Telemetry & cost (SPEC 013)
 

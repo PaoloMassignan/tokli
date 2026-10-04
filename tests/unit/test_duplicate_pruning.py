@@ -312,6 +312,7 @@ def test_chain_order_by_stage_then_id() -> None:
         "json_minify",  # normalize
         "duplicate_tool_results",  # structural
         "edit_args_on_resume",  # structural
+        "reread_by_reference",  # structural
         "search_group",  # structural
         "log_filter",  # domain
         "zz_lossy",  # semantic

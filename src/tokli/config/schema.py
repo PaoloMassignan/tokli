@@ -134,6 +134,8 @@ class CompressorsSection(BaseModel):
     log_filter: LogFilterOptions = LogFilterOptions()
     # SELECTIVE, never on by default (CC-002); SPEC 019 PR-020 (S8c).
     edit_args_on_resume: CompressorToggle = CompressorToggle(enabled=False)
+    # On by default since its smoke record (2026-10-04) says no_measurable_damage (CC-020).
+    reread_by_reference: CompressorToggle = CompressorToggle(enabled=True)
 
 
 class PruningSection(BaseModel):
@@ -155,6 +157,10 @@ class PruningSection(BaseModel):
         }
     )
     conversation_states: int = Field(default=1024, ge=1)
+    # `reread_by_reference` (S8e, SPEC 019 PR-030…PR-036, ADR 0013)
+    reread_tools: list[str] = Field(default_factory=lambda: ["Read"])
+    reread_min_run_lines: int = Field(default=5, ge=1)
+    reread_max_lines: int = Field(default=20000, ge=1)
 
 
 class ObservabilitySection(BaseModel):

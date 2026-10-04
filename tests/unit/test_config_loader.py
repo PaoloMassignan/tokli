@@ -52,6 +52,10 @@ EXAMPLES: dict[str, tuple[str, str, object]] = {
         {"Edit": ("old_string",)},  # values are frozen (lists become tuples)
     ),
     "pruning.conversation_states": ("8", "16", 16),
+    "compressors.reread_by_reference.enabled": ("true", "false", False),
+    "pruning.reread_tools": ("[Read, Cat]", '["Read"]', ("Read",)),
+    "pruning.reread_min_run_lines": ("3", "7", 7),
+    "pruning.reread_max_lines": ("100", "200", 200),
     "pruning.duplicate_min_tokens": ("10", "20", 20),
     "pruning.duplicate_require_same_call": ("true", "false", False),
     "tokens.default": ("cl100k_base", "o200k_base", "o200k_base"),
@@ -98,6 +102,10 @@ FILE_EXPECTED: dict[str, object] = {
     "pruning.resume_min_tokens": 10,
     "pruning.resume_edit_fields": {"Write": ("content",)},
     "pruning.conversation_states": 8,
+    "compressors.reread_by_reference.enabled": True,
+    "pruning.reread_tools": ("Read", "Cat"),
+    "pruning.reread_min_run_lines": 3,
+    "pruning.reread_max_lines": 100,
     "compressors.log_filter.apply_to_verbatim_tools": True,
     "pruning.duplicate_min_tokens": 10,
     "pruning.duplicate_require_same_call": True,
@@ -130,6 +138,7 @@ DEFAULT_BEHAVIOUR_JSON = {
         "search_group": {"enabled": False, "min_group_lines": 5, "apply_to_verbatim_tools": False},
         "log_filter": {"enabled": False, "debug_sample": 10, "apply_to_verbatim_tools": False},
         "edit_args_on_resume": {"enabled": False},  # S8c
+        "reread_by_reference": {"enabled": True},  # S8e: on after its smoke record
     },
     "limits": {"max_transform_bytes": 33554432, "usage_parser_buffer": 1048576},
     "pruning": {
@@ -145,6 +154,10 @@ DEFAULT_BEHAVIOUR_JSON = {
             "MultiEdit": ["edits/*/old_string", "edits/*/new_string"],
         },
         "conversation_states": 1024,
+        # S8e
+        "reread_tools": ["Read"],
+        "reread_min_run_lines": 5,
+        "reread_max_lines": 20000,
     },
     "tokens": {
         "default": "o200k_base",

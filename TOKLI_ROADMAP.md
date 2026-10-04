@@ -190,6 +190,24 @@ slice on 2026-10-04.
 - **Consequence for S8a-3** (`superseded_tool_results`): it removes outdated reads, so it must
   pass the same refusal experiment before any code.
 
+## S8e — Re-reads after an edit, sent by reference
+
+- **Requested** by the human on 2026-10-04.
+- **Pre-code experiment E10(e) passed:** a re-read that sends its changed lines and refers to the
+  earlier read for the rest kept every edit anchor exact (20/20), drew no refusal, and cut the
+  request by 42 %.
+- **Contents:**
+  - `reread_by_reference` (LOSSLESS by reference, prefix-stable, ADR 0013);
+  - the smoke families `reread_fact_lookup` and `reread_edit_anchor`, with the checker
+    `edit_anchor`.
+- **Exit:**
+  - Tier 0 tests green (decode property, integrity, prefix stability, complexity);
+  - the smoke record run by the human; on by default if it says `no_measurable_damage`;
+  - savings measured on dogfood.
+- **Accepted 2026-10-04** (`slices/S8e/COMPLETION_REPORT.md`):
+  - the smoke record says `no_measurable_damage` (no refusal; −40 % input tokens on its cases);
+  - `reread_by_reference` is on by default.
+
 ## S5 — OpenAI Responses (Codex, API key)
 
 - Adapter `openai_responses` (OR-*): `function_call_output`/`custom_tool_call_output`/`input_text`;

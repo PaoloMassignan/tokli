@@ -457,6 +457,8 @@ def reference_oracle(upstream: FakeUpstream) -> None:
     """Answers correctly only when the answer is still somewhere in the forwarded tool results."""
     expected = {}
     for case in load_cases(CASES, REF_ASSUMPTIONS):
+        if not case.family.startswith("reference_"):  # the E11 families only
+            continue
         question = case.request["messages"][-1]["content"][-1]["text"]
         expected[question] = case.expected
 
@@ -508,7 +510,7 @@ def test_smoke_harness_self_test_reference_families(tmp_path: Path, upstream: Fa
     )
     baseline = Arm("baseline", bootstrap(off, catalog=BYTE_CATALOG, version="t", telemetry=False))
     candidate = Arm("candidate", bootstrap(on, catalog=BYTE_CATALOG, version="t", telemetry=False))
-    cases = load_cases(CASES, REF_ASSUMPTIONS)
+    cases = [c for c in load_cases(CASES, REF_ASSUMPTIONS) if c.family.startswith("reference_")]
     plan = plan_run(cases, (baseline, candidate), repetitions=1, model="claude-test")
     assert plan.not_exercised == 0  # every case has a later identical read to stub
     result = asyncio.run(run_smoke(plan, (baseline, candidate), api_key=KEY, max_calls=10_000))
@@ -585,3 +587,52 @@ def test_answer_or_read_counts_a_read_call(tmp_path: Path, upstream: FakeUpstrea
     result = asyncio.run(run_smoke(plan, (baseline, candidate), api_key=KEY, max_calls=10_000))
     assert {v.verdict for v in by_family(result).values()} == {"no_measurable_damage"}
     assert all(set(c.candidate) == {"pass"} for c in result.cases)
+
+
+# -- S8e: an exact `Edit` passes `edit_anchor` through the runner ---------------------------------
+
+
+def test_edit_anchor_counts_an_exact_edit(tmp_path: Path, upstream: FakeUpstream) -> None:
+    """QE-020 `edit_anchor` through the runner: a response that edits the marker line with an
+    exact anchor is a pass."""
+    cases = load_cases(CASES, ("quotes_from_reference_target",))
+    cases = [c for c in cases if c.family == "reread_edit_anchor"]
+    assert len(cases) == 22
+    by_question = {c.request["messages"][-1]["content"]: c for c in cases}
+
+    async def responder(request: Request) -> Response:
+        body = json.loads(await request.body())
+        case = by_question[body["messages"][-1]["content"]]
+        edit = {
+            "file_path": case.expected_read_path,
+            "old_string": case.expected,
+            "new_string": "x",
+        }
+        return JSONResponse(
+            {
+                "type": "message",
+                "role": "assistant",
+                "content": [{"type": "tool_use", "id": "toolu_e", "name": "Edit", "input": edit}],
+                "stop_reason": "tool_use",
+                "usage": {"input_tokens": 100, "output_tokens": 10},
+            }
+        )
+
+    upstream.responder = responder
+    base = (
+        "compressors.json_minify.enabled=false",
+        "compressors.duplicate_tool_results.enabled=false",
+    )
+    # The baseline arm has every compressor off (QE-012); this pruner is on by default since S8e.
+    off = make_config(
+        tmp_path / "off", upstream.url, *base, "compressors.reread_by_reference.enabled=false"
+    )
+    on = make_config(
+        tmp_path / "on", upstream.url, *base, "compressors.reread_by_reference.enabled=true"
+    )
+    baseline = Arm("baseline", bootstrap(off, catalog=BYTE_CATALOG, version="t", telemetry=False))
+    candidate = Arm("candidate", bootstrap(on, catalog=BYTE_CATALOG, version="t", telemetry=False))
+    plan = plan_run(cases, (baseline, candidate), repetitions=1, model="claude-test")
+    assert plan.not_exercised == 0
+    result = asyncio.run(run_smoke(plan, (baseline, candidate), api_key=KEY, max_calls=10_000))
+    assert all(set(c.candidate) == {"pass"} and set(c.baseline) == {"pass"} for c in result.cases)

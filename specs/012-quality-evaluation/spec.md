@@ -7,6 +7,7 @@ Approved for S2.5 (2026-10-03): QE-001, QE-004, QE-005, QE-007, QE-009…QE-011 
 Approved for S4 (2026-10-03): families `reference_fact_lookup`, `reference_verbatim_quote`; checker `verbatim_line`; QE-012 as changed by S4 SCR-001.
 Approved for S8a-1 (2026-10-03): families `grep_fact_lookup`, `grep_verbatim_quote`, `log_fact_lookup`, `log_verbatim_quote`.
 Changed by S8a SCR-002 (2026-10-04): QE-015 (families with no exercised case stay out of the verdict).
+Approved for S8e (2026-10-04): families `reread_fact_lookup`, `reread_edit_anchor`; checker `edit_anchor` (QE-020).
 Approved for S8c (2026-10-04): family `reread_after_pruned_edit`; checker `answer_or_read` (QE-020).
 
 ## Purpose
@@ -59,7 +60,7 @@ QE-001, QE-004, QE-005, QE-007 and QE-009…QE-011 apply to **both tiers from S2
 | QE-017 | THE smoke harness SHALL have a CI self-test against a fake upstream with no provider calls: the identity compressor yields `no_measurable_damage`, and a destructive fake compressor yields `damage_detected`. |
 | QE-018 | UNTIL a price book exists (S6), `tokli eval smoke` SHALL require `--max-calls N` (QE-011), SHALL show the plan (cases, repetitions, arms, calls, estimated input tokens) before any provider call, and SHALL proceed only after interactive confirmation or with `--yes`. |
 | QE-019 | THE evaluation SHALL authenticate with an API key read only from the environment variable named by `--api-key-env`, and SHALL NOT read it from configuration files, store it, log it, print it, or write it to any result file. |
-| QE-020 | THE smoke checkers SHALL be: `exact_value` — the answer's last non-empty line equals the expected value after trimming whitespace and surrounding quotes or backticks; `json_structural` — the first JSON value in the answer equals the expected value as parsed JSON (key order and whitespace ignored); `verbatim_line` (S4) — the answer's last non-empty line, with surrounding quotes or backticks removed but leading whitespace kept, equals the expected line byte for byte; `answer_or_read` (S8c) — passes when the answer passes `exact_value`, or when the response is a tool call reading the file named in the case (`expected_read_path`), the honest way to recover pruned content. |
+| QE-020 | THE smoke checkers SHALL be: `exact_value` — the answer's last non-empty line equals the expected value after trimming whitespace and surrounding quotes or backticks; `json_structural` — the first JSON value in the answer equals the expected value as parsed JSON (key order and whitespace ignored); `verbatim_line` (S4) — the answer's last non-empty line, with surrounding quotes or backticks removed but leading whitespace kept, equals the expected line byte for byte; `answer_or_read` (S8c) — passes when the answer passes `exact_value`, or when the response is a tool call reading the file named in the case (`expected_read_path`), the honest way to recover pruned content; `edit_anchor` (S8e) — passes when the response holds an `Edit` of the case's file (`expected_read_path`) whose `old_string` occurs exactly once in the case's current file text (`current_file`) and contains the expected line. |
 
 Initial case families (S2.5 builds the first two; S4 adds the next two):
 
@@ -73,6 +74,8 @@ Initial case families (S2.5 builds the first two; S4 adds the next two):
 | `grep_verbatim_quote` (S8a-1) | `not_quoted_verbatim` (search_group) | Reproduce the exact content of the match line that contains a marker, as an edit anchor | `verbatim_line` |
 | `log_fact_lookup` (S8a-1) | `omitted_log_lines_not_needed` | An application log with many repeated routine lines and a few severe ones. Question: a fact the task needs (for example the error code of the failed request) | exact value |
 | `log_verbatim_quote` (S8a-1) | `not_quoted_verbatim` (log_filter) | Reproduce the exact severe line that contains a marker | `verbatim_line` |
+| `reread_fact_lookup` (S8e) | `reads_partial_reference` | A file is read, one function is edited, the file is read again (sent by reference). Question: a value from an unchanged function. | `answer_or_read` |
+| `reread_edit_anchor` (S8e) | `quotes_from_reference_target` | The same history; the task is to `Edit` a line in an unchanged function (E10(e)). | `edit_anchor` |
 | `reread_after_pruned_edit` (S8c) | `edit_content_not_needed` | A conversation in which the agent wrote a file several human turns earlier. Question: a value from that file. | `answer_or_read` |
 
 S8a-1 cases put their content in a tool whose name is not in the default `verbatim_tools`

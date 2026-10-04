@@ -281,6 +281,57 @@ viable in the forms tried:
 The same caution applies to `superseded_tool_results` (S8a-3), which removes outdated reads.
 Lossless-by-reference pruning stays sound.
 
+### Repeated reads of source code, and E10(e) — a re-read by reference keeps edits exact (2026-10-04)
+
+**How much read code is already in the conversation** (the developer's sessions, counters only):
+- 22.5 % of the meaningful lines of `Read` results were already in the context window.
+- Rebuilding each file from the conversation itself (the last full read, the agent's `Write`, and
+  later `Edit` calls applied) and comparing line by line, the `Read` volume splits into:
+
+  | Kind of read | Share of `Read` volume |
+  |---|---|
+  | First view, or not rebuildable | 83.7 % |
+  | Identical to the last read with the edits applied | 10.4 % |
+  | Identical to the agent's own `Write` | 2.3 % |
+  | Identical to the last read, unchanged | 1.6 % |
+  | Near or different | 1.8 % |
+
+**E10(e):** `evals/experiments/e10e_reread_by_reference.py` on `claude-opus-5-5`; result in
+`evals/experiments/e10e_result.json`.
+- **The conversation** (synthetic): a module of about 250 lines is read, one function is edited
+  (one line becomes two, so later line numbers shift), and the file is read again.
+- **The task:** the agent must `Edit` a line in another, unchanged function. With the reference
+  form, that line's exact text exists in full only in the first read.
+- **Size:** 10 cases, 2 repetitions.
+
+| Form of the second read (20 calls each) | Correct `Edit` | Wrong anchor | Refused | Mean request input tokens |
+|---|---|---|---|---|
+| Whole file (control) | 20 | 0 | 0 | 7,139 |
+| Changed lines + `[tokli: lines a-b unchanged — identical to lines c-d of the read in call <id>]` | 20 | 0 | 0 | 4,106 |
+| The same, each note also naming its functions | 20 | 0 | 0 | 4,195 |
+
+**Reading:**
+- A re-read that sends only the changed lines and refers to an earlier read for the rest kept
+  every edit anchor exact.
+- It drew no refusal and cut the request by 42 % in this setting.
+- It agrees with E11, and contrasts with E10(c)/(d): the provider does not object when the
+  information stays in the request.
+
+### S8e smoke run — re-reads by reference cause no measurable damage (2026-10-04)
+
+**Run:** `tokli eval smoke --compressor reread_by_reference` on `claude-opus-5-5`, 66 synthetic
+cases × 3 repetitions × 2 arms (396 calls).
+
+| Family | Assumption | n | b | c | Errors (base / cand.) | Verdict |
+|---|---|---|---|---|---|---|
+| `reread_fact_lookup` | `reads_partial_reference` | 22 | 0 | 0 | 0 / 0 | `no_measurable_damage` |
+| `reread_edit_anchor` | `quotes_from_reference_target` | 22 | 0 | 0 | 0 / 0 | `no_measurable_damage` |
+| `reference_verbatim_quote` | `quotes_from_reference_target` | 22 | 0 | 0 | 0 / 0 | `no_measurable_damage` |
+
+- **No refusal and no error.** Exact input tokens fell from 1,055,835 to 629,031 (−40.4 %) on
+  these cases.
+- **Consequence:** the compressor is on by default (CC-020).
+
 ### Other quantitative inputs
 
 | Input | Value | Use |

@@ -88,6 +88,15 @@ defaults.
 
 UI-editable (CF-009): `compressors.<id>.enabled`, `telemetry.retention_days`.
 
+## Keys added in S8e (approved for S8e, 2026-10-04)
+
+| Key | Default |
+|---|---|
+| `compressors.reread_by_reference.enabled` | `true` (smoke record `no_measurable_damage` on `claude-opus-5-5`, 2026-10-04; S8e review P3; CC-020) |
+| `pruning.reread_tools` | `["Read"]` |
+| `pruning.reread_min_run_lines` | `5` (S8e review P4) |
+| `pruning.reread_max_lines` | `20000` (ADR 0013) |
+
 ## Keys added in S8c (approved for S8c, 2026-10-04)
 
 | Key | Default |

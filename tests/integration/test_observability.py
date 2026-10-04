@@ -145,7 +145,9 @@ def test_request_record_persisted_per_outcome(tokli: Start, upstream: FakeUpstre
 
 def test_compressor_stats_only_for_considered(tokli: Start) -> None:
     t = tokli(
-        "compressors.json_minify.enabled=false", "compressors.duplicate_tool_results.enabled=false"
+        "compressors.json_minify.enabled=false",
+        "compressors.duplicate_tool_results.enabled=false",
+        "compressors.reread_by_reference.enabled=false",  # on by default since S8e
     )
     send(t)
     assert db_rows(t, "compressor_stats") == []
@@ -154,6 +156,7 @@ def test_compressor_stats_only_for_considered(tokli: Start) -> None:
     assert {r["compressor_id"] for r in db_rows(t2, "compressor_stats")} == {
         "json_minify",
         "duplicate_tool_results",
+        "reread_by_reference",  # on by default since S8e
     }
 
 

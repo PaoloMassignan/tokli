@@ -7,6 +7,7 @@ Changed by S4 SCR-001 (2026-10-03): CC-002 (the policy is a shortcut, not a gate
 Approved for S4 (2026-10-03): CC-002 (SCR-001), CC-003, CC-009, CC-015 and CC-016 for `reference`, CC-019, CC-021, the request scope.
 Changed by S8a SCR-001 (approved for S8a-1, 2026-10-03): CC-021 (per-compressor opt-in for verbatim tools).
 Changed for S8c (approved 2026-10-04): CC-006 (a request-scope pruner may use the conversation state of ADR 0012).
+Approved for S8e (2026-10-04): CC-019 covers line-range references (ADR 0013); a `Write` argument used as a source is a reference target.
 
 ## Purpose
 Define what a compressor is, what "lossless" means in Tokli, how the global policy constrains

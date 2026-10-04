@@ -76,7 +76,38 @@ def answer_or_read(
     )
 
 
-# Checkers that also see the response's tool calls and the case's read path.
-TOOL_CHECKERS: dict[str, Callable[[str, str, list[ToolCall], str | None], bool]] = {
-    "answer_or_read": answer_or_read,
+def edit_anchor(
+    answer: str,
+    expected: str,
+    tool_calls: list[ToolCall],
+    read_path: str | None,
+    current_file: str | None,
+) -> bool:
+    """QE-020 `edit_anchor` (S8e): the response holds an `Edit` of the case's file whose
+    `old_string` occurs exactly once in the current file text and contains the expected line."""
+    if read_path is None or current_file is None:
+        return False
+    for name, args in tool_calls:
+        if name != "Edit" or not isinstance(args, dict) or args.get("file_path") != read_path:
+            continue
+        anchor = args.get("old_string")
+        exact = isinstance(anchor, str) and bool(anchor) and expected in anchor
+        if exact and current_file.count(str(anchor)) == 1:
+            return True
+    return False
+
+
+# Checkers that also see the response's tool calls and the case (its read path and file).
+TOOL_CHECKERS: dict[str, Callable[[str, list[ToolCall], Any], bool]] = {
+    "answer_or_read": lambda answer, calls, case: answer_or_read(
+        answer, case.expected, calls, case.expected_read_path
+    ),
+    "edit_anchor": lambda answer, calls, case: edit_anchor(
+        answer, case.expected, calls, case.expected_read_path, case.current_file
+    ),
+}
+# What each tool-aware checker needs in the case file.
+TOOL_CHECKER_FIELDS: dict[str, tuple[str, ...]] = {
+    "answer_or_read": ("expected_read_path",),
+    "edit_anchor": ("expected_read_path", "current_file"),
 }
