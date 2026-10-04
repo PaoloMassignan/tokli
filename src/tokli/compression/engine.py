@@ -126,6 +126,8 @@ class _RequestState:
 CacheKey = tuple[str, str, SegmentView, Features, int, bytes]
 # Fixed per-entry bookkeeping counted against the cache bound (key, tuples, dict slot).
 _ENTRY_OVERHEAD = 256
+# A cached "skipped for the budget" decision (CC-014, S8f SCR-001): repeated while it stays cached.
+_BUDGET_SKIP = Applicability(False, "budget_exhausted")
 
 
 class ResultCache:
@@ -284,7 +286,6 @@ class Engine:
             originals,
             view,
             counter,
-            start,
             stats,
             invocations,
             state,
@@ -353,7 +354,6 @@ class Engine:
         originals: Mapping[str, str],
         view: StageView,
         counter: Counter,
-        start: float,
         stats: dict[str, CompressorStats],
         invocations: list[Invocation],
         state: _RequestState,
@@ -382,10 +382,7 @@ class Engine:
                 skip_all(reason)
                 continue
             stat.considered += len(candidates)
-            if (self._clock() - start) * 1000 >= settings.request_budget_ms:
-                stat.skipped_budget += len(candidates)
-                skip_all("budget_exhausted")
-                continue
+            # No budget check: a pruner's decisions must be the same on every request (CC-014).
             refs = [
                 SegmentRef(
                     s.id,
@@ -558,16 +555,24 @@ class Engine:
             if terminal_reached:
                 skip("after_terminal")
                 continue
-            if (self._clock() - start) * 1000 >= settings.request_budget_ms:
+            cache, key, hit = self._cache, None, None
+            if cache is not None:
+                key = cache.key(spec.id, spec.version, segment_view, features, text)
+                hit = cache.get(key)
+            # CC-014 (S8f SCR-001): a cached decision applies whatever budget remains, and a
+            # budget skip is cached, so the history already sent never changes with timing.
+            budget_skip = hit is not None and hit[0] is _BUDGET_SKIP
+            if budget_skip or (
+                hit is None and (self._clock() - start) * 1000 >= settings.request_budget_ms
+            ):
+                if cache is not None and key is not None and not budget_skip:
+                    cache.put(key, _BUDGET_SKIP, None)
+                stat.cache_hits += budget_skip
                 stat.skipped_budget += 1
                 skip("budget_exhausted")
                 continue
 
             call_start = self._clock()
-            cache, key, hit = self._cache, None, None
-            if cache is not None:
-                key = cache.key(spec.id, spec.version, segment_view, features, text)
-                hit = cache.get(key)
             if hit is not None:
                 stat.cache_hits += 1
                 applicability, output = hit

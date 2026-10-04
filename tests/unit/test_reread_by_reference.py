@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import dataclasses
+import gc
 import json
 import time
 from typing import Any
@@ -199,7 +200,12 @@ def test_reread_keeps_reminders_and_verbatim_tool() -> None:
 
 
 def test_reread_linear_time() -> None:
-    """AC-PR-26 (PR-035): one changed line in 5,000 vs 50,000 lines: time ratio at most 15."""
+    """AC-PR-26 (PR-035): one changed line in 5,000 vs 50,000 lines: time ratio at most 15.
+
+    The best of 7 runs with the garbage collector paused measures the algorithm itself. With the
+    best of 3 and the collector on, macOS CI runners measured 17.8x and 18.1x (S8f CI run
+    37233467737), while the cost per line is flat from 5,000 to 200,000 lines (1.5 to 2.0 us
+    locally): the 6 ms denominator was dominated by runner noise."""
 
     def elapsed(size: int) -> float:
         old = [f"row {n}: payload {n * 7}" for n in range(size)]
@@ -222,10 +228,15 @@ def test_reread_linear_time() -> None:
         tools = [ToolRecordView(t.call_id, t.name, t.arguments) for t in request.tools]
         pruner = RereadByReference(max_lines=10**6)
         best = float("inf")
-        for _ in range(3):
-            started = time.perf_counter()
-            proposals = pruner.plan(refs, texts, tools, len, None)
-            best = min(best, time.perf_counter() - started)
+        gc.collect()
+        gc.disable()
+        try:
+            for _ in range(7):
+                started = time.perf_counter()
+                proposals = pruner.plan(refs, texts, tools, len, None)
+                best = min(best, time.perf_counter() - started)
+        finally:
+            gc.enable()
         assert any(p.new_text for p in proposals)
         return best
 

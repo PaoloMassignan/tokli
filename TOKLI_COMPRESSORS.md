@@ -679,7 +679,10 @@ when it does (`edit_content_not_needed`). Experiment E10(a) showed both parts on
   A high rate plus noticeable latency means that it costs time for nothing.
 - **Tokens saved per ms** shows efficiency.
 - **Skipped (budget)** counts how often a compressor was skipped because the request's time budget
-  was used up. It is visible so that a useful but slow compressor is never hidden.
+  was used up. It is visible so that a useful but slow compressor is never hidden. A skip is
+  remembered with the cached results and repeated on later requests, so that timing never
+  changes history already sent (which would cost a provider cache rewrite). Pruners and
+  results already cached are never skipped.
 - Each figure carries its method: **exact** (from the provider), **calibrated**, or **estimate**.
 
 ## 12. What the compressors save on real Claude Code traffic (measured 2026-10-04)

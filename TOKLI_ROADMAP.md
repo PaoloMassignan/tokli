@@ -208,6 +208,17 @@ slice on 2026-10-04.
   - the smoke record says `no_measurable_damage` (no refusal; −40 % input tokens on its cases);
   - `reread_by_reference` is on by default.
 
+## S8f — The request budget keeps history stable
+
+- **Requested** by the human on 2026-10-04 (S8f SCR-001, from the S8e completion report).
+- **Problem:** the request time budget (CC-014) made compression depend on timing. The
+  same history could be forwarded differently on consecutive requests, which costs a
+  provider cache rewrite.
+- **Contents:** cached decisions (results and budget skips) repeat whatever the budget;
+  pruners are never skipped by the budget.
+- **Exit:** AC-CC-15 green on the CI matrix.
+- **Accepted 2026-10-04** (`slices/S8f/COMPLETION_REPORT.md`).
+
 ## S5 — OpenAI Responses (Codex, API key)
 
 - Adapter `openai_responses` (OR-*): `function_call_output`/`custom_tool_call_output`/`input_text`;

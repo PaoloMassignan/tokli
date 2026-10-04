@@ -8,6 +8,7 @@ Approved for S4 (2026-10-03): CC-002 (SCR-001), CC-003, CC-009, CC-015 and CC-01
 Changed by S8a SCR-001 (approved for S8a-1, 2026-10-03): CC-021 (per-compressor opt-in for verbatim tools).
 Changed for S8c (approved 2026-10-04): CC-006 (a request-scope pruner may use the conversation state of ADR 0012).
 Approved for S8e (2026-10-04): CC-019 covers line-range references (ADR 0013); a `Write` argument used as a source is a reference target.
+Changed by S8f SCR-001 (approved 2026-10-04): CC-014 (cached decisions repeat whatever the budget; pruners are never skipped), AC-CC-15.
 
 ## Purpose
 Define what a compressor is, what "lossless" means in Tokli, how the global policy constrains
@@ -157,7 +158,7 @@ for segment in mutable segments (document order):
 | CC-011 | THE registry SHALL be an explicit list in `tokli.compression.registry`; adding a compressor SHALL require only a new module and one registry entry. |
 | CC-012 | WHEN a compressor is invoked (considered), THE SYSTEM SHALL record its per-request statistics as defined for `CompressorStats` (TOKLI_TELEMETRY_AND_COST §2). |
 | CC-013 | WHEN a compressor is skipped for a segment, THE SYSTEM SHALL increment the skip-reason counter for that compressor in the request's statistics. |
-| CC-014 | WHEN the request's compression time budget (`compression.request_budget_ms`, default 50, a provisional POLICY value until E9 and dogfood data exist) is exhausted, THE SYSTEM SHALL skip the remaining compressor invocations with reason `budget_exhausted`, count the skips per compressor (`skipped_budget`), and SHALL NOT fail the request. The budget is a runtime control, not an acceptance criterion for a compressor (TOKLI_TEST_STRATEGY §8). |
+| CC-014 | WHEN the request's compression time budget (`compression.request_budget_ms`, default 50, a provisional POLICY value until E9 and dogfood data exist) is exhausted, THE SYSTEM SHALL skip each remaining segment-scope compressor invocation that has no entry in the result cache (CC-024), with reason `budget_exhausted`, count the skips per compressor (`skipped_budget`), and SHALL NOT fail the request. THE SYSTEM SHALL store each such skip in the result cache under the invocation's key, and SHALL apply a cached result or a cached skip whatever budget remains, so that the decision taken for a segment repeats on later requests while it stays cached. THE budget SHALL NOT skip request-scope compressors (SPEC 019), whose decisions must be the same on every request; every request-scope compressor SHALL declare `cost_class: cheap`. The budget is a runtime control, not an acceptance criterion for a compressor (TOKLI_TEST_STRATEGY §8). (S8f SCR-001.) |
 | CC-015 | EVERY LOSSLESS compressor SHALL ship a property test proving its declared equivalence (segment decode for `byte`/`structural`; whole-request decode plus reference integrity for `reference`), and EVERY SELECTIVE compressor SHALL ship a test per declared guarantee (contract test fails otherwise). |
 | CC-016 | WHEN `compression.verify_lossless` is true (default true in tests and debug, false in normal serving), THE SYSTEM SHALL decode each accepted LOSSLESS output and reject mismatches. |
 | CC-017 | THE compression packages SHALL NOT import protocol, upstream, auth, HTTP, pricing, telemetry-storage or UI modules. |
@@ -191,6 +192,7 @@ each invocation is logged as `(segment_id, kind, compressor, decision, t_in, t_o
 - AC-CC-11 (CC-020): a registry entry with `default_enabled: true` and an assumption without an evaluation record fails the contract test. The same entry with `default_enabled: false` passes, and the user can still enable it.
 - AC-CC-12 (CC-021): a TOOL_RESULT from a tool in `verbatim_tools` that duplicates an earlier result is stubbed by `duplicate_tool_results`, while `json_minify` is skipped on it with `verbatim_tool`.
 - AC-CC-13 (CC-024): the same request processed twice gives identical forwarded bytes and identical stats, and the second run records only hits. The same text with a different `SegmentView` (e.g. a verbatim tool) or a different compressor config is not served from the cache. The cache never exceeds its bound. With `result_cache_mb: 0` nothing is cached.
+- AC-CC-15 (CC-014): with a clock that exhausts the budget part-way, (a) a request-scope compressor still runs; (b) a segment compressed on request 1 is compressed identically on request 2 even when the budget is exhausted before it; (c) a segment skipped for the budget on request 1 is skipped again on request 2 even when budget remains; (d) on a growing conversation the forwarded text of every segment already sent is byte-identical from one request to the next. (S8f SCR-001.)
 
 ## Test scenarios
 `test_lossless_only_never_runs_lossy_compressor` · `test_lossy_allowed_runs_selective_and_lossy` ·
@@ -208,7 +210,9 @@ each invocation is logged as `(segment_id, kind, compressor, decision, t_in, t_o
 `test_verbatim_opt_in_only_for_declaring_compressors` ·
 `test_min_segment_tokens_default` · `test_unresolved_tool_name_treated_as_verbatim` · `test_late_result_discarded_as_timeout` ·
 `test_result_cache_hit_gives_identical_output` · `test_result_cache_key_includes_view_and_config` ·
-`test_result_cache_bounded` · `test_result_cache_off`
+`test_result_cache_bounded` · `test_result_cache_off` ·
+`test_budget_never_skips_pruners` · `test_budget_applies_cached_results` · `test_budget_skip_is_sticky` ·
+`test_budget_without_cache_still_skips` · `test_budget_keeps_history_stable` · `test_request_scope_compressors_are_cheap`
 
 ## Open questions
 - Q9: Should `min_gain_ratio` differ per compressor (spec field) rather than being global? Start global and revisit with S4 data.

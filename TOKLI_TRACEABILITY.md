@@ -160,7 +160,7 @@ Evidence codes:
 | CC-011 | Brief§6 | AC-CC-9 | `test_registry_contract_every_lossless_has_roundtrip_property`, `test_json_minify_is_the_only_registered_compressor_in_s1`, `test_registered_compressors_are_available` |
 | CC-012 | Brief§11 | AC-CC-8 | `test_compressor_stats_expected_fixture`, `prop_marginal_savings_sum_to_total` |
 | CC-013 | Brief§11 skip reasons | AC-CC-8 | `test_compressor_stats_expected_fixture` |
-| CC-014 | Brief§9 cheap before expensive; E9; R01§9 (budget = runtime control, provisional default) | AC-CC-8 | `test_budget_exhaustion_skips` |
+| CC-014 | Brief§9 cheap before expensive; E9; R01§9 (budget = runtime control, provisional default); S8f SCR-001 (timing must not change history already sent) | AC-CC-8, AC-CC-15 | `test_budget_exhaustion_skips`, `test_budget_never_skips_pruners`, `test_budget_applies_cached_results`, `test_budget_skip_is_sticky`, `test_budget_without_cache_still_skips`, `test_budget_keeps_history_stable`, `test_request_scope_compressors_are_cheap` |
 | CC-015 | H02: lossless is proven by a decoder | AC-CC-9 | `test_registry_contract_every_lossless_has_roundtrip_property`, `test_registry_contract_every_selective_guarantee_has_a_named_test` (S8a-1) |
 | CC-016 | defence in depth | AC-CC-9 | `test_verify_lossless_rejects_decode_mismatch` |
 | CC-017 | ARCH §5 | AC-CM-7 | `test_import_contracts` |

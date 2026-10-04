@@ -45,10 +45,8 @@ def edited() -> tuple[list[str], dict[str, Any]]:
 
 def test_reread_by_reference_end_to_end(tokli: Start, upstream: FakeUpstream) -> None:
     """AC-PR-20 through the proxy: the re-read is forwarded as notes plus the changed line."""
-    # The request budget (CC-014) is lifted: a slow runner must not skip the pruner here.
-    t = tokli(
-        "compressors.reread_by_reference.enabled=true", "compression.request_budget_ms=100000"
-    )
+    # The request budget never skips a pruner (CC-014, S8f SCR-001), so it is left at its default.
+    t = tokli("compressors.reread_by_reference.enabled=true")
     old, data = edited()
     trace = send(t, data)
     forwarded = results(json.loads(upstream.received[-1].body))
