@@ -474,6 +474,114 @@ def log_quote_case(rng: random.Random, n: int) -> dict[str, Any]:
     }
 
 
+# -- reread family (S8c): old edit content is pruned at a resume; the agent should re-read ------
+
+CASE_SET_S8C = "2026-10-04.2"
+REREAD_TOOLS = [
+    {
+        "name": "Write",
+        "description": "Writes a file.",
+        "input_schema": {
+            "type": "object",
+            "properties": {"file_path": {"type": "string"}, "content": {"type": "string"}},
+            "required": ["file_path", "content"],
+        },
+    },
+    {
+        "name": "Edit",
+        "description": "Replaces old_string with new_string in a file.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "file_path": {"type": "string"},
+                "old_string": {"type": "string"},
+                "new_string": {"type": "string"},
+            },
+            "required": ["file_path", "old_string", "new_string"],
+        },
+    },
+    {
+        "name": "Read",
+        "description": "Reads a file and returns its content.",
+        "input_schema": {
+            "type": "object",
+            "properties": {"file_path": {"type": "string"}},
+            "required": ["file_path"],
+        },
+    },
+]
+SMALL_TALK = [
+    ("What does HTTP 429 mean?", "Too Many Requests: the client is rate limited."),
+    ("And 503?", "Service Unavailable."),
+    ("Which port does HTTPS use by default?", "443."),
+    ("Thanks. Let me think about the next step.", "Sure."),
+    ("What is a semantic version?", "MAJOR.MINOR.PATCH."),
+    ("OK.", "Anything else?"),
+]
+
+
+def reread_case(rng: random.Random, n: int) -> dict[str, Any]:
+    name = f"{rng.choice(WORDS)}_{rng.choice(SECTIONS)}_settings.py"
+    keys = rng.sample([f"{s.upper()}_{f.upper()}" for s in SECTIONS for f in FIELDS], 12)
+
+    def value(key: str) -> str:  # realistic per key kind (the first run got refusals, S8c report)
+        if key.endswith("ENDPOINT"):
+            return f'"https://{rng.choice(WORDS)}.example.invalid/v{rng.randint(1, 9)}"'
+        if key.endswith("LABEL"):
+            return f'"{rng.choice(WORDS)}-{rng.choice(WORDS)}"'
+        return str(rng.randint(2, 9999))
+
+    values = {key: value(key) for key in keys}
+    content = '"""Synthetic settings."""\n\n' + "".join(f"{key} = {values[key]}\n" for key in keys)
+    asked = rng.choice(keys)
+    messages: list[dict[str, Any]] = [
+        {"role": "user", "content": f"Create {name} with the settings we discussed."},
+        {
+            "role": "assistant",
+            "content": [
+                {
+                    "type": "tool_use",
+                    "id": "toolu_01REREADW",
+                    "name": "Write",
+                    "input": {"file_path": name, "content": content},
+                }
+            ],
+        },
+        {
+            "role": "user",
+            "content": [
+                {
+                    "type": "tool_result",
+                    "tool_use_id": "toolu_01REREADW",
+                    "content": "File created.",
+                }
+            ],
+        },
+        {"role": "assistant", "content": f"Created {name}."},
+    ]
+    for question, answer in rng.sample(SMALL_TALK, 5):
+        messages += [
+            {"role": "user", "content": question},
+            {"role": "assistant", "content": answer},
+        ]
+    messages.append(
+        {
+            "role": "user",
+            "content": f"What is the value of {asked} in {name} right now? Reply with the value "
+            "only, or read the file first if you are not sure.",
+        }
+    )
+    return {
+        "case_set": CASE_SET_S8C,
+        "family": "reread_after_pruned_edit",
+        "assumption": "edit_content_not_needed",
+        "checker": "answer_or_read",
+        "request": {"max_tokens": 1024, "tools": REREAD_TOOLS, "messages": messages},
+        "expected": values[asked].strip('"'),
+        "expected_read_path": name,
+    }
+
+
 def main() -> None:
     import yaml
 
@@ -486,6 +594,7 @@ def main() -> None:
         ("grep_verbatim_quote", grep_quote_case, 2506),
         ("log_fact_lookup", log_fact_case, 2507),
         ("log_verbatim_quote", log_quote_case, 2508),
+        ("reread_after_pruned_edit", reread_case, 2509),
     )
     for family, make, seed in families:
         rng = random.Random(seed)

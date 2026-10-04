@@ -11,7 +11,7 @@ from typing import Any
 
 import yaml
 
-from tokli.eval.checkers import CHECKERS
+from tokli.eval.checkers import CHECKERS, TOOL_CHECKERS
 
 REQUIRED = ("case_set", "family", "assumption", "checker", "request", "expected")
 # Synthetic cases only: no developer paths, no credential-shaped strings (AC-QE-6). The text is
@@ -30,16 +30,19 @@ class Case:
     checker: str
     request: dict[str, Any]
     expected: str
+    expected_read_path: str | None = None  # `answer_or_read` (S8c)
 
 
 def lint_case(data: Any, source: str) -> list[str]:
     if not isinstance(data, dict):
         return [f"{source}: not a mapping"]
     errors = [f"{source}: missing field '{name}'" for name in REQUIRED if name not in data]
-    if data.get("checker") is not None and data.get("checker") not in CHECKERS:
+    if data.get("checker") is not None and data.get("checker") not in {**CHECKERS, **TOOL_CHECKERS}:
         errors.append(f"{source}: unknown checker '{data.get('checker')}'")
     if "expected" in data and not isinstance(data["expected"], str):
         errors.append(f"{source}: 'expected' must be a string")
+    if data.get("checker") in TOOL_CHECKERS and not isinstance(data.get("expected_read_path"), str):
+        errors.append(f"{source}: 'expected_read_path' is required by '{data.get('checker')}'")
     request = data.get("request")
     if "request" in data:
         if not isinstance(request, dict) or not isinstance(request.get("messages"), list):
@@ -90,6 +93,7 @@ def load_cases(root: Path, assumptions: Iterable[str]) -> list[Case]:
                 checker=data["checker"],
                 request=data["request"],
                 expected=data["expected"],
+                expected_read_path=data.get("expected_read_path"),
             )
         )
     return cases

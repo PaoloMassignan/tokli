@@ -30,7 +30,7 @@ from tokli.compression.contract import (
 )
 from tokli.domain.models import CanonicalRequest, Patch, Segment, SegmentKind, Span
 from tokli.domain.spans import spans_preserved
-from tokli.domain.stage import Features, StageView
+from tokli.domain.stage import ConversationView, Features, StageView
 
 LOSSLESS_ONLY = "LOSSLESS_ONLY"
 LOSSY_ALLOWED = "LOSSY_ALLOWED"
@@ -260,7 +260,13 @@ class Engine:
         availability = self._availability[spec.id]
         return "" if availability == "available" else availability
 
-    def run(self, request: CanonicalRequest, view: StageView, counter: Counter) -> EngineResult:
+    def run(
+        self,
+        request: CanonicalRequest,
+        view: StageView,
+        counter: Counter,
+        conversation: ConversationView | None = None,
+    ) -> EngineResult:
         start = self._clock()
         stats = {
             c.spec.id: CompressorStats(c.spec.id, c.spec.version, c.spec.kind)
@@ -273,7 +279,16 @@ class Engine:
         originals = {s.id: view.texts.get(s.id, s.text) for s in segments}
         state = _RequestState(texts=dict(originals), chains={s.id: [] for s in segments})
         self._run_request_scope(
-            request, segments, originals, view, counter, start, stats, invocations, state
+            request,
+            segments,
+            originals,
+            view,
+            counter,
+            start,
+            stats,
+            invocations,
+            state,
+            conversation,
         )
 
         for segment in segments:
@@ -342,11 +357,15 @@ class Engine:
         stats: dict[str, CompressorStats],
         invocations: list[Invocation],
         state: _RequestState,
+        conversation: ConversationView | None,
     ) -> None:
         """Pruners (PR-001, PR-010): each proposal passes the same gate as a segment result, plus
         reference integrity (CC-019), and is attributed to its compressor."""
         settings = self._settings
-        tools = tuple(ToolRecordView(t.call_id, t.name, t.arguments) for t in request.tools)
+        tools = tuple(
+            ToolRecordView(t.call_id, t.name, t.arguments, t.human_turns_after)
+            for t in request.tools
+        )
         position = {s.id: i for i, s in enumerate(segments)}
         for compressor in self._request_scope:
             spec = compressor.spec
@@ -386,6 +405,7 @@ class Engine:
                     {r.segment_id: state.texts[r.segment_id] for r in refs},
                     tools,
                     counter.count,
+                    conversation,
                 )
             except Exception:  # isolation (CC-008)
                 ms = (self._clock() - call_start) * 1000

@@ -1,6 +1,6 @@
 Tokli doctor (normalized)
 
-Configuration  hash 4240b33a7a02e6a8
+Configuration  hash 5cb7b379b6ab6e1f
   server.host = "127.0.0.1"  [default]
   server.port = 8787  [default]
   server.allow_remote = false  [default]
@@ -27,8 +27,14 @@ Configuration  hash 4240b33a7a02e6a8
   compressors.log_filter.enabled = false  [default]
   compressors.log_filter.debug_sample = 10  [default]
   compressors.log_filter.apply_to_verbatim_tools = false  [default]
+  compressors.edit_args_on_resume.enabled = false  [default]
   pruning.duplicate_min_tokens = 64  [default]
   pruning.duplicate_require_same_call = false  [default]
+  pruning.resume_after_s = 3600.0  [default]
+  pruning.resume_min_age_turns = 4  [default]
+  pruning.resume_min_tokens = 64  [default]
+  pruning.resume_edit_fields = {"Write": ["content"], "Edit": ["old_string", "new_string"], "MultiEdit": ["edits/*/old_string", "edits/*/new_string"]}  [default]
+  pruning.conversation_states = 1024  [default]
   tokens.default = "o200k_base"  [default]
   tokens.model_map = [{"pattern": "gpt-*", "tokenizer": "o200k_base"}, {"pattern": "o*", "tokenizer": "o200k_base"}, {"pattern": "claude-*", "tokenizer": "o200k_base"}]  [default]
   observability.trace_buffer = 500  [default]
@@ -45,6 +51,7 @@ Compressors
   duplicate_tool_results  v1  LOSSLESS  enabled  available
   search_group  v2  LOSSLESS  disabled  available
   log_filter  v1  SELECTIVE  disabled  available
+  edit_args_on_resume  v1  SELECTIVE  disabled  available
 
 Tokenizers
   o200k_base  present  tiktoken:o200k_base@446a9538cb6c

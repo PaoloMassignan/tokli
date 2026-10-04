@@ -18,8 +18,10 @@ class SegmentKind(enum.StrEnum):
 
 
 # Kinds that may ever be mutable in v1 (CM-009); config narrows this further.
+# TOOL_CALL_ARGS segments exist only for the argument strings listed in
+# `pruning.resume_edit_fields` (SPEC 001 CM-009 after S8c, SPEC 019 PR-022).
 MUTABLE_ELIGIBLE: frozenset[SegmentKind] = frozenset(
-    {SegmentKind.USER_TEXT, SegmentKind.TOOL_RESULT}
+    {SegmentKind.USER_TEXT, SegmentKind.TOOL_RESULT, SegmentKind.TOOL_CALL_ARGS}
 )
 
 
@@ -64,6 +66,7 @@ class ToolRecord:
     arguments: Any  # parsed JSON, or the raw string
     index: int
     result_segment_ids: tuple[str, ...] = ()
+    human_turns_after: int = 0  # human turns after the call's message (SPEC 019 PR-026)
 
 
 @dataclass(frozen=True)

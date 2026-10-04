@@ -311,6 +311,7 @@ def test_chain_order_by_stage_then_id() -> None:
     assert [c.spec.id for c in engine.compressors] == [
         "json_minify",  # normalize
         "duplicate_tool_results",  # structural
+        "edit_args_on_resume",  # structural
         "search_group",  # structural
         "log_filter",  # domain
         "zz_lossy",  # semantic

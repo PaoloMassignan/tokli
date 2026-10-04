@@ -16,7 +16,7 @@ from tokli.app.api import compression_report
 from tokli.app.bootstrap import Services
 from tokli.domain.stage import StageContext
 from tokli.eval.cases import Case
-from tokli.eval.checkers import CHECKERS
+from tokli.eval.checkers import CHECKERS, TOOL_CHECKERS, ToolCall
 from tokli.eval.record import ArmTotals
 from tokli.eval.verdict import CaseResult
 from tokli.protocols.anthropic_messages import estimate_request_tokens, parse, render
@@ -46,14 +46,15 @@ class Arm:
 
     def prepare(self, body: bytes) -> Prepared:
         services = self.services
-        request = parse(body, mutable_kinds=services.mutable_kinds)
+        request = parse(body, mutable_kinds=services.mutable_kinds, arg_fields=services.arg_fields)
         counter = services.selector.select(request.model)
         result = services.pipeline.run(request, StageContext(request_id=f"eval-{self.name}"))
         report = compression_report(result.reports)
         ms = sum(s.ms_total for s in report.stats) if report is not None else 0.0
         forwarded = render(request, result.patches) if result.patches else body
         estimate = estimate_request_tokens(
-            parse(forwarded, mutable_kinds=services.mutable_kinds), counter.count
+            parse(forwarded, mutable_kinds=services.mutable_kinds, arg_fields=services.arg_fields),
+            counter.count,
         )
         return Prepared(forwarded, estimate, ms)
 
@@ -140,6 +141,17 @@ def _answer(payload: Any) -> str:
     )
 
 
+def _tool_calls(payload: Any) -> list[ToolCall]:
+    blocks = payload.get("content") if isinstance(payload, dict) else None
+    if not isinstance(blocks, list):
+        return []
+    return [
+        (str(b.get("name")), b.get("input"))
+        for b in blocks
+        if isinstance(b, dict) and b.get("type") == "tool_use"
+    ]
+
+
 async def run_smoke(
     plan: Plan,
     arms: tuple[Arm, Arm],
@@ -179,7 +191,7 @@ async def run_smoke(
                         break
                     prepared = planned.prepared[arm.name]
                     result.calls += 1
-                    outcome, tokens, answer, status, error = await _call(
+                    outcome, tokens, answer, status, error, stop = await _call(
                         upstream, headers, prepared.body, planned.case
                     )
                     if error is not None:
@@ -204,6 +216,7 @@ async def run_smoke(
                                 else {"value": prepared.est_tokens, "method": "estimate"}
                             ),
                             "answer": answer[:_ANSWER_LIMIT],
+                            "stop_reason": stop,  # S8c: diagnoses refusals and truncation
                             **({"error": error} if error is not None else {}),
                         }
                     )
@@ -249,8 +262,8 @@ def _provider_error(payload: Any, status: int) -> dict[str, str]:
 
 async def _call(
     upstream: Any, headers: list[tuple[str, str]], body: bytes, case: Case
-) -> tuple[str, int | None, str, int | None, dict[str, str] | None]:
-    """One provider call: (outcome, exact input tokens, answer text, status, error)."""
+) -> tuple[str, int | None, str, int | None, dict[str, str] | None, str | None]:
+    """One provider call: (outcome, exact input tokens, answer text, status, error, stop reason)."""
     try:
         response = await upstream.open("POST", "/v1/messages", "", headers, body)
         try:
@@ -258,9 +271,9 @@ async def _call(
         finally:
             await response.aclose()
     except UpstreamError as exc:
-        return "error", None, "", None, _error(exc.kind)
+        return "error", None, "", None, _error(exc.kind), None
     except OSError as exc:
-        return "error", None, "", None, _error("connection_error", type(exc).__name__)
+        return "error", None, "", None, _error("connection_error", type(exc).__name__), None
     usage = BodyUsageParser(_RESPONSE_LIMIT)
     usage.feed(data)
     tokens = usage.result().input_total
@@ -268,13 +281,21 @@ async def _call(
     try:
         payload = json.loads(data)
     except ValueError:
-        return "error", tokens, "", status, _error(f"http_{status}", "response is not JSON")
+        return "error", tokens, "", status, _error(f"http_{status}", "response is not JSON"), None
+    stop = payload.get("stop_reason") if isinstance(payload, dict) else None
     if status >= 400:
-        return "error", tokens, "", status, _provider_error(payload, status)
+        return "error", tokens, "", status, _provider_error(payload, status), stop
     answer = _answer(payload)
     if payload.get("stop_reason") == "refusal":
-        return "error", tokens, answer, status, _error("refusal")
+        return "error", tokens, answer, status, _error("refusal"), stop
+    if case.checker in TOOL_CHECKERS:  # S8c: a tool call can be the answer (`answer_or_read`)
+        calls = _tool_calls(payload)
+        if not answer and not calls:
+            return "error", tokens, answer, status, _error("empty_answer"), stop
+        seen = answer + "".join(f"\n[tool_use {name} {json.dumps(args)}]" for name, args in calls)
+        passed = TOOL_CHECKERS[case.checker](answer, case.expected, calls, case.expected_read_path)
+        return ("pass" if passed else "fail"), tokens, seen, status, None, stop
     if not answer:
-        return "error", tokens, answer, status, _error("empty_answer")
+        return "error", tokens, answer, status, _error("empty_answer"), stop
     passed = CHECKERS[case.checker](answer, case.expected)
-    return ("pass" if passed else "fail"), tokens, answer, status, None
+    return ("pass" if passed else "fail"), tokens, answer, status, None, stop

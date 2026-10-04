@@ -83,6 +83,173 @@ Consequences in the specification: tool-history pruning is in v1 (SPEC 019); LOS
 expect low single-digit text-compression savings (README risk R3); latency is a real product risk
 (CC-014, E9, TOKLI_TEST_STRATEGY §8).
 
+### E5b-lite — composition, cost and saving on real Claude Code sessions (2026-10-03/04)
+
+**Method:**
+- **Data:** the session files of the developer's own Claude Code work over 14 days: 39 sessions,
+  about 17,800 requests, 28 context compactions. Subagent side-chains were left out.
+- **Analysis:** local scripts with the developer's consent. Only counters and flags are kept and
+  printed; no text, path or tool argument is printed or stored.
+- **Measures:**
+  - provider usage is exact, from the session files;
+  - content tokens are estimated as characters / 4;
+  - "weighted" = a content's tokens × the number of later requests that resend it, stopping at
+    the next compaction;
+  - costs use typical relative prices: input 1, cache write 1.25, cache read 0.1, output 5.
+
+**Where the cost goes** (exact usage):
+
+| Item | Tokens | Share of cost |
+|---|---|---|
+| Cache reads | 7.58 B | 64.0 % |
+| Cache writes | 261 M | 27.5 % |
+| Output | 19.9 M | 8.4 % |
+| Uncached input | 0.37 M | about 0 % |
+
+**Cache writes come from full rewrites.**
+- 88 % of cache-write tokens come from requests that rewrote most of the cached context (579
+  requests).
+- 76 % of all cache writes follow a pause of more than an hour since the previous request. Only
+  5.7 % follow a pause of 5 to 60 minutes.
+- This is consistent with a one-hour provider cache lifetime.
+
+**Resent content,** by part, weighted (estimate). The session files do not hold the system prompt
+or the tool definitions.
+
+| Part | Share |
+|---|---|
+| `Write` arguments (file contents) | 21.7 % |
+| `Bash` results | 19.5 % |
+| `Read` results | 15.3 % |
+| `Bash` arguments (commands and inline scripts) | 12.2 % |
+| `Edit` arguments | 9.7 % |
+| User and assistant text | 11.8 % |
+| Other | 9.8 % |
+
+**Tool results only:**
+- `Bash` 47 % and `Read` 37 % of their volume.
+- **Shapes:**
+  - grep-shaped results are about 6 %;
+  - log-shaped results about 6 %;
+  - JSON-shaped about 1 %;
+  - diffs 0.4 %.
+- **Inside `Bash`:**
+  - about a third is reading files with `sed`, `cat` and `grep`;
+  - 11 % is test-runner output.
+- **Long results:** the part of results above 4,000 tokens beyond their first and last 2,000
+  tokens is 1.7 % of the resent content.
+- **Superseded reads:** reads superseded by a later full view (a real view of at least half the
+  size, not an error, at least four human turns old) are 1.7 % of the tool-result volume.
+
+**Measured saving of the built compressors,** default options, run offline over the same tool
+results:
+
+| Setting | `search_group` v2 | `log_filter` | Both |
+|---|---|---|---|
+| Opt-in for `Bash`/`Read` on | 0.51 % | 0.83 % | 1.34 % |
+| Default (`Bash`/`Read` excluded) | — | — | under 0.2 % |
+
+The figures are shares of the tool-result volume. Version 1 of `search_group` measured 0.74 %,
+because it grouped log timestamps as paths (S8a SCR-003).
+
+**Simulation: pruning old history only when the context is rewritten anyway.**
+- **When:** at the requests that the provider usage shows as full rewrites after a pause.
+- **What:** items older than K human turns are replaced by a 20-token stub, and they stay
+  replaced afterwards, so the cache prefix stays stable.
+- **Saving per request:** 1.25 × the removed tokens at rewrites, and 0.1 × in the other turns,
+  until compaction or the end of the session.
+
+| What is pruned | K = 4 | K = 10 |
+|---|---|---|
+| Old `Write`/`Edit` arguments | 5.9 % of total cost | 4.3 % |
+| + superseded reads | 6.1 % | 4.4 % |
+| + every old tool result above 500 tokens | 10.5 % | 7.6 % |
+
+The pause threshold (more than 1 hour, or more than 5 minutes) changes the figures by less than
+0.2 points.
+
+**Limits:**
+- one developer, 14 days;
+- content tokens are estimates;
+- the simulation measures cost only, not model behaviour, and not extra calls the model might
+  make after pruning (for example re-reading files).
+
+**Consequences in the specification:**
+- The lossless, prefix-stable compressors save well under 1 % of cost on this traffic, because
+  nearly all resent tokens are paid at the cache-read price.
+- The large levers are:
+  - tool-call arguments (E10);
+  - pruning at the moments when the cache is rewritten anyway.
+
+  Both need conversation state and time, which SPEC 009 CC-006 currently excludes.
+
+### E10(a) — the provider accepts stubbed edit arguments (2026-10-04)
+
+**Method:** `evals/experiments/e10a_api_acceptance.py`, run by the developer on `claude-opus-5-5`,
+4 calls; the result is in `evals/experiments/e10a_result.json`.
+- **The conversation** (synthetic): the agent writes `config.py`, edits it, has four unrelated
+  exchanges, and is asked for a value from the file.
+- **The two variants:** the history as sent, and the history with the `content`, `old_string` and
+  `new_string` of the old calls replaced by Tokli's stub.
+
+| Variant | HTTP status | Model behaviour (2 of 2) |
+|---|---|---|
+| Original | 200 | Answers from the earlier `Write` content (`4`, correct) |
+| Stubbed | 200 | Calls `Read` on `config.py` instead of answering from memory |
+
+**Consequences:**
+- The API accepts the stubbed history.
+- The model behaves as the assumption `edit_content_not_needed` expects: it re-reads the file
+  rather than guessing.
+- The re-read is an extra call that the cost simulation above does not include. The S8c dogfood
+  week measures it.
+- The stub was about as long as this tiny file, so this run measures acceptance and behaviour,
+  not saving.
+
+### S8c smoke run — stubbed edit history draws refusals (2026-10-04)
+
+**Run:** `tokli eval smoke --compressor edit_args_on_resume` on `claude-opus-5-5`, 22 synthetic
+cases × 3 repetitions × 2 arms. Report:
+`evals/results/2026-10-04-edit_args_on_resume-claude-opus-5-5/report.md`.
+
+- **No wrong answer** in either arm.
+- **Refusals** (`stop_reason: refusal`): 6 of 66 with the original history, **17 of 66** with
+  the old `Write` content replaced by
+  `[tokli: earlier edit content omitted (<n> tokens) — read the file for its current state]`.
+- **Verdict:** `damage_detected` (b = 4, c = 0).
+
+**Reading:**
+- A provider-side refusal triggered by edited assistant history is a hazard of the same kind as
+  H05/H07: a transformation that is valid for the protocol but changes how the provider treats
+  the request.
+- Two calls in E10(a) were too few to see it.
+
+### E10(c) — any edit of the assistant's own tool-call history draws refusals (2026-10-04)
+
+**Method:** `evals/experiments/e10c_stub_wording.py` on `claude-opus-5-5`; result in
+`evals/experiments/e10c_result.json`.
+- 10 synthetic cases of `reread_after_pruned_edit`, including the 5 refused in the S8c smoke run.
+- 2 repetitions per case.
+- Four forms of the old `Write` content.
+
+| Form of the old `Write` content (20 calls each) | Correct | Wrong | Refused |
+|---|---|---|---|
+| Original (control) | 16 | 2 | 2 |
+| `[tokli: earlier edit content omitted (<n> tokens) — read the file for its current state]` | 12 | 0 | 8 |
+| `[tokli: <n> tokens omitted]` | 9 | 0 | 11 |
+| Empty string | 12 | 3 | 5 |
+
+**Reading:**
+- The imperative wording is not the cause: the purely descriptive stub drew more refusals.
+- Emptying the content also raised them.
+- Changing the assistant's own past tool-call arguments, in any form tried, makes the provider
+  refuse far more often.
+- **Contrast:** replacing *tool results* (user-side content) drew no refusal in 132 calls (E11,
+  `duplicate_tool_results`).
+
+**Consequence:** pruning tool-call arguments (`edit_args_on_resume`, E10) is not viable on this
+model. Pruning old tool results at a resume is the remaining form of the lever.
+
 ### Other quantitative inputs
 
 | Input | Value | Use |

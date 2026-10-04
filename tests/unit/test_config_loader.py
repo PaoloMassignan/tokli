@@ -42,6 +42,16 @@ EXAMPLES: dict[str, tuple[str, str, object]] = {
     "compressors.log_filter.enabled": ("true", "false", False),
     "compressors.log_filter.debug_sample": ("5", "20", 20),
     "compressors.log_filter.apply_to_verbatim_tools": ("true", "false", False),
+    "compressors.edit_args_on_resume.enabled": ("true", "false", False),
+    "pruning.resume_after_s": ("60", "120", 120.0),
+    "pruning.resume_min_age_turns": ("2", "6", 6),
+    "pruning.resume_min_tokens": ("10", "20", 20),
+    "pruning.resume_edit_fields": (
+        "{Write: [content]}",
+        '{"Edit": ["old_string"]}',
+        {"Edit": ("old_string",)},  # values are frozen (lists become tuples)
+    ),
+    "pruning.conversation_states": ("8", "16", 16),
     "pruning.duplicate_min_tokens": ("10", "20", 20),
     "pruning.duplicate_require_same_call": ("true", "false", False),
     "tokens.default": ("cl100k_base", "o200k_base", "o200k_base"),
@@ -82,6 +92,12 @@ FILE_EXPECTED: dict[str, object] = {
     "compressors.search_group.apply_to_verbatim_tools": True,
     "compressors.log_filter.enabled": True,
     "compressors.log_filter.debug_sample": 5,
+    "compressors.edit_args_on_resume.enabled": True,
+    "pruning.resume_after_s": 60.0,
+    "pruning.resume_min_age_turns": 2,
+    "pruning.resume_min_tokens": 10,
+    "pruning.resume_edit_fields": {"Write": ("content",)},
+    "pruning.conversation_states": 8,
     "compressors.log_filter.apply_to_verbatim_tools": True,
     "pruning.duplicate_min_tokens": 10,
     "pruning.duplicate_require_same_call": True,
@@ -113,9 +129,23 @@ DEFAULT_BEHAVIOUR_JSON = {
         # S8a-1: the new compressors' default options enter the hash (CF-006).
         "search_group": {"enabled": False, "min_group_lines": 5, "apply_to_verbatim_tools": False},
         "log_filter": {"enabled": False, "debug_sample": 10, "apply_to_verbatim_tools": False},
+        "edit_args_on_resume": {"enabled": False},  # S8c
     },
     "limits": {"max_transform_bytes": 33554432, "usage_parser_buffer": 1048576},
-    "pruning": {"duplicate_min_tokens": 64, "duplicate_require_same_call": False},
+    "pruning": {
+        "duplicate_min_tokens": 64,
+        "duplicate_require_same_call": False,
+        # S8c (SPEC 017 "Keys added in S8c")
+        "resume_after_s": 3600.0,
+        "resume_min_age_turns": 4,
+        "resume_min_tokens": 64,
+        "resume_edit_fields": {
+            "Write": ["content"],
+            "Edit": ["old_string", "new_string"],
+            "MultiEdit": ["edits/*/old_string", "edits/*/new_string"],
+        },
+        "conversation_states": 1024,
+    },
     "tokens": {
         "default": "o200k_base",
         "model_map": [

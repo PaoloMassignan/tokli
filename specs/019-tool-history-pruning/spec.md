@@ -2,6 +2,7 @@
 
 Status: Draft (revised in Phase 0.1) · Slices: S4 (`duplicate_tool_results`, LOSSLESS by reference), S8 (`superseded_tool_results`, SELECTIVE)
 Approved for S4 (2026-10-03): PR-001…PR-005, PR-009 (never set by duplicates), PR-010…PR-013, PR-015. PR-006…PR-008, PR-014 in S8.
+Approved for S8c (2026-10-04): `edit_args_on_resume`, PR-005 (as changed), PR-020…PR-026, AC-PR-11…AC-PR-16; ADR 0012.
 Related: SPEC 001 (canonical model), 009 (compression core, preservation model), 010 (catalogue), 012 (evaluation), PHASE0_1_REVIEW.md
 
 ## Purpose
@@ -114,7 +115,7 @@ saving is at least `pruning.superseded_min_saving_tokens` (default 8,000).
 | PR-002 | WHEN a TOOL_RESULT segment has byte-identical text to an earlier TOOL_RESULT segment in the same request and meets the minimum size, THE `duplicate_tool_results` pruner SHALL replace the later segment's text with a stub naming the earlier call id. |
 | PR-003 | THE `duplicate_tool_results` pruner SHALL never stub the earliest occurrence, SHALL never reference a segment that is not present earlier in the same request, and SHALL decode (whole request) to the original texts. |
 | PR-004 | THE patch produced by `duplicate_tool_results` for segment j SHALL depend only on segments 0…j (prefix stability). |
-| PR-005 | THE pruners SHALL NOT change the number, order or pairing of messages, tool calls, tool results or input items, and SHALL NOT modify tool-call arguments in v1. |
+| PR-005 | THE pruners SHALL NOT change the number, order or pairing of messages, tool calls, tool results or input items, and SHALL NOT modify tool-call arguments in v1, except the argument strings that `edit_args_on_resume` replaces under PR-022 (S8c). |
 | PR-006 | THE `analyze.tool_resources` analyzer SHALL derive `resource_key` and `action` for each tool record only from `pruning.tool_semantics`. Unknown tools get `action: other` and are never superseded. |
 | PR-007 | WHEN a read of resource X is followed later in the same request by a full read or full write of X, AND the superseding record is older than `superseded_min_age_turns` user turns, AND the request-wide saving reaches `superseded_min_saving_tokens`, THE `superseded_tool_results` pruner SHALL stub the earlier read's result. |
 | PR-008 | THE `superseded_tool_results` pruner SHALL keep verbatim the latest full read or write of every resource and every result whose resource or action is unknown. |
@@ -125,8 +126,53 @@ saving is at least `pruning.superseded_min_saving_tokens` (default 8,000).
 | PR-013 | THE `duplicate_tool_results` pruner SHALL consider TOOL_RESULT segments of tools listed in `verbatim_tools` (CC-021). |
 | PR-015 | THE `duplicate_tool_results` stub SHALL keep every protected span of the replaced text, verbatim and in order, after the stub line, AND the pruner SHALL consider only tool results whose whole content is one text segment, as stub and as target. `reference_stubs` (TC-014) SHALL count the accepted stubs of the forwarded request. (S4 review P6, P7, A5.) |
 | PR-014 | THE shell-command classification for Codex tools SHALL be exactly the rules in "Shell-command classification" below. A command that matches no rule SHALL get `action: other`. New rules SHALL be added only by a spec change with a test case per rule. |
+| PR-020 | THE `edit_args_on_resume` pruner SHALL be SELECTIVE, request scope, `prefix_stable: false`, off by default, and SHALL run only when enabled (CC-002). |
+| PR-021 | WHEN a request's conversation (key per ADR 0012) was last seen more than `pruning.resume_after_s` seconds ago, or is not known to Tokli, THE SYSTEM SHALL treat the request as a resume; otherwise it SHALL NOT. |
+| PR-022 | AT a resume, THE `edit_args_on_resume` pruner SHALL replace with the stub every argument string listed in `pruning.resume_edit_fields` for its tool, of at least `pruning.resume_min_tokens` tokens, in every tool call followed by at least `pruning.resume_min_age_turns` human turns, and SHALL keep every other key and value, the call id and the block order. |
+| PR-023 | BETWEEN two resumes of a conversation, THE pruner SHALL apply exactly the replacements decided at its last resume to the calls still present, and no others, so that the forwarded prefix is byte-identical from one request to the next. |
+| PR-024 | THE conversation store SHALL keep, per conversation key, only the time of the last request and the pruned call ids; it SHALL be bounded by `pruning.conversation_states` with least-recently-used eviction, and SHALL NOT be written to disk. |
+| PR-025 | WHEN a resume changes an argument string, THE SYSTEM SHALL record `history_rewritten: true` (PR-009); THE per-compressor statistics SHALL count each replaced string as one accepted segment. |
+| PR-026 | THE pruners SHALL count human turns as defined in this spec (a user message holding human text); messages that carry only tool results SHALL NOT count. |
 
-## Default tool semantics (config data, revisable)
+## `edit_args_on_resume` — SELECTIVE (S8c)
+
+Rationale: TOKLI_EVIDENCE §2 (E5b-lite).
+- Most of the cost of agent traffic is the provider cache.
+- Three quarters of the cache writes follow a pause of more than an hour, when the whole context
+  is written again.
+- The contents written by `Write` and the strings of `Edit` are about a third of the resent
+  content.
+
+Pruning them only at those moments avoids an extra cache rewrite. Keeping the pruning
+afterwards keeps the cache valid.
+
+**Conversation state** (ADR 0012).
+- **Key:** SHA-256 of the canonical JSON of `system` and the first message.
+- **What Tokli keeps per key:** the wall-clock time of the conversation's last request, and the
+  set of tool-call ids pruned at its last resume.
+- **Where:** in memory only, bounded by `pruning.conversation_states` (least recently used).
+
+**Resume.** A request is a resume when its conversation was last seen more than
+`pruning.resume_after_s` ago (default 3,600), or is not known (S8c review P5).
+
+**Human turn.** A user message that holds human text (a string, or a text block in a message
+without `tool_result` blocks). Messages that carry only tool results are not human turns.
+
+**Stub** (replaces each pruned argument string):
+```text
+[tokli: earlier edit content omitted (<n> tokens) — read the file for its current state]
+```
+
+Claims:
+
+| Claim | Type | Backed by |
+|---|---|---|
+| Keys, `file_path`, ids, order and structure are unchanged; only listed argument strings change | PROVEN | `test_resume_pruning_keeps_structure_and_paths` |
+| Between two resumes the forwarded prefix is byte-identical | PROVEN | `test_resume_pruning_stable_between_resumes` |
+| Only calls older than `resume_min_age_turns` human turns are pruned, and only at a resume | PROVEN | `test_resume_pruning_only_at_resume_and_old_calls` |
+| The agent does not need, hours later, the exact text it wrote, and re-reads the file when it does (`edit_content_not_needed`) | ASSUMPTION | smoke family `reread_after_pruned_edit` (SPEC 012) |
+| The provider accepts a history whose edit arguments were changed | ASSUMPTION | E10(a), before code |
+
 
 | Client | Tool | Resource argument | Action |
 |---|---|---|---|
@@ -172,6 +218,12 @@ superseding.
 - AC-PR-8 (PR-012): read(F) → read(F) identical → full read(F) with different content, with both pruners on: the second read is a duplicate stub naming the first; `superseded_tool_results` is rejected on the first read with `reference_target_modified`; the whole-request decode restores every original text.
 - AC-PR-9 (PR-013): a duplicate `Read` result (a tool in `verbatim_tools`) is stubbed.
 - AC-PR-10 (PR-014): a table-driven test covers every rule row, each rejection in step 2, and argv vs string forms (bash/PowerShell wrappers, Windows and POSIX paths).
+- AC-PR-11 (PR-021, PR-022): a conversation with a `Write` and an `Edit` at turn 1 and six more human turns; with a clock two hours after the previous request → `content`, `old_string` and `new_string` are stubbed, `file_path`, ids and structure are unchanged. One hour minus a second → nothing changes.
+- AC-PR-12 (PR-023): after a resume, a request one minute later with one more turn → the forwarded body before the new turn is byte-identical to the previous forwarded body, and no newly old call is pruned.
+- AC-PR-13 (PR-021): an unknown conversation is a resume (S8c review P5).
+- AC-PR-14 (PR-020): off by default; the "Lossless only" shortcut switches it off.
+- AC-PR-15 (PR-024): the store never exceeds its bound, and no file is written.
+- AC-PR-16 (PR-022, PR-026): a call followed by three human turns and many tool-only messages is not pruned; strings under `resume_min_tokens` are not pruned.
 
 ## Test scenarios
 `test_duplicate_results_stub_later_copies` · `prop_duplicate_pruning_decodes_whole_request` ·
@@ -185,7 +237,10 @@ superseding.
 `test_shell_command_classification_rules` · `test_path_normalisation` ·
 `test_duplicate_stub_names_earliest_copy` · `test_superseded_rejected_on_reference_target` ·
 `test_duplicate_pruning_applies_to_verbatim_tools` · `test_reference_target_integrity_enforced` ·
-`test_duplicate_stub_keeps_protected_spans` · `test_multi_block_results_not_pruned` · `test_reference_stubs_counted`
+`test_duplicate_stub_keeps_protected_spans` · `test_multi_block_results_not_pruned` · `test_reference_stubs_counted` ·
+`test_resume_pruning_keeps_structure_and_paths` · `test_resume_pruning_stable_between_resumes` ·
+`test_resume_pruning_only_at_resume_and_old_calls` · `test_unknown_conversation_is_resume` ·
+`test_conversation_store_bounded_and_memory_only` · `test_human_turn_definition` · `test_resume_pruning_off_by_default`
 
 ## Open questions
 - Q14: How much of the pruning saving measured in E5a (TOKLI_EVIDENCE §2) came from Edit/Write **arguments** rather than results? It needs a per-part count. E5b records tokens by segment kind, including TOOL_CALL_ARGS (read-only).

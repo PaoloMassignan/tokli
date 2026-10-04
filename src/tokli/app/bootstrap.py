@@ -7,9 +7,10 @@ constructs compressors, tokenizers or sinks itself.
 from __future__ import annotations
 
 import dataclasses
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 
+from tokli.app.conversations import ConversationStore
 from tokli.app.setup_tokenizers import required_tokenizers
 from tokli.compression.engine import Engine, EngineSettings
 from tokli.compression.registry import build_registry
@@ -47,6 +48,10 @@ class Services:
     version: str
     policy: str = "LOSSLESS_ONLY"  # derived from the enabled compressors (CC-002)
     calibration: OutlierWindow = field(default_factory=OutlierWindow)  # OB-011
+    # Conversation state for `edit_args_on_resume` (ADR 0012); kept across config changes.
+    conversations: ConversationStore = field(default_factory=ConversationStore)
+    # Argument strings exposed as TOOL_CALL_ARGS, only while `edit_args_on_resume` is on.
+    arg_fields: Mapping[str, Sequence[str]] = field(default_factory=dict)
 
 
 class StartupError(Exception):
@@ -84,6 +89,7 @@ def bootstrap(
         pipeline=parts.pipeline,
         selector=selector,
         mutable_kinds=parts.mutable_kinds,
+        arg_fields=parts.arg_fields,
         upstream=Upstream(
             anthropic.base_url,
             anthropic.connect_timeout_s,
@@ -100,6 +106,7 @@ def bootstrap(
         enabled=parts.enabled,
         version=version,
         policy=parts.policy,
+        conversations=ConversationStore(settings.pruning.conversation_states),
     )
 
 
@@ -110,6 +117,7 @@ class _Compression:
     availability: Mapping[str, str]
     enabled: Mapping[str, bool]
     policy: str
+    arg_fields: Mapping[str, Sequence[str]]
 
 
 def _compression(config: EffectiveConfig, selector: Selector) -> _Compression:
@@ -118,6 +126,7 @@ def _compression(config: EffectiveConfig, selector: Selector) -> _Compression:
     compression = settings.compression
     options = settings.compressors.model_dump()
     enabled = {compressor_id: bool(toggle["enabled"]) for compressor_id, toggle in options.items()}
+    resume_on = enabled.get("edit_args_on_resume", False)  # SPEC 019 PR-020
     opted_in = frozenset(  # CC-021 (b), S8a SCR-001
         compressor_id
         for compressor_id, toggle in options.items()
@@ -129,6 +138,9 @@ def _compression(config: EffectiveConfig, selector: Selector) -> _Compression:
             duplicate_require_same_call=settings.pruning.duplicate_require_same_call,
             search_group_min_lines=settings.compressors.search_group.min_group_lines,
             log_debug_sample=settings.compressors.log_filter.debug_sample,
+            resume_after_s=settings.pruning.resume_after_s,
+            resume_min_age_turns=settings.pruning.resume_min_age_turns,
+            resume_min_tokens=settings.pruning.resume_min_tokens,
         ),
         EngineSettings(
             enabled=enabled,
@@ -148,7 +160,9 @@ def _compression(config: EffectiveConfig, selector: Selector) -> _Compression:
     )
     return _Compression(
         pipeline=pipeline,
-        mutable_kinds=frozenset(SegmentKind(kind) for kind in compression.segment_kinds),
+        mutable_kinds=frozenset(SegmentKind(kind) for kind in compression.segment_kinds)
+        | ({SegmentKind.TOOL_CALL_ARGS} if resume_on else set()),
+        arg_fields=dict(settings.pruning.resume_edit_fields) if resume_on else {},
         availability=dict(engine.availability()),
         enabled=enabled,
         policy=engine.policy,
@@ -166,6 +180,7 @@ def rebuild(services: Services, config: EffectiveConfig) -> Services:
         config=config,
         pipeline=parts.pipeline,
         mutable_kinds=parts.mutable_kinds,
+        arg_fields=parts.arg_fields,
         availability=parts.availability,
         enabled=parts.enabled,
         policy=parts.policy,

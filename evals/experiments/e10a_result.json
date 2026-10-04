@@ -1,0 +1,51 @@
+{
+  "model": "claude-opus-5-5",
+  "rows": [
+    {
+      "variant": "original",
+      "status": 200,
+      "stop_reason": "end_turn",
+      "tool_calls": [],
+      "text": "4",
+      "input_tokens": 1031
+    },
+    {
+      "variant": "stubbed",
+      "status": 200,
+      "stop_reason": "tool_use",
+      "tool_calls": [
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "config.py"
+          }
+        }
+      ],
+      "text": "",
+      "input_tokens": 1031
+    },
+    {
+      "variant": "original",
+      "status": 200,
+      "stop_reason": "end_turn",
+      "tool_calls": [],
+      "text": "4",
+      "input_tokens": 1031
+    },
+    {
+      "variant": "stubbed",
+      "status": 200,
+      "stop_reason": "tool_use",
+      "tool_calls": [
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "config.py"
+          }
+        }
+      ],
+      "text": "",
+      "input_tokens": 1031
+    }
+  ]
+}

@@ -400,3 +400,67 @@ def test_s8a1_cases_do_not_exercise_the_other_compressor(
             assert not compressor.applicable(text, view, _features(text, FakeCounter())).ok, (
                 case.case_id
             )
+
+
+# -- S8c: `answer_or_read` and the family `reread_after_pruned_edit` (SPEC 012) ------------------
+
+
+def test_checker_answer_or_read() -> None:
+    """QE-020 `answer_or_read`: the right value, or a read of the case's file."""
+    from tokli.eval.checkers import answer_or_read
+
+    read = [("Read", {"file_path": "config.py"})]
+    assert answer_or_read("The value is\n4", "4", [], "config.py")
+    assert answer_or_read("", "4", read, "config.py")
+    assert not answer_or_read("5", "4", [], "config.py")
+    assert not answer_or_read("", "4", [("Read", {"file_path": "other.py"})], "config.py")
+    assert not answer_or_read("", "4", [("Bash", {"command": "cat config.py"})], "config.py")
+    assert not answer_or_read("", "4", read, None)
+
+
+def test_answer_or_read_case_needs_a_read_path() -> None:
+    case = {
+        "case_set": "x",
+        "family": "reread_after_pruned_edit",
+        "assumption": "edit_content_not_needed",
+        "checker": "answer_or_read",
+        "request": {"messages": []},
+        "expected": "4",
+    }
+    assert any("expected_read_path" in e for e in lint_case(case, "c"))
+    assert lint_case({**case, "expected_read_path": "config.py"}, "c") == []
+
+
+def test_reread_family_exists_for_the_pruner() -> None:
+    spec = next(c.spec for c in REGISTRY if c.spec.id == "edit_args_on_resume")
+    cases = load_cases(CASES, spec.assumptions)
+    assert {c.family for c in cases} == {"reread_after_pruned_edit"}
+    assert len(cases) == 22
+    assert {c.checker for c in cases} == {"answer_or_read"}
+    assert all(c.expected_read_path for c in cases)
+
+
+def test_reread_cases_exercise_the_pruner() -> None:
+    """Every case has an old `Write` the pruner replaces at a resume (the eval arm has no
+    conversation state, so it is a resume)."""
+    import json as _json
+
+    from tests.helpers import FakeCounter, view_of
+    from tests.unit.test_engine import settings_for
+    from tokli.compression.engine import Engine
+    from tokli.compressors.edit_args_on_resume import EditArgsOnResume
+    from tokli.config.schema import TokliSettings
+    from tokli.domain.models import SegmentKind
+    from tokli.protocols.anthropic_messages import parse
+
+    fields = TokliSettings().pruning.resume_edit_fields
+    kinds = frozenset({SegmentKind.TOOL_RESULT, SegmentKind.USER_TEXT, SegmentKind.TOOL_CALL_ARGS})
+    engine = Engine([EditArgsOnResume()], settings_for("edit_args_on_resume"))
+    cases = load_cases(CASES, ("edit_content_not_needed",))
+    assert cases
+    for case in cases:
+        raw = _json.dumps({**case.request, "model": "m"}).encode()
+        request = parse(raw, mutable_kinds=kinds, arg_fields=fields)
+        result = engine.run(request, view_of(request), FakeCounter(), None)
+        assert result.patches, case.case_id
+        assert case.expected not in "".join(p.new_text for p in result.patches)

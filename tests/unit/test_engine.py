@@ -456,12 +456,13 @@ def test_verbatim_opt_in_defaults_off() -> None:
     assert EngineSettings(enabled={}, verbatim_tools=frozenset()).verbatim_opt_in == frozenset()
 
 
-def test_registry_lists_the_s8a1_compressors() -> None:
+def test_registry_lists_the_s8c_compressors() -> None:
     assert [c.spec.id for c in REGISTRY] == [
         "json_minify",
         "duplicate_tool_results",
         "search_group",
         "log_filter",
+        "edit_args_on_resume",
     ]
     assert isinstance(REGISTRY[0], JsonMinify)
 

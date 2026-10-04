@@ -31,8 +31,19 @@ class StageView:
 
 
 @dataclass(frozen=True)
+class ConversationView:
+    """What Tokli remembers about the request's conversation (SPEC 019 PR-021…PR-024, ADR 0012):
+    seconds since its previous request (``None`` when the conversation is unknown) and the tool
+    calls pruned at its last resume."""
+
+    seconds_since_last: float | None
+    pruned_call_ids: frozenset[str] = frozenset()
+
+
+@dataclass(frozen=True)
 class StageContext:
     request_id: str
+    conversation: ConversationView | None = None  # S8c; None outside the proxy (eval, tests)
 
 
 @dataclass(frozen=True)

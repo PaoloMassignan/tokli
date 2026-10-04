@@ -16,6 +16,7 @@ from tokli.compression.contract import (
     ToolRecordView,
 )
 from tokli.domain.models import SegmentKind
+from tokli.domain.stage import ConversationView
 
 STUB_PREFIX = "[tokli: identical to the result of tool call "
 _STUB = STUB_PREFIX + "{call_id} earlier in this conversation — {tokens} tokens omitted]"
@@ -67,6 +68,7 @@ class DuplicateToolResults:
         texts: Mapping[str, str],
         tools: Sequence[ToolRecordView],
         count: Callable[[str], int],
+        conversation: ConversationView | None = None,  # unused: prefix-stable by itself
     ) -> list[Proposal]:
         calls = {t.call_id: (t.name, _canonical(t.arguments)) for t in tools}
         earliest: dict[str, SegmentRef] = {}

@@ -3,6 +3,7 @@
 Status: Draft · Slice: S1 (Anthropic subset), S5/S7 (OpenAI) · Related: ARCH §3
 Approved for S1 (2026-09-30): CM-001…CM-012 (Anthropic). CM-013 deferred to S4.
 Approved for S4 (2026-10-03): CM-013 (Anthropic).
+Changed for S8c (approved 2026-10-04): CM-009 (selected tool-call argument strings, SPEC 019 PR-022).
 
 ## Purpose
 Give every stage a protocol-independent, minimal view of the request's **text values**, and
@@ -32,7 +33,9 @@ Span(start, end, reason)            # [start, end) character offsets into Segmen
 
 `mutable` is decided by the adapter (protocol eligibility) **and** by config
 (`compression.segment_kinds`, default `{TOOL_RESULT, USER_TEXT}`). Assistant-side content,
-`TOOL_CALL_ARGS`, thinking, reasoning, images and documents are never mutable in v1, whatever the config says.
+`TOOL_CALL_ARGS`, thinking, reasoning, images and documents are never mutable in v1, whatever the config says,
+with one exception (S8c): the argument strings listed in `pruning.resume_edit_fields` are exposed as
+`TOOL_CALL_ARGS` segments that only request-scope pruners declaring `TOOL_CALL_ARGS` may change (SPEC 019 PR-022).
 
 ## Requirements
 
@@ -46,7 +49,7 @@ Span(start, end, reason)            # [start, end) character offsets into Segmen
 | CM-006 | WHEN a tool result can be linked to its tool call within the same request, THE adapter SHALL set `attrs.tool_name` and `attrs.tool_call_id`. |
 | CM-007 | WHEN the body is not valid JSON, is not an object, or does not match the protocol's minimal shape, THE SYSTEM SHALL relay the request verbatim and record `passthrough(parse_error)`. |
 | CM-008 | WHILE a request carries a `content-encoding` header, THE SYSTEM SHALL relay it verbatim and record `passthrough(content_encoding)`. |
-| CM-009 | THE SYSTEM SHALL NOT mark as mutable: assistant-role content, thinking/redacted_thinking blocks, encrypted reasoning, tool-call arguments, image/audio/file/document parts, `cache_control`, tool `name`/`input_schema`/`parameters`. |
+| CM-009 | THE SYSTEM SHALL NOT mark as mutable: assistant-role content, thinking/redacted_thinking blocks, encrypted reasoning, tool-call arguments (except the argument strings of SPEC 019 PR-022, which only request-scope pruners declaring `TOOL_CALL_ARGS` may change), image/audio/file/document parts, `cache_control`, tool `name`/`input_schema`/`parameters`. |
 | CM-010 | THE `tokli.domain` package SHALL NOT import any protocol, provider, HTTP or storage module. |
 | CM-011 | WHEN re-serialising a patched body, THE SYSTEM SHALL emit UTF-8 JSON with non-ASCII characters unescaped and SHALL set `content-length` from the new body. |
 | CM-012 | WHEN the request body exceeds `limits.max_transform_bytes` (default 32 MiB), THE SYSTEM SHALL relay it verbatim and record `passthrough(too_large)`. |

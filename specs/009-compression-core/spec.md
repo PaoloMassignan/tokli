@@ -6,6 +6,7 @@ Approved for S2 (2026-10-02): CC-024.
 Changed by S4 SCR-001 (2026-10-03): CC-002 (the policy is a shortcut, not a gate), AC-CC-1, AC-CC-11, the eligibility column.
 Approved for S4 (2026-10-03): CC-002 (SCR-001), CC-003, CC-009, CC-015 and CC-016 for `reference`, CC-019, CC-021, the request scope.
 Changed by S8a SCR-001 (approved for S8a-1, 2026-10-03): CC-021 (per-compressor opt-in for verbatim tools).
+Changed for S8c (approved 2026-10-04): CC-006 (a request-scope pruner may use the conversation state of ADR 0012).
 
 ## Purpose
 Define what a compressor is, what "lossless" means in Tokli, how the global policy constrains
@@ -143,7 +144,7 @@ for segment in mutable segments (document order):
 | CC-003 | THE SYSTEM SHALL apply an enabled and permitted compressor to a segment only if all filters pass, `applicable()` returns true, and the acceptance gate passes (enabled ≠ forced). |
 | CC-004 | WHEN a compressor's output does not reduce the segment's estimated tokens by at least `max(min_gain_tokens, ceil(t_in × min_gain_ratio))` (defaults 4 and 0.01), THE SYSTEM SHALL retain the previous text. |
 | CC-005 | THE SYSTEM SHALL ensure that the estimated tokens of every forwarded segment, and of the request as a whole, are less than or equal to the original. |
-| CC-006 | THE output of a segment-scope compressor for a segment SHALL depend only on the segment's text, its `SegmentView`, the effective compression config and the compressor versions. THE output of a request-scope compressor declared `prefix_stable` SHALL depend only on segments and tool records at or before that segment. No compressor SHALL depend on time, randomness, locale or host. |
+| CC-006 | THE output of a segment-scope compressor for a segment SHALL depend only on the segment's text, its `SegmentView`, the effective compression config and the compressor versions. THE output of a request-scope compressor declared `prefix_stable` SHALL depend only on segments and tool records at or before that segment. No compressor SHALL depend on time, randomness, locale or host, except that a request-scope compressor MAY depend on the conversation state of SPEC 019 PR-021…PR-024 (the time since the conversation's previous request and the replacements decided at its last resume), received read-only from the engine (S8c, ADR 0012). |
 | CC-018 | WHEN a compressor declared `prefix_stable: false` changes a segment, THE SYSTEM SHALL record `history_rewritten: true` for the request, and THE UI SHALL mark such compressors as "may invalidate provider cache". |
 | CC-007 | IF a compressor output does not contain every protected span's text unchanged and in order, THEN THE SYSTEM SHALL reject that output (`rejected_invariant`). |
 | CC-008 | IF a compressor raises or exceeds `compression.per_call_timeout_ms` (default 200), THEN THE SYSTEM SHALL keep the previous text and record `failed` with the reason. In-process calls are not preempted: a call that returns after the timeout has its result discarded (`failed(timeout)`). Protection against non-terminating compressors comes from their complexity requirements; a compressor of `cost_class: expensive` needs a design that can be preempted. |

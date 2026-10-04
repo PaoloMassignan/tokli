@@ -132,6 +132,8 @@ class CompressorsSection(BaseModel):
     duplicate_tool_results: CompressorToggle = CompressorToggle(enabled=True)
     search_group: SearchGroupOptions = SearchGroupOptions()
     log_filter: LogFilterOptions = LogFilterOptions()
+    # SELECTIVE, never on by default (CC-002); SPEC 019 PR-020 (S8c).
+    edit_args_on_resume: CompressorToggle = CompressorToggle(enabled=False)
 
 
 class PruningSection(BaseModel):
@@ -141,6 +143,18 @@ class PruningSection(BaseModel):
 
     duplicate_min_tokens: int = Field(default=64, ge=0)  # POLICY, provisional
     duplicate_require_same_call: bool = False
+    # `edit_args_on_resume` (S8c, SPEC 019 PR-021…PR-024, ADR 0012)
+    resume_after_s: float = Field(default=3600.0, gt=0)
+    resume_min_age_turns: int = Field(default=4, ge=0)
+    resume_min_tokens: int = Field(default=64, ge=0)
+    resume_edit_fields: dict[str, list[str]] = Field(
+        default_factory=lambda: {
+            "Write": ["content"],
+            "Edit": ["old_string", "new_string"],
+            "MultiEdit": ["edits/*/old_string", "edits/*/new_string"],
+        }
+    )
+    conversation_states: int = Field(default=1024, ge=1)
 
 
 class ObservabilitySection(BaseModel):

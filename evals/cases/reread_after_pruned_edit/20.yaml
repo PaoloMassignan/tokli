@@ -1,0 +1,113 @@
+case_set: 2026-10-04.2
+family: reread_after_pruned_edit
+assumption: edit_content_not_needed
+checker: answer_or_read
+request:
+  max_tokens: 1024
+  tools:
+  - name: Write
+    description: Writes a file.
+    input_schema:
+      type: object
+      properties:
+        file_path:
+          type: string
+        content:
+          type: string
+      required:
+      - file_path
+      - content
+  - name: Edit
+    description: Replaces old_string with new_string in a file.
+    input_schema:
+      type: object
+      properties:
+        file_path:
+          type: string
+        old_string:
+          type: string
+        new_string:
+          type: string
+      required:
+      - file_path
+      - old_string
+      - new_string
+  - name: Read
+    description: Reads a file and returns its content.
+    input_schema:
+      type: object
+      properties:
+        file_path:
+          type: string
+      required:
+      - file_path
+  messages:
+  - role: user
+    content: Create fjord_queue_settings.py with the settings we discussed.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01REREADW
+      name: Write
+      input:
+        file_path: fjord_queue_settings.py
+        content: '"""Synthetic settings."""
+
+
+          CACHE_MAX_ITEMS = 3354
+
+          RETRY_BATCH_SIZE = 8157
+
+          STORAGE_TIMEOUT_MS = 2173
+
+          QUEUE_TIMEOUT_MS = 3046
+
+          STORAGE_TOKEN_TTL = 8998
+
+          QUEUE_WINDOW_S = 1403
+
+          SERVER_TOKEN_TTL = 755
+
+          RETRY_LABEL = "birch-birch"
+
+          CACHE_LABEL = "amber-raven"
+
+          CACHE_ENDPOINT = "https://lumen.example.invalid/v3"
+
+          STORAGE_MAX_ITEMS = 9930
+
+          STORAGE_BATCH_SIZE = 6844
+
+          '
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01REREADW
+      content: File created.
+  - role: assistant
+    content: Created fjord_queue_settings.py.
+  - role: user
+    content: Thanks. Let me think about the next step.
+  - role: assistant
+    content: Sure.
+  - role: user
+    content: And 503?
+  - role: assistant
+    content: Service Unavailable.
+  - role: user
+    content: What does HTTP 429 mean?
+  - role: assistant
+    content: 'Too Many Requests: the client is rate limited.'
+  - role: user
+    content: Which port does HTTPS use by default?
+  - role: assistant
+    content: '443.'
+  - role: user
+    content: OK.
+  - role: assistant
+    content: Anything else?
+  - role: user
+    content: What is the value of STORAGE_TOKEN_TTL in fjord_queue_settings.py right now? Reply with the
+      value only, or read the file first if you are not sure.
+expected: '8998'
+expected_read_path: fjord_queue_settings.py

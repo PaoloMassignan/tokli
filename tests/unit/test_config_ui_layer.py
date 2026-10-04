@@ -41,6 +41,7 @@ def test_keys_marked_ui_editable() -> None:
         "compressors.search_group.apply_to_verbatim_tools",
         "compressors.log_filter.enabled",
         "compressors.log_filter.apply_to_verbatim_tools",
+        "compressors.edit_args_on_resume.enabled",
         "telemetry.retention_days",
     }
 

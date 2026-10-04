@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from typing import Any, Literal, Protocol, runtime_checkable
 
 from tokli.domain.models import SegmentKind, Span
-from tokli.domain.stage import Features
+from tokli.domain.stage import ConversationView, Features
 
 Kind = Literal["LOSSLESS", "SELECTIVE", "LOSSY", "UNKNOWN"]
 Equivalence = Literal["byte", "structural", "reference", "none"]
@@ -87,6 +87,7 @@ class ToolRecordView:
     call_id: str
     name: str
     arguments: Any
+    human_turns_after: int = 0  # SPEC 019 PR-026
 
 
 @dataclass(frozen=True)
@@ -115,6 +116,7 @@ class RequestCompressor(Protocol):
         texts: Mapping[str, str],
         tools: Sequence[ToolRecordView],
         count: Callable[[str], int],
+        conversation: ConversationView | None,
     ) -> list[Proposal]: ...
 
     def decode_request(

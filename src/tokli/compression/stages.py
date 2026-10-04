@@ -42,5 +42,7 @@ class CompressionStage:
         self._selector = selector
 
     def run(self, request: CanonicalRequest, view: StageView, ctx: StageContext) -> StageResult:
-        result = self._engine.run(request, view, self._selector.select(request.model))
+        result = self._engine.run(
+            request, view, self._selector.select(request.model), ctx.conversation
+        )
         return StageResult(patches=result.patches, report=result)

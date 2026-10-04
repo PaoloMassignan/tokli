@@ -58,6 +58,7 @@ class Observed:
     header_names: tuple[str, ...]
     usage: Usage
     error_details: Mapping[str, str] = field(default_factory=dict)
+    history_rewritten: bool = False  # PR-009, PR-025
 
 
 def record_request(
@@ -110,6 +111,7 @@ def record_request(
         usage_output=usage.output,
         calibration_k=calibration.k,
         header_names=observed.header_names,
+        history_rewritten=observed.history_rewritten,
         reference_stubs=engine.reference_stubs if engine else 0,
     )
     stats = stats_records(observed.request_id, engine.stats if engine else ())

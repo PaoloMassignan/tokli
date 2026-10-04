@@ -159,6 +159,28 @@ Three sub-slices, each with its own gates:
 Not in S8a: the arguments of `Edit`/`Write`, the largest resent item in E5b-lite. That is E10,
 a candidate for its own spec after S8a.
 
+## S8c — Pruning old edit content when the cache is rewritten anyway (before S8a-2)
+
+Why here: the S8a measurements showed that most of the cost is the provider cache, and that
+three quarters of the cache writes follow pauses of more than an hour (TOKLI_EVIDENCE §2). An
+offline simulation estimated about 6 % of total cost for pruning old `Write`/`Edit` arguments
+only at those moments, against well under 1 % for the built compressors. The human added the
+slice on 2026-10-04.
+
+- **E10(a) before code:** the provider accepts a history with stubbed edit arguments.
+- **`edit_args_on_resume`** (SELECTIVE, off by default), with the conversation state of ADR 0012.
+- **The smoke family `reread_after_pruned_edit`,** with its checker `answer_or_read`.
+- **Exit:**
+  - Tier 0 tests green;
+  - the smoke record run by the human;
+  - a dogfood week with the pruner on, comparing cache writes and reads per resume from exact
+    usage.
+- **Accepted 2026-10-04** (`slices/S8c/COMPLETION_REPORT.md`):
+  - the pruner was built and evaluated;
+  - any edit of the assistant's own tool-call history draws provider refusals
+    (smoke run, E10(c)), so it is off and not recommended;
+  - the conversation state stays, for a later pruner of old tool results at a resume.
+
 ## S5 — OpenAI Responses (Codex, API key)
 
 - Adapter `openai_responses` (OR-*): `function_call_output`/`custom_tool_call_output`/`input_text`;

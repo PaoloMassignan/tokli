@@ -59,3 +59,24 @@ CHECKERS: dict[str, Callable[[str, str], bool]] = {
     "json_structural": json_structural,
     "verbatim_line": verbatim_line,
 }
+
+ToolCall = tuple[str, Any]  # (tool name, parsed input)
+
+
+def answer_or_read(
+    answer: str, expected: str, tool_calls: list[ToolCall], read_path: str | None
+) -> bool:
+    """QE-020 `answer_or_read` (S8c): the answer passes `exact_value`, or the response reads the
+    case's file (`expected_read_path`), the honest way to recover pruned content."""
+    if answer.strip() and exact_value(answer, expected):
+        return True
+    return read_path is not None and any(
+        name == "Read" and isinstance(args, dict) and args.get("file_path") == read_path
+        for name, args in tool_calls
+    )
+
+
+# Checkers that also see the response's tool calls and the case's read path.
+TOOL_CHECKERS: dict[str, Callable[[str, str, list[ToolCall], str | None], bool]] = {
+    "answer_or_read": answer_or_read,
+}

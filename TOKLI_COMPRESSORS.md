@@ -23,8 +23,10 @@ model's reasoning, or anything in the response.
 - **Segment compressors** look at one segment at a time: `json_minify`, `search_group`,
   `dictionary`, `diff_context_trim`, `log_filter`.
 - **Request compressors ("pruners")** look at the whole tool history of the request:
-  `duplicate_tool_results`, `superseded_tool_results`. They never delete a tool call or a message.
-  They replace the *content* of a tool result with a short **stub**.
+  `duplicate_tool_results`, `superseded_tool_results`, `edit_args_on_resume`. They never delete a
+  tool call or a message.
+  - The first two replace the *content* of a tool result with a short **stub**.
+  - `edit_args_on_resume` replaces old strings inside the *arguments* of `Write`/`Edit` calls.
 
 **Order.** Pruners run first, so no work is wasted compressing a result that will become a stub.
 Then segment compressors run in a fixed order: `normalize` (json_minify) → `structural`
@@ -38,7 +40,7 @@ alphabetical by id.
 | Shrink or nothing | A result is kept only if it saves at least 4 tokens **and** at least 1 % of the segment. Otherwise the original text stays. |
 | Never longer | No segment, and no request, is ever forwarded longer than the original. |
 | Protected text | Text marked protected (for example `<system-reminder>…</system-reminder>` blocks) must come out unchanged and in order, or the result is rejected. |
-| Verbatim tools | Results of tools whose output agents often copy back byte-for-byte (default `Read`, `Bash`, `shell`, `shell_command`, `container.exec`) are not transformed. The one exception is `duplicate_tool_results`, because it leaves the original bytes in place (§3). |
+| Verbatim tools | Results of tools whose output agents often copy back byte-for-byte (default `Read`, `Bash`, `shell`, `shell_command`, `container.exec`) are not transformed. Exceptions: `duplicate_tool_results`, because it leaves the original bytes in place (§4); and a compressor for which the user switched on **"Also on Read, Bash…"** (`apply_to_verbatim_tools`, off by default; today `search_group` and `log_filter` offer it). A result whose tool name is unknown is always treated as verbatim. |
 | Failure is harmless | If a compressor crashes or is too slow, the text stays as it was, and the failure is recorded. The request always goes through. |
 | Deterministic | Same input and same configuration give the same output, on every machine. |
 | Measured | For every request and compressor, Tokli records how many segments it looked at, how many it changed, the tokens it saved and the time it took. |
@@ -56,23 +58,35 @@ alphabetical by id.
 **Assumptions**: what Tokli can *not* prove. Every compressor relies on something about the
 model's behaviour, for example "the model reads minified JSON as well as indented JSON". These
 assumptions are named for each compressor below. A compressor may be **on by default** only after
-an evaluation has checked its assumptions (SPEC 012). The policy switch cares only about the
-proven class:
+an evaluation has checked its assumptions (SPEC 012), and a selective or lossy one is never on by
+default in v1.
 
-- **LOSSLESS ONLY** (default): only the three lossless classes may run.
-- **LOSSY ALLOWED**: selective and lossy compressors may run too, when enabled.
+**Switching compressors.**
+- Enabling a compressor is the only control (S4 SCR-001). Its class does not block it.
+- **"Lossless only"** on the Settings page is a shortcut: it switches off every enabled
+  compressor that is not lossless.
+- Each request records `LOSSLESS_ONLY` when only lossless compressors were on, and
+  `LOSSY_ALLOWED` otherwise.
+
+**Evaluation status.** Each compressor shows its evaluation record: none, or `smoke` with a
+verdict. A smoke evaluation detects only gross damage. Each family of test cases checks one
+assumption; a family whose cases a compressor never changes is reported `not_exercised` and does
+not count (S8a SCR-002).
 
 ## 2. Summary
 
-| Compressor | What it does, in one line | Class | Default | Slice |
-|---|---|---|---|---|
-| `json_minify` | Removes indentation and line breaks from JSON | lossless · structural | on (provisional until evaluated) | S1 |
-| `duplicate_tool_results` | Replaces a tool result identical to an earlier one with a one-line pointer | lossless · by reference | on only if its evaluation passes | S4 |
-| `search_group` | Writes the file path once for a run of search matches in the same file | lossless · exact | off | S8 |
-| `dictionary` | Replaces long phrases repeated in a segment with short symbols plus a legend | lossless · exact | off | S8 |
-| `superseded_tool_results` | Replaces an old file read with a stub when a newer full version exists later | selective | off (LOSSY ALLOWED only) | S8 |
-| `diff_context_trim` | Keeps every changed line of a diff, and only 1 unchanged line around each change | selective | off (LOSSY ALLOWED only) | S8 |
-| `log_filter` | Keeps every error, warning and unlabelled log line, and drops repeated routine lines | selective | off (LOSSY ALLOWED only) | S8 |
+| Compressor | What it does, in one line | Class | Default | Evaluation (smoke, `claude-opus-5-5`) | Status |
+|---|---|---|---|---|---|
+| `json_minify` | Removes indentation and line breaks from JSON | lossless · structural | on | no measurable damage (2026-10-03) | built (S1) |
+| `duplicate_tool_results` | Replaces a tool result identical to an earlier one with a one-line pointer | lossless · by reference | on | no measurable damage (E11, 2026-10-03) | built (S4) |
+| `search_group` | Writes the file path once for a run of search matches in the same file | lossless · exact | off | no measurable damage (v2, 2026-10-04) | built (S8a-1) |
+| `log_filter` | Keeps every error, warning and unlabelled log line, and drops repeated routine lines | selective | off (never on by default in v1) | no measurable damage (2026-10-04) | built (S8a-1) |
+| `dictionary` | Replaces long phrases repeated in a segment with short symbols plus a legend | lossless · exact | off | — | planned (S8a-2) |
+| `diff_context_trim` | Keeps every changed line of a diff, and only 1 unchanged line around each change | selective | off | — | planned (S8a-2) |
+| `superseded_tool_results` | Replaces an old file read with a stub when a newer full version exists later | selective | off | — | planned (S8a-3) |
+| `edit_args_on_resume` | After a long pause, replaces the text of old `Write`/`Edit` calls with a one-line stub | selective | off — **not recommended** | **damage detected** (refusals, 2026-10-04) | built (S8c) |
+
+What these compressors save on real Claude Code traffic is in §12.
 
 ---
 
@@ -126,6 +140,9 @@ the JSON has no removable whitespace, the tool is in the verbatim list, or the s
 read through a non-verbatim tool) might copy the minified form. That is why file-reading tools are
 on the verbatim list, and why the smoke evaluation checks JSON quoting.
 
+**On real traffic.** On Claude Code traffic it found almost nothing to do: JSON-shaped results
+are about 1 % of the tool-result volume, and most of them come from `Bash`, a verbatim tool (§12).
+
 ---
 
 ## 4. `duplicate_tool_results`
@@ -178,8 +195,8 @@ integrity**). If another compressor tries, that change is rejected.
 **Assumed.** The model understands that the stub means "same content as call toolu_01" and answers
 from there (`resolves_result_reference`). When it must copy the content exactly, for example as an
 edit anchor, it copies it correctly from the earlier copy (`quotes_from_reference_target`). Both
-are checked by the smoke evaluation in S4 (experiment E11) before this compressor is turned on by
-default.
+are checked by the smoke evaluation in S4 (experiment E11). The verdict was "no measurable
+damage" (132 of 132 candidate answers correct), so it is on by default.
 
 **Verbatim tools.** This is the only compressor that also works on `Read`/`Bash` results, because
 the exact bytes remain available in the earlier copy.
@@ -193,6 +210,9 @@ with `duplicate_require_same_call: true`, the two calls differ in tool name or a
 **Risks.** The earlier copy may be far back in a long conversation, and a model could pay less
 attention to it. This is exactly what the evaluation measures.
 
+**On real traffic.** Claude Code already answers a second `Read` of an unchanged file with a short
+"unchanged" message, so the real gain is mostly on repeated shell output, and it is modest (§12).
+
 ---
 
 ## 5. `search_group`
@@ -205,7 +225,13 @@ the same file, instead of on every line.
 **How it works.**
 1. A *grep line* looks like `<path>:<line number>:<content>`. Paths may be POSIX
    (`src/app.py`), Windows (`C:\repo\app.py`) or network (`\\server\share\app.py`).
-2. It runs only if the segment has at least 5 grep lines.
+   - A path has no spaces and contains `/`, `\` or `.`. So the log timestamp
+     `2026-10-03 09:00:01` is **not** a grep line (version 2, S8a SCR-003).
+   - Version 1 grouped such timestamps under fake `[file]` headers; the first evaluation found
+     it.
+   - The price is that `Makefile:3:` and paths with spaces are not grouped. They stay as they
+     are.
+2. It runs only if the segment has at least 5 grep lines in total (not per file).
 3. Two or more consecutive grep lines with the same path become a `[file] <path>` header followed
    by indented `<line>:<content>` lines.
 4. Every other line (separators `--`, headings, prose) stays exactly where it was.
@@ -244,10 +270,18 @@ The agent does not copy the grouped form back (`not_quoted_verbatim`).
 **Does not run when.** Fewer than 5 grep lines, no run of 2+ lines with the same path, a verbatim
 tool, or too little saving.
 
-**Settings.** `compressors.search_group.enabled`, `min_group_lines` (5).
+**Settings.** `compressors.search_group.enabled`, `min_group_lines` (5),
+`apply_to_verbatim_tools` (off: switch it on to group search output that comes through `Bash`,
+which is where most of it is in Claude Code).
 
-**Risks.** Tools that expect `path:line:` on every line would see a different format. Off by
-default until an evaluation (E8) shows no harm.
+**Evaluation.** Smoke, 2026-10-04, version 2: no measurable damage. The model found the right
+`<path>:<line>` and copied the exact matched line in 22 of 22 cases each, without the indentation
+of the grouped form.
+
+**Risks.** Tools that expect `path:line:` on every line would see a different format. The smoke
+cases used the `Grep` tool. Whether agents copy grouped `Bash` output into edits correctly is
+experiment E8 (S8b). It stays off by default: its saving is small (§12) and it changes what the
+model reads.
 
 ---
 
@@ -358,6 +392,17 @@ provider cache". Experiment E2-ext measures whether the saving outweighs the ext
 **Settings.** `compressors.superseded_tool_results.enabled`, `pruning.superseded_min_age_turns`
 (4), `pruning.superseded_min_saving_tokens` (8,000), `pruning.tool_semantics`.
 
+**Open points for S8a-3** (S8a review M1, A1, A2):
+- **A weak re-read must never supersede.** Claude Code answers a re-read of an unchanged file
+  with a short "unchanged" message instead of the file, and errors carry no content either. A
+  later read therefore has to be a real view, at least half the size of the old one, and not an
+  error. Otherwise the only copy of the file would be stubbed.
+- **The age counts on the old result.**
+- **A "user turn" is a human message**, not a message that only carries tool results.
+
+**On real traffic,** reads superseded under these rules are about 1.7 % of the tool-result
+volume (§12).
+
 ---
 
 ## 8. `diff_context_trim` (selective)
@@ -433,6 +478,9 @@ the first line of each repeated routine message, and samples debug lines.
    replaced by `#`. For INFO/NOTICE only the first line of each pattern is kept. For DEBUG/TRACE
    the 1st, 11th, 21st … are kept.
 4. Order is preserved, and a note counts what was omitted per level.
+   - The note is the last line. It ends with `\r\n` when every line of the log does, otherwise
+     with `\n`.
+   - If nothing would be omitted, the compressor does not apply.
 
 **Example**
 
@@ -464,9 +512,83 @@ ids) are no longer visible.
 
 **Assumed.** The dropped lines are not needed for the task (`omitted_log_lines_not_needed`).
 
-**Settings.** `compressors.log_filter.enabled`, `debug_sample` (10).
+**Settings.** `compressors.log_filter.enabled`, `debug_sample` (10), `apply_to_verbatim_tools`
+(off: switch it on to filter logs printed through `Bash` or read with `Read`).
+
+**Evaluation.** Smoke, 2026-10-04: no measurable damage. The model found the error code of the
+failed request and copied the full error line exactly in 22 of 22 cases each. The test logs are
+built to be very repetitive, so their saving (about 80 %) says nothing about real logs; see §12.
 
 ---
+
+## 10a. `edit_args_on_resume` (selective, S8c)
+
+**In one sentence.** When you come back to a conversation after a long pause, the full text of
+old `Write` and `Edit` calls is replaced by a one-line note; the file paths stay.
+
+**Problem.** Agents send back everything they wrote: the whole content of every `Write` and both
+strings of every `Edit`, on every turn. On real Claude Code traffic these arguments are about a
+third of the resent content (§12).
+
+After a pause of more than an hour, the provider has forgotten its cache, and the whole
+conversation is paid for again at the cache-write price. That is the moment when removing old
+content costs nothing extra.
+
+**How it works.**
+1. **Conversation:** Tokli recognises the conversation by a hash of its first message and its
+   system prompt. In memory only, it keeps the time of the conversation's last request and which
+   calls it pruned.
+2. **Resume:** a request is a **resume** when the conversation was last seen more than an hour
+   ago (`pruning.resume_after_s`), or is new to Tokli, for example after a restart.
+3. **At a resume:** every `Write`/`Edit`/`MultiEdit` call followed by at least 4 of your messages
+   (`pruning.resume_min_age_turns`) has its long strings replaced: `content`, `old_string`,
+   `new_string`. Messages that only carry tool results do not count as yours.
+4. **Until the next resume:** exactly the same replacements are applied to every following
+   request, so the provider cache stays valid. No newly old call is pruned before the next pause.
+
+**Example**
+
+```text
+turn 1   Write config.py   content: <3,000 tokens of the file>
+...      (six of your messages, then a two-hour pause)
+```
+Forwarded after the pause:
+```text
+turn 1   Write config.py   content: [tokli: earlier edit content omitted (3000 tokens) — read the file for its current state]
+```
+
+**Proven (the retention rule).**
+- The structure, ids, `file_path` and every other argument stay unchanged.
+- Between two resumes the forwarded beginning of the conversation is byte for byte the same.
+- Nothing is pruned outside a resume, and nothing younger than the age limit.
+
+**Not proven, so selective.** The text the agent wrote is gone from the conversation. To use it
+again, the agent must read the file.
+
+**Assumed.** Hours later, the agent does not need the exact text it wrote, and reads the file
+when it does (`edit_content_not_needed`). Experiment E10(a) showed both parts on
+`claude-opus-5-5`:
+- the provider accepts the changed history;
+- asked for a value, the model read the file instead of guessing.
+
+**Settings.** `compressors.edit_args_on_resume.enabled` (off), `pruning.resume_after_s` (3600),
+`pruning.resume_min_age_turns` (4), `pruning.resume_min_tokens` (64),
+`pruning.resume_edit_fields`, `pruning.conversation_states` (1024).
+
+**Evaluation: damage detected; do not switch it on.**
+- On `claude-opus-5-5` the provider **refused** far more often once the assistant's own old
+  `Write` arguments had been changed:
+  - in the smoke run, 26 % of calls against 9 % with the original history;
+  - in E10(c), every form of stub tried raised the refusals, including an empty string.
+- When the model did answer, it was right (it read the file). The refusals alone make the pruner
+  unusable on this model.
+- **Replacing tool results is not affected:** `duplicate_tool_results` drew no refusal in 132
+  calls.
+
+**Risks.**
+- **A guess of "resume" while the cache is still warm costs one cache write.** For example when
+  Tokli restarted a few minutes ago.
+- **A re-read costs a tool call.** The dogfood week measures both with exact provider usage.
 
 ## 10. What Tokli deliberately does not do (v1)
 
@@ -477,7 +599,7 @@ ids) are no longer visible.
 | Dropping `null` or empty fields from JSON | Absent and `null` mean different things |
 | Turning JSON arrays into tables | Types become ambiguous |
 | Stripping comments from source code | Agents quote code back exactly (H04) |
-| Removing whole tool calls or shortening their arguments | Protocol pairing rules and provider validation (H07, H08); experiment E10 first |
+| Removing whole tool calls, or shortening their arguments other than by `edit_args_on_resume` | Protocol pairing rules and provider validation (H07, H08). `edit_args_on_resume` (§10a) is the one exception, after E10(a). |
 | Deduplicating arbitrary text blocks by removing the earlier copy | Breaks provider caching (H05). `duplicate_tool_results` does it the cache-safe way. |
 | Learned or model-based compressors | Heavy, machine-dependent, and poor on code in the available benchmarks |
 | Compressing system instructions or tool definitions | Usually cached cheaply, and they are instructions (Q1) |
@@ -492,3 +614,52 @@ ids) are no longer visible.
 - **Skipped (budget)** counts how often a compressor was skipped because the request's time budget
   was used up. It is visible so that a useful but slow compressor is never hidden.
 - Each figure carries its method: **exact** (from the provider), **calibrated**, or **estimate**.
+
+## 12. What the compressors save on real Claude Code traffic (measured 2026-10-04)
+
+The source is the developer's own Claude Code sessions of 14 days (39 sessions, about 17,800
+requests), analysed locally with consent: counters only, no content. Details and method:
+TOKLI_EVIDENCE.md §2 (E5b-lite, the cost map, the pruning simulation).
+
+**Where the money goes** (provider usage, typical price ratios):
+
+| Item | Share of cost |
+|---|---|
+| Cache reads (resent context, 0.1× the input price) | 64 % |
+| Cache writes (context written to the cache, 1.25×) | 27.5 % |
+| Output | 8.4 % |
+| Uncached input | about 0 % |
+
+76 % of the cache writes, about a fifth of all cost, happen when a session is resumed after more
+than an hour: the provider cache has expired and the whole context is written again.
+
+**What the built compressors save,** as a share of the tool-result volume, with "Also on Read,
+Bash…" switched on:
+
+| Compressor | Saving |
+|---|---|
+| `search_group` | 0.51 % |
+| `log_filter` | 0.83 % |
+| both | 1.34 % (under 0.2 % with the default verbatim list) |
+
+`Bash` and `Read` carry 84 % of the tool-result volume, but most of it is source code and varied
+command output that no safe transformation shrinks. Because nearly all of it is paid at the
+cache-read price, the effect on cost is well under 1 %.
+
+**Where the volume is:**
+- **Tool-call arguments: about 46 % of the resent content,** more than all tool results (about
+  41 %). They are the contents written by `Write` (22 %), `Bash` commands (12 %) and `Edit`
+  strings (10 %).
+- **Inside `Bash` output:**
+  - about a third is reading files through `sed`, `cat` and `grep`;
+  - 11 % is test-runner output.
+
+**The lever that would matter** is pruning old history at the moment the context is rewritten
+anyway after a pause.
+- **Estimated saving:** 6 % of total cost when pruning only old `Write`/`Edit` contents, and
+  about 10 % when also pruning old tool results. This is an offline cost estimate, not a measure
+  of model behaviour.
+- **It is now `edit_args_on_resume` (§10a, S8c),** off by default. Its first part is the old
+  `Write`/`Edit` arguments, estimated at about 6 % of cost, and the dogfood week measures what it
+  really saves.
+

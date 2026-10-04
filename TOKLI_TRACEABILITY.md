@@ -35,7 +35,7 @@ Evidence codes:
 | CM-006 | H04 | AC-CM-4 | `test_tool_name_resolution_per_protocol`, `test_anthropic_tool_name_resolution` |
 | CM-007 | fail to pass-through | AC-CM-5 | `test_malformed_body_relayed_verbatim`, `test_malformed_body_raises_parse_error` |
 | CM-008 | cannot parse encoded bodies | AC-CM-5 | `test_content_encoded_body_relayed_verbatim` |
-| CM-009 | tool schemas, `cache_control` and thinking signatures are validated or cached by providers and must never change | AC-CM-6 | `test_forbidden_parts_never_mutable`, `test_opaque_parts_not_exposed`, `test_mutable_kinds_from_config` |
+| CM-009 | tool schemas, `cache_control` and thinking signatures are validated or cached by providers and must never change | AC-CM-6 | `test_forbidden_parts_never_mutable`, `test_opaque_parts_not_exposed`, `test_mutable_kinds_from_config`; S8c: `test_argument_segments_only_for_listed_fields`, `test_multiedit_wildcard_fields` |
 | CM-010 | ARCH §5 | AC-CM-7 | `test_import_contracts` |
 | CM-011 | H09 (non-ASCII escaping changes bytes and length) | AC-CM-2 | `test_patched_body_utf8_and_length` |
 | CM-012 | H33 | AC-CM-5 | `test_oversize_body_relayed_verbatim`, `test_large_body_not_rejected` |
@@ -66,7 +66,7 @@ Evidence codes:
 | Req | Why | AC | Tests |
 |---|---|---|---|
 | AN-001 | Brief§24 example | AC-AN-1 | compat suite `tests/compat/anthropic/*`, `test_passthrough_forwards_original_bytes`, `test_only_json_tool_results_of_non_verbatim_tools_change`, `test_expected_changes_in_tool_use_fixture`, `test_claude_code_like_reminders_protected` |
-| AN-002 | tool results nested in user-role `tool_result` blocks must be reachable (SPEC 003 rationale) | AC-AN-1 | `test_anthropic_segment_mapping`, `test_system_segments` |
+| AN-002 | tool results nested in user-role `tool_result` blocks must be reachable (SPEC 003 rationale) | AC-AN-1 | `test_anthropic_segment_mapping`, `test_system_segments`; S8c: `test_argument_segments_only_for_listed_fields` |
 | AN-003 | H04 | AC-AN-2 | `test_anthropic_tool_name_resolution` |
 | AN-004 | `cache_control` preservation; H05, H07 | AC-AN-1 | `test_anthropic_block_attributes_preserved`, `test_anthropic_cache_control_count_preserved` |
 | AN-005 | H20 | AC-AN-3 | `test_anthropic_usage_non_stream`, `test_anthropic_usage_non_stream_without_cache_split`, `test_anthropic_usage_non_stream_end_to_end` |
@@ -152,7 +152,7 @@ Evidence codes:
 | CC-003 | Brief§8 enabled ≠ forced | AC-CC-2 | `test_enabled_compressor_not_applied_when_not_applicable`, `test_disabled_compressor_skipped` |
 | CC-004 | Brief§10; tokenizer mismatch margin | AC-CC-3 | `test_longer_output_rejected`, `test_below_min_gain_rejected` |
 | CC-005 | Brief§10 invariant | AC-CC-3 | `prop_compression_never_increases_tokens` |
-| CC-006 | determinism; H05 | AC-CC-4 | `prop_compression_is_deterministic`, `test_segment_output_independent_of_other_segments` |
+| CC-006 | determinism; H05 | AC-CC-4 | `prop_compression_is_deterministic`, `test_segment_output_independent_of_other_segments`; S8c (conversation state): `test_resume_pruning_reapplies_stored_set_between_resumes`, `test_resume_pruning_stable_between_resumes` |
 | CC-007 | reminders; future redaction markers | AC-CC-5 | `prop_protected_spans_preserved`, `test_protected_span_change_rejected`, `test_transformer_patch_breaking_protected_span_is_dropped`, `test_spans_preserved` |
 | CC-008 | H14, MD-25 | AC-CC-6 | `test_compressor_exception_is_recorded`, `test_compressor_timeout_is_recorded`, `test_late_result_discarded_as_timeout` |
 | CC-009 | deterministic chains | — | `test_terminal_stops_chain`, `test_chain_order_by_stage_then_id` |
@@ -180,17 +180,24 @@ Evidence codes:
 | PR-002 | repeated tool output | AC-PR-1 | `test_duplicate_results_stub_later_copies`, `test_small_duplicates_not_stubbed`, `test_duplicate_pruning_end_to_end` |
 | PR-003 | lossless by reference | AC-PR-1 | `test_duplicate_pruning_never_stubs_first_occurrence`, `prop_duplicate_pruning_decodes_whole_request` |
 | PR-004 | provider prefix caching | AC-PR-2 | `test_duplicate_pruning_prefix_stable_across_turns` |
-| PR-005 | protocol pairing rules | AC-PR-3 | `test_pruning_preserves_structure_and_arguments` |
+| PR-005 | protocol pairing rules | AC-PR-3 | `test_pruning_preserves_structure_and_arguments`; S8c: `test_pruned_history_is_accepted_shape`, `test_resume_pruning_keeps_structure_and_paths` |
 | PR-006 | client-specific tool meaning is data, not code | AC-PR-4 | `test_tool_semantics_from_config_only`, `test_unknown_tool_never_superseded`, `test_shell_command_classification_rules`, `test_path_normalisation` |
 | PR-007 | E5a: 75 % of pruned entries touched a re-touched file | AC-PR-5 | `test_superseded_read_stubbed_after_full_reread`, `test_edit_never_supersedes`, `test_partial_read_ranges`, `test_superseded_respects_age_and_min_saving` |
 | PR-008 | keep the current state visible | AC-PR-4 | `test_unknown_tool_never_superseded`, `test_edit_never_supersedes` |
-| PR-009 | cache invalidation visible | AC-PR-6 | `test_history_rewritten_flag` (duplicates never set it) |
+| PR-009 | cache invalidation visible | AC-PR-6 | `test_history_rewritten_flag` (duplicates never set it); S8c: `test_resume_pruning_stable_between_resumes` (set at a resume, not between) |
 | PR-010 | no work on stubbed content | — | `test_pruning_runs_before_segment_compressors` |
 | PR-011 | block attributes | — | `test_stub_preserves_cache_control_and_is_error` |
 | PR-012 | reference integrity | AC-PR-8 | `test_reference_target_integrity_enforced`, `test_duplicate_stub_names_earliest_copy` |
 | PR-013 | verbatim tools | AC-PR-9 | `test_duplicate_pruning_applies_to_verbatim_tools` |
 | PR-015 | Claude Code reminders inside results; ambiguous multi-block results (S4 review P6, P7, A5) | — | `test_duplicate_stub_keeps_protected_spans`, `test_multi_block_results_not_pruned`, `test_reference_stubs_counted`, `test_duplicate_require_same_call_option`, `test_pruner_records_why_it_did_not_stub` |
 | PR-014 | shell-command classification defined in the spec; Codex Windows/Unix shapes (MD-13) | AC-PR-10 | `test_shell_command_classification_rules` |
+| PR-020 | SELECTIVE, off by default (E5b-lite; S8c review P4) | AC-PR-14 | `test_resume_pruning_off_by_default`, `test_resume_pruning_off_by_default_end_to_end` |
+| PR-021 | prune only when the cache is rewritten anyway (E5b-lite: 76 % of cache writes follow pauses over an hour) | AC-PR-11, AC-PR-13 | `test_resume_pruning_only_at_resume_and_old_calls`, `test_unknown_conversation_is_resume`, `test_conversation_key` |
+| PR-022 | E10(a): the provider accepts stubbed edit arguments and the model re-reads | AC-PR-11, AC-PR-16 | `test_resume_pruning_keeps_structure_and_paths`, `test_resume_pruning_only_at_resume_and_old_calls` |
+| PR-023 | keep the cache valid between resumes (H05) | AC-PR-12 | `test_resume_pruning_reapplies_stored_set_between_resumes`, `test_resume_pruning_stable_between_resumes` |
+| PR-024 | operational state only, bounded, no disk (ADR 0012) | AC-PR-15 | `test_conversation_store_bounded_and_memory_only` |
+| PR-025 | cache invalidation visible | AC-PR-11 | `test_resume_pruning_stable_between_resumes` |
+| PR-026 | tool-only messages are not human turns (S8a review A2) | AC-PR-16 | `test_human_turn_definition`, `test_resume_pruning_only_at_resume_and_old_calls` |
 
 ## Compressors (SPEC 010)
 
@@ -252,7 +259,7 @@ Evidence codes:
 | QE-017 | the harness must prove it can detect damage | AC-QE-2 | `test_smoke_harness_self_test`, `test_smoke_harness_self_test_reference_families`, `test_reference_families_exist_for_the_pruner` |
 | QE-018 | no price book before S6; S2.5 review X1, P2 | AC-QE-8 | `test_eval_requires_max_calls_without_pricing`, `test_eval_requires_confirmation_or_yes`, `test_eval_stops_at_call_cap` |
 | QE-019 | the proxy never holds credentials; S2.5 review X2, P3; ADR 0008 | AC-QE-8 | `test_eval_api_key_from_named_env_only`, `test_eval_never_writes_the_key`, `test_eval_sends_key_only_as_header` |
-| QE-020 | H23: checkers that cannot hide removed content; S2.5 review A5; S4 P9 | AC-QE-8 | `test_checker_exact_value`, `test_checker_json_structural`, `test_checker_verbatim_line` |
+| QE-020 | H23: checkers that cannot hide removed content; S2.5 review A5; S4 P9 | AC-QE-8 | `test_checker_exact_value`, `test_checker_json_structural`, `test_checker_verbatim_line`; S8c: `test_checker_answer_or_read`, `test_answer_or_read_case_needs_a_read_path`, `test_answer_or_read_counts_a_read_call` |
 
 ## Telemetry & cost (SPEC 013)
 

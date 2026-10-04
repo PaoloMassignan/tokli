@@ -483,7 +483,7 @@ class StubEverything:
 
     spec = dataclasses.replace(DUP_SPEC, id="stub_everything", kind="LOSSY", equivalence="none")
 
-    def plan(self, refs, texts, tools, count):  # type: ignore[no-untyped-def]
+    def plan(self, refs, texts, tools, count, conversation=None):  # type: ignore[no-untyped-def]
         return [Proposal(r.segment_id, "[omitted]") for r in refs if r.whole_result]
 
     def decode_request(self, texts, refs):  # type: ignore[no-untyped-def]
@@ -533,3 +533,55 @@ def test_smoke_harness_self_test_reference_families(tmp_path: Path, upstream: Fa
     plan = plan_run(cases, (baseline, destructive), repetitions=1, model="claude-test")
     result = asyncio.run(run_smoke(plan, (baseline, destructive), api_key=KEY, max_calls=10_000))
     assert {v.verdict for v in by_family(result).values()} == {"damage_detected"}
+
+
+# -- S8c: a read of the right file passes `answer_or_read` -----------------------------------------
+
+
+def test_answer_or_read_counts_a_read_call(tmp_path: Path, upstream: FakeUpstream) -> None:
+    """QE-020 `answer_or_read` through the runner: a response that only calls `Read` on the
+    case's file is a pass, not an empty answer."""
+    cases = load_cases(CASES, ("edit_content_not_needed",))
+    paths = {c.request["messages"][-1]["content"]: c.expected_read_path for c in cases}
+
+    async def responder(request: Request) -> Response:
+        body = json.loads(await request.body())
+        path = paths[body["messages"][-1]["content"]]
+        return JSONResponse(
+            {
+                "type": "message",
+                "role": "assistant",
+                "content": [
+                    {
+                        "type": "tool_use",
+                        "id": "toolu_r",
+                        "name": "Read",
+                        "input": {"file_path": path},
+                    }
+                ],
+                "stop_reason": "tool_use",
+                "usage": {"input_tokens": 100, "output_tokens": 10},
+            }
+        )
+
+    upstream.responder = responder
+    off = make_config(
+        tmp_path / "off",
+        upstream.url,
+        "compressors.json_minify.enabled=false",
+        "compressors.duplicate_tool_results.enabled=false",
+    )
+    on = make_config(
+        tmp_path / "on",
+        upstream.url,
+        "compressors.json_minify.enabled=false",
+        "compressors.duplicate_tool_results.enabled=false",
+        "compressors.edit_args_on_resume.enabled=true",
+    )
+    baseline = Arm("baseline", bootstrap(off, catalog=BYTE_CATALOG, version="t", telemetry=False))
+    candidate = Arm("candidate", bootstrap(on, catalog=BYTE_CATALOG, version="t", telemetry=False))
+    plan = plan_run(cases, (baseline, candidate), repetitions=1, model="claude-test")
+    assert plan.not_exercised == 0
+    result = asyncio.run(run_smoke(plan, (baseline, candidate), api_key=KEY, max_calls=10_000))
+    assert {v.verdict for v in by_family(result).values()} == {"no_measurable_damage"}
+    assert all(set(c.candidate) == {"pass"} for c in result.cases)

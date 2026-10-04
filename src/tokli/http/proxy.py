@@ -28,16 +28,23 @@ from starlette.responses import JSONResponse, Response, StreamingResponse
 from tokli.app import measurement
 from tokli.app.api import CompressionReport, compression_report, compressor_summary
 from tokli.app.bootstrap import Services
+from tokli.app.conversations import pruned_call_ids
 from tokli.app.request_record import Observed, now_iso, record_request, usage_categories
 from tokli.app.runtime import Runtime
 from tokli.auth.passthrough import credential_kind, forward_request_headers, header_names
 from tokli.domain.models import CanonicalRequest
-from tokli.domain.stage import StageContext
+from tokli.domain.stage import ConversationView, StageContext
 from tokli.domain.usage import Usage
 from tokli.observability.ids import new_request_id
 from tokli.observability.logs import log_fields
 from tokli.observability.trace import Trace
-from tokli.protocols.anthropic_messages import PROTOCOL, ParseError, parse, render
+from tokli.protocols.anthropic_messages import (
+    PROTOCOL,
+    ParseError,
+    conversation_key,
+    parse,
+    render,
+)
 from tokli.protocols.anthropic_usage import BodyUsageParser, StreamUsageParser, unavailable
 from tokli.upstream.forwarder import UpstreamError, response_headers
 
@@ -85,6 +92,7 @@ class _State:
     error_code: str | None = None
     error_details: dict[str, str] = field(default_factory=dict)
     header_names: tuple[str, ...] = ()
+    history_rewritten: bool = False  # PR-009, PR-025
     request: CanonicalRequest | None = None
     counter: measurement.TokenCounter | None = None
     parser: StreamUsageParser | BodyUsageParser | None = None
@@ -205,7 +213,9 @@ class ProxyHandler:
 
         parse_started = time.perf_counter()
         try:
-            request = parse(body, mutable_kinds=services.mutable_kinds)
+            request = parse(
+                body, mutable_kinds=services.mutable_kinds, arg_fields=services.arg_fields
+            )
         except ParseError:
             trace.span("parse", parse_started, time.perf_counter(), status="error")
             self._passthrough(trace, state, "parse_error")
@@ -226,13 +236,37 @@ class ProxyHandler:
         counter = services.selector.select(request.model)
         state.tokenizer_id = counter.tokenizer_id
         state.request, state.counter = request, counter
+        # Conversation state (ADR 0012): read before the pipeline; written after, with the calls
+        # whose stubs the forwarded request really carries (none when it is passed through).
+        key = conversation_key(request)
+        conversation = services.conversations.view(key)
+        carried: list[frozenset[str]] = [frozenset()]
+        try:
+            return self._transform_parsed(
+                body, request, trace, state, services, conversation, carried
+            )
+        finally:
+            state.history_rewritten = services.conversations.record(key, carried[0])
+
+    def _transform_parsed(
+        self,
+        body: bytes,
+        request: CanonicalRequest,
+        trace: Trace,
+        state: _State,
+        services: Services,
+        conversation: ConversationView,
+        carried: list[frozenset[str]],
+    ) -> bytes:
         if state.segments_mutable == 0:
             self._passthrough(trace, state, "no_mutable_segments")
             return body
 
         pipeline_started = time.perf_counter()
         try:
-            result = services.pipeline.run(request, StageContext(request_id=state.request_id))
+            result = services.pipeline.run(
+                request, StageContext(request_id=state.request_id, conversation=conversation)
+            )
         except Exception:  # fail to pass-through (PX-010)
             trace.span("pipeline", pipeline_started, time.perf_counter(), status="error")
             self._passthrough(trace, state, "pipeline_error")
@@ -275,6 +309,7 @@ class ProxyHandler:
             bytes_before=len(body),
             bytes_after=len(rendered),
         )
+        carried[0] = pruned_call_ids(request, result.patches)
         return rendered
 
     # -- relay and completion ------------------------------------------------------------------
@@ -463,6 +498,7 @@ class ProxyHandler:
             ms_total=(ended - state.started) * 1000,
             error_code=state.error_code,
             header_names=state.header_names,
+            history_rewritten=state.history_rewritten,
             usage=usage,
             error_details=state.error_details,
         )

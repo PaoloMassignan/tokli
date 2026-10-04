@@ -8,8 +8,9 @@ once as compact UTF-8 JSON (CM-002, CM-011).
 
 from __future__ import annotations
 
+import hashlib
 import json
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from typing import Any
 
 from tokli.domain.models import (
@@ -82,7 +83,62 @@ def _text_blocks(
             builder.add(kind, block.get("text"), f"{base}/{j}/text", role, block=block, **attrs)
 
 
-def parse(raw: bytes, *, mutable_kinds: frozenset[SegmentKind]) -> CanonicalRequest:
+def conversation_key(request: CanonicalRequest) -> str:
+    """SHA-256 of the canonical JSON of `system` and the first message (ADR 0012): the same for
+    every request of one conversation, different for another conversation."""
+    body = request.original_json if isinstance(request.original_json, dict) else {}
+    messages = body.get("messages")
+    first = messages[0] if isinstance(messages, list) and messages else None
+    canonical = json.dumps(
+        {"system": body.get("system"), "first": first},
+        sort_keys=True,
+        ensure_ascii=False,
+        separators=(",", ":"),
+    )
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def _pointer_part(key: str) -> str:
+    return key.replace("~", "~0").replace("/", "~1")
+
+
+def _argument_strings(node: Any, parts: list[str], pointer: str) -> list[tuple[str, str]]:
+    """``(pointer, value)`` for each string at a field path such as ``edits/*/old_string``."""
+    if not parts:
+        return [(pointer, node)] if isinstance(node, str) else []
+    head, rest = parts[0], parts[1:]
+    if head == "*":
+        if not isinstance(node, list):
+            return []
+        found: list[tuple[str, str]] = []
+        for index, item in enumerate(node):
+            found += _argument_strings(item, rest, f"{pointer}/{index}")
+        return found
+    if not isinstance(node, dict) or head not in node:
+        return []
+    return _argument_strings(node[head], rest, f"{pointer}/{_pointer_part(head)}")
+
+
+def _is_human_turn(message: dict[str, Any]) -> bool:
+    """A user message holding human text; tool-only messages and messages that mix tool
+    results with text are not human turns (SPEC 019 PR-026)."""
+    if message.get("role") != "user":
+        return False
+    content = message.get("content")
+    if isinstance(content, str):
+        return True
+    if not isinstance(content, list):
+        return False
+    types = {block.get("type") for block in content if isinstance(block, dict)}
+    return "text" in types and "tool_result" not in types
+
+
+def parse(
+    raw: bytes,
+    *,
+    mutable_kinds: frozenset[SegmentKind],
+    arg_fields: Mapping[str, Sequence[str]] | None = None,
+) -> CanonicalRequest:
     try:
         body = json.loads(raw)
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
@@ -113,11 +169,14 @@ def parse(raw: bytes, *, mutable_kinds: frozenset[SegmentKind]) -> CanonicalRequ
                 )
 
     tool_names: dict[str, str] = {}
-    calls: list[tuple[str, str, Any]] = []
+    calls: list[tuple[str, str, Any, int]] = []
+    human_turns: list[int] = []
     for i, message in enumerate(messages):
         role = message.get("role")
         content = message.get("content")
         base = f"/messages/{i}/content"
+        if _is_human_turn(message):
+            human_turns.append(i)
         if role == "user":
             if isinstance(content, str):
                 builder.add(SegmentKind.USER_TEXT, content, base, "user")
@@ -198,17 +257,37 @@ def parse(raw: bytes, *, mutable_kinds: frozenset[SegmentKind]) -> CanonicalRequ
                     and isinstance(block.get("name"), str)
                 ):
                     tool_names[block["id"]] = block["name"]
-                    calls.append((block["id"], block["name"], block.get("input")))
+                    calls.append((block["id"], block["name"], block.get("input"), i))
+                    for path in (arg_fields or {}).get(block["name"], ()):
+                        found = _argument_strings(
+                            block.get("input"), path.split("/"), f"{base}/{j}/input"
+                        )
+                        for pointer, value in found:
+                            builder.add(
+                                SegmentKind.TOOL_CALL_ARGS,
+                                value,
+                                pointer,
+                                "assistant",
+                                tool_name=block["name"],
+                                tool_call_id=block["id"],
+                            )
         elif role == "assistant" and isinstance(content, str):
             builder.add(SegmentKind.ASSISTANT_TEXT, content, base, "assistant")
 
     results: dict[str, list[str]] = {}
     for segment in builder.segments:
-        if segment.tool_call_id is not None:
+        if segment.tool_call_id is not None and segment.kind is SegmentKind.TOOL_RESULT:
             results.setdefault(segment.tool_call_id, []).append(segment.id)
     tools = tuple(
-        ToolRecord(call_id, name, arguments, index, tuple(results.get(call_id, ())))
-        for index, (call_id, name, arguments) in enumerate(calls)
+        ToolRecord(
+            call_id,
+            name,
+            arguments,
+            index,
+            tuple(results.get(call_id, ())),
+            human_turns_after=sum(1 for turn in human_turns if turn > message_index),
+        )
+        for index, (call_id, name, arguments, message_index) in enumerate(calls)
     )
     model = body.get("model")
     return CanonicalRequest(

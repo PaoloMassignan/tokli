@@ -1,0 +1,113 @@
+case_set: 2026-10-04.2
+family: reread_after_pruned_edit
+assumption: edit_content_not_needed
+checker: answer_or_read
+request:
+  max_tokens: 1024
+  tools:
+  - name: Write
+    description: Writes a file.
+    input_schema:
+      type: object
+      properties:
+        file_path:
+          type: string
+        content:
+          type: string
+      required:
+      - file_path
+      - content
+  - name: Edit
+    description: Replaces old_string with new_string in a file.
+    input_schema:
+      type: object
+      properties:
+        file_path:
+          type: string
+        old_string:
+          type: string
+        new_string:
+          type: string
+      required:
+      - file_path
+      - old_string
+      - new_string
+  - name: Read
+    description: Reads a file and returns its content.
+    input_schema:
+      type: object
+      properties:
+        file_path:
+          type: string
+      required:
+      - file_path
+  messages:
+  - role: user
+    content: Create raven_server_settings.py with the settings we discussed.
+  - role: assistant
+    content:
+    - type: tool_use
+      id: toolu_01REREADW
+      name: Write
+      input:
+        file_path: raven_server_settings.py
+        content: '"""Synthetic settings."""
+
+
+          CACHE_ENDPOINT = "https://onyx.example.invalid/v3"
+
+          QUEUE_MAX_ITEMS = 6179
+
+          LOGGING_MAX_ITEMS = 2777
+
+          LOGGING_ENDPOINT = "https://delta.example.invalid/v9"
+
+          CACHE_LABEL = "kelp-nimbus"
+
+          RETRY_WINDOW_S = 1787
+
+          RETRY_BATCH_SIZE = 6898
+
+          STORAGE_TIMEOUT_MS = 8933
+
+          RETRY_MAX_ITEMS = 8659
+
+          RETRY_ENDPOINT = "https://birch.example.invalid/v2"
+
+          CACHE_TIMEOUT_MS = 641
+
+          RETRY_LABEL = "raven-pebble"
+
+          '
+  - role: user
+    content:
+    - type: tool_result
+      tool_use_id: toolu_01REREADW
+      content: File created.
+  - role: assistant
+    content: Created raven_server_settings.py.
+  - role: user
+    content: Thanks. Let me think about the next step.
+  - role: assistant
+    content: Sure.
+  - role: user
+    content: What is a semantic version?
+  - role: assistant
+    content: MAJOR.MINOR.PATCH.
+  - role: user
+    content: What does HTTP 429 mean?
+  - role: assistant
+    content: 'Too Many Requests: the client is rate limited.'
+  - role: user
+    content: And 503?
+  - role: assistant
+    content: Service Unavailable.
+  - role: user
+    content: Which port does HTTPS use by default?
+  - role: assistant
+    content: '443.'
+  - role: user
+    content: What is the value of RETRY_MAX_ITEMS in raven_server_settings.py right now? Reply with the
+      value only, or read the file first if you are not sure.
+expected: '8659'
+expected_read_path: raven_server_settings.py

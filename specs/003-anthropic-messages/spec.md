@@ -3,6 +3,7 @@
 Status: Draft · Slice: S1 (request), S2 (usage) · Related: SPEC 001, 002
 Approved for S1 (2026-09-30): AN-001…AN-004, AN-008. Usage (AN-005…AN-007, AN-009) in S2.
 Approved for S2 (2026-10-02): AN-005…AN-007, AN-009, AN-010.
+Changed for S8c (approved 2026-10-04): the `tool_use.input` row of the segment mapping.
 
 ## Purpose
 Map `POST /v1/messages` requests to canonical segments and back, and extract provider usage from
@@ -27,7 +28,8 @@ Evidence: TOKLI_EVIDENCE.md (hazards and measurements); per-requirement rational
 | `messages[i]` role `user`, `content[j]` `type:"tool_result"`, `content` string | TOOL_RESULT | yes |
 | … `tool_result.content[k]` `type:"text"` `.text` | TOOL_RESULT | yes |
 | `messages[i]` role `assistant`, `type:"text"` | ASSISTANT_TEXT | never |
-| `tool_use.input`, `thinking`, `redacted_thinking`, `image`, `document`, `search_result`, server-tool blocks, unknown types | opaque | never |
+| `tool_use.input` string values named by `pruning.resume_edit_fields` for the call's tool (S8c) | TOOL_CALL_ARGS | only for request-scope pruners declaring it (SPEC 019 PR-022) |
+| the rest of `tool_use.input`, `thinking`, `redacted_thinking`, `image`, `document`, `search_result`, server-tool blocks, unknown types | opaque | never |
 
 `attrs.cache_breakpoint_after = true` when the containing block carries `cache_control`.
 `attrs.is_error` mirrors `tool_result.is_error`.

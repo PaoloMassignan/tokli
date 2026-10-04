@@ -88,6 +88,17 @@ defaults.
 
 UI-editable (CF-009): `compressors.<id>.enabled`, `telemetry.retention_days`.
 
+## Keys added in S8c (approved for S8c, 2026-10-04)
+
+| Key | Default |
+|---|---|
+| `compressors.edit_args_on_resume.enabled` | `false` (SELECTIVE; CC-002) |
+| `pruning.resume_after_s` | `3600` (S8c review P4; rewrites follow pauses of more than an hour, E5b-lite) |
+| `pruning.resume_min_age_turns` | `4` |
+| `pruning.resume_min_tokens` | `64` (per argument string) |
+| `pruning.resume_edit_fields` | `{"Write": ["content"], "Edit": ["old_string", "new_string"], "MultiEdit": ["edits/*/old_string", "edits/*/new_string"]}` |
+| `pruning.conversation_states` | `1024` (ADR 0012) |
+
 ## Keys added in S8a-1
 
 | Key | Default |

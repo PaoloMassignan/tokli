@@ -10,7 +10,7 @@
 | Authentication | **Passthrough** (default): the client's own credentials are forwarded unchanged. **Inject**: Tokli adds a provider API key from an explicit source. OpenAI API-key auth is required and supported in both modes. |
 | Compression | Registry of compressors with declared preservation class (LOSSLESS byte / structural / reference, SELECTIVE, LOSSY, UNKNOWN; SPEC 009) and declared behavioural assumptions. Global policy LOSSLESS ONLY (default) / LOSSY ALLOWED. Per-compressor enable/disable. Default enablement requires an evaluation record. |
 | v1 compressors | `json_minify` (LOSSLESS, slice 1). Later slices: `search_group` (LOSSLESS, reimplemented), `dictionary` (LOSSLESS, off by default), `diff_context_trim` and `log_filter` (SELECTIVE, off by default). |
-| Tool-history pruning | `duplicate_tool_results` (LOSSLESS by reference, prefix-stable, S4; on by default only if its smoke evaluation passes). `superseded_tool_results` (SELECTIVE, LOSSY ALLOWED only, S8). Both are content-level stubs with no structural removal. Tool semantics come from config. See `specs/019`. |
+| Tool-history pruning | `duplicate_tool_results` (LOSSLESS by reference, prefix-stable, S4; on by default only if its smoke evaluation passes). `superseded_tool_results` (SELECTIVE, LOSSY ALLOWED only, S8). Both are content-level stubs with no structural removal. Tool semantics come from config. `edit_args_on_resume` (SELECTIVE, off by default, S8c): when a conversation resumes after its provider cache expired, the strings of old `Write`/`Edit` arguments become stubs. It keeps an in-memory conversation state (time of the last request, pruned call ids; ADR 0012), which is operational state, not a knowledge model or memory of the user's code. See `specs/019`. |
 | Measurement | Local token estimates, provider-reported usage, calibrated savings, per-compressor marginal attribution, latency per stage. |
 | Cost | Versioned price book; estimated saving with method and bounds; "unavailable" when pricing is unknown. |
 | Observability | Request IDs, stage timings, decision records, structured logs, no content by default. |
@@ -23,7 +23,7 @@ Proprietary-code protection · PASS/REDACT/BLOCK · secret detection · semantic
 a persistent knowledge model of the user's code · persistent knowledge or memory · claims, contradictions, freshness · RAG ·
 autonomous model selection or model routing · documentation generation · **relevance-based**
 pruning (needs a knowledge model; Tokli prunes only duplicates and superseded results) ·
-structural removal of tool-call pairs and stubbing of tool-call arguments (E10) ·
+structural removal of tool-call pairs, and stubbing of tool-call arguments other than by `edit_args_on_resume` (E10) ·
 LLMLingua or any learned compressor · ML-based routing · retrieval tools that let the model fetch compressed-away content ·
 injecting tools or cache breakpoints into client requests · response-side compression · multi-user
 or remote deployment · any capability not listed under "In scope".
