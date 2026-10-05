@@ -244,6 +244,21 @@ slice on 2026-10-04.
   reference stub (CC-019).
 - **Accepted 2026-10-05** (`slices/S6/COMPLETION_REPORT.md`): the E2 real run passed (+19.8 %, tolerance 25 %).
 
+## S6.5 — Dashboard review (simplicity)
+
+- **Requested** by the human on 2026-10-05.
+- **Done by an OpenAI Codex agent:** `AGENTS.md` and `slices/S6.5/BRIEF.md` are its
+  instructions.
+- **Contents:**
+  - presentation, wording and layout of the dashboard only: simple, plain, not "AI-styled";
+  - no API or behaviour change;
+  - every SPEC 016 requirement still holds, and any wording change to approved texts needs a
+    Spec Change Request.
+- **Gates:**
+  - Gate 1 on the agent's spec review (findings, proposals, sketches);
+  - Gate 2 after the human verification in `slices/S6.5/HUMAN_REVIEW.md`, on screenshots and
+    on the live dashboard.
+
 ## S7 — OpenAI Chat Completions
 
 - Adapter `openai_chat` (OC-*): `role:"tool"` + user text; usage only when the client asked.
