@@ -51,6 +51,16 @@ class Segment:
 
 
 @dataclass(frozen=True)
+class SegmentPlace:
+    """A segment's offset and length in estimate units, in the provider's order of the request
+    (tool definitions, system, messages; TC-017)."""
+
+    segment_id: str
+    offset: int
+    length: int
+
+
+@dataclass(frozen=True)
 class Patch:
     segment_id: str
     new_text: str

@@ -253,8 +253,14 @@ def test_summary_compressor_filter(query: MetricsQuery) -> None:
     assert lossless["tokens"]["saved"]["value"] == 165 + 100 + 0
 
 
-def test_summary_cost_block_null_until_s6(query: MetricsQuery) -> None:
-    assert query.summary(filters())["cost"] == {"value": None, "reason": "no_price_book"}
+def test_summary_cost_block_without_price_book(query: MetricsQuery) -> None:
+    """API-012 was retired in S6 (API-013): without a price book every money figure is null with
+    the reason, and the caveats are still counted."""
+    cost = query.summary(filters())["cost"]
+    for name in ("forwarded", "saved", "original"):
+        assert cost[name] == {"value": None, "reason": "no_price_book"}
+    assert cost["priced_requests"] == 0
+    assert cost["caveats"] == {"history_rewritten_requests": 0, "config_changes": 0}
 
 
 def test_summary_empty_database(tmp_path: Path) -> None:
@@ -482,6 +488,7 @@ def test_requests_list_metadata_only(query: MetricsQuery) -> None:
         "usage_source",
         "overhead_ms",
         "tokens",
+        "cost",  # S6, API-013: money figures, still metadata only
     }
 
 

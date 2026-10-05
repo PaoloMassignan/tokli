@@ -13,6 +13,7 @@ import os
 import platform
 import sys
 from collections.abc import Sequence
+from decimal import Decimal, InvalidOperation
 from importlib import metadata
 from pathlib import Path
 
@@ -83,6 +84,12 @@ def _parser() -> argparse.ArgumentParser:
         help="name of the environment variable holding an Anthropic API key",
     )
     smoke.add_argument("--max-calls", type=int, metavar="N", help="maximum provider calls")
+    smoke.add_argument(
+        "--max-cost",
+        type=_usd,
+        metavar="USD",
+        help="stop before a call that could take the spending past this amount (QE-010)",
+    )
     smoke.add_argument("--repetitions", type=int, default=3, help="repetitions per case (3)")
     smoke.add_argument("--yes", action="store_true", help="do not ask for confirmation")
     smoke.add_argument(
@@ -212,6 +219,16 @@ def _serve(config: EffectiveConfig) -> int:
     return EXIT_OK
 
 
+def _usd(text: str) -> Decimal:
+    try:
+        value = Decimal(text)
+    except InvalidOperation as exc:
+        raise argparse.ArgumentTypeError("must be an amount in USD, e.g. 2.50") from exc
+    if not value.is_finite() or value <= 0:
+        raise argparse.ArgumentTypeError("must be an amount above 0")
+    return value
+
+
 def _eval_smoke(args: argparse.Namespace, config: EffectiveConfig) -> int:
     """`tokli eval smoke`: manual only (QE-011). The two arms differ only in the candidate."""
     from tokli.eval.command import SmokeOptions, arm_sets, smoke
@@ -226,6 +243,7 @@ def _eval_smoke(args: argparse.Namespace, config: EffectiveConfig) -> int:
         model=args.model,
         api_key_env=args.api_key_env,
         max_calls=args.max_calls,
+        max_cost=args.max_cost,
         repetitions=args.repetitions,
         yes=args.yes,
         temperature=args.temperature,

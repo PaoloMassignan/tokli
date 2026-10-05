@@ -40,8 +40,19 @@ _USAGE = (
 )
 
 
-def stats_records(request_id: str, stats: Sequence[CompressorStats]) -> list[CompressorStatsRecord]:
-    """Rows for compressors considered at least once (TC-002)."""
+def stats_records(
+    request_id: str,
+    stats: Sequence[CompressorStats],
+    regions: Mapping[str, tuple[int, int, int]] | None = None,
+) -> list[CompressorStatsRecord]:
+    """Rows for compressors considered at least once (TC-002), with each one's saving split by
+    usage region when the request has one (TC-017): a compressor that saved nothing gets zeros."""
+
+    def parts(cid: str) -> tuple[int | None, int | None, int | None]:
+        if regions is None:
+            return None, None, None
+        return regions.get(cid, (0, 0, 0))
+
     return [
         CompressorStatsRecord(
             request_id=request_id,
@@ -61,6 +72,9 @@ def stats_records(request_id: str, stats: Sequence[CompressorStats]) -> list[Com
             ms_total=s.ms_total,
             skip_reasons=dict(s.skip_reasons),
             tokens_in_accepted=s.tokens_in_accepted,
+            saved_cache_read=parts(s.compressor_id)[0],
+            saved_cache_write=parts(s.compressor_id)[1],
+            saved_input=parts(s.compressor_id)[2],
         )
         for s in stats
         if s.considered > 0

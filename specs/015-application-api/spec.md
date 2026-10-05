@@ -4,6 +4,7 @@ Status: Draft · Slices: S1 (`requests/{id}`), S3 (metrics), S4 (config), S9 (di
 Approved for S1 (2026-09-30): `GET /tokli/api/requests/{id}`, `GET /tokli/health`, API-001, API-002, API-004.
 Approved for S3 (2026-10-03): `GET /tokli/api/requests`, `metrics/summary|timeseries|compressors`, read-only `GET /tokli/api/compressors`; API-001…API-004, API-008…API-012.
 Approved for S4 (2026-10-03): `GET`/`PATCH /tokli/api/config`, `GET /tokli/api/compressors` with `locked_by` and evaluation status; API-005, API-006, API-007.
+Approved for S6 (2026-10-04): API-002 money figures, API-013; API-012 retired.
 
 ## Purpose
 One JSON API under `/tokli/api` that the dashboard, the CLI and any replacement UI consume.
@@ -29,7 +30,7 @@ It exposes application use cases, never storage tables or compressor objects.
 | ID | EARS requirement |
 |---|---|
 | API-001 | THE API SHALL return only metadata. No endpoint SHALL return prompt/response content or credential values (debug-content excepted, under OB-008/009 via a separate `/tokli/api/debug/*` namespace). |
-| API-002 | EVERY token figure in API responses SHALL be an object `{value, method}`, and every money figure SHALL be `{estimate, low, high, method, currency, price_book_version}` or `{value: null, reason}`. |
+| API-002 | EVERY token figure in API responses SHALL be an object `{value, method}`, and every money figure SHALL be `{estimate, low, high, method, currency, price_book_version, basis}` or `{value: null, reason}`. A money `method` is `provider_usage` (the forwarded cost: provider usage at the price book), or for a saving `positional`, `proportional` or `assumes_uncached` (TC-004, TC-006); a total carries the weakest of its parts in that order and, when they differ, `method_shares` (the share of the estimate per method). `basis` is `billed` or `api_equivalent` (TC-019). (S6.) |
 | API-003 | THE metrics endpoints SHALL accept the filters `from`, `to`, `provider`, `model`, `compressor`, `kind` and `tz`, and SHALL validate them (400 with field errors). |
 | API-004 | THE API SHALL be versioned by a top-level `api_version` field. Breaking changes require a new version. |
 | API-005 | WHEN `PATCH /tokli/api/config` targets a key pinned by env/CLI, THE SYSTEM SHALL answer 409 naming the pinning source; WHEN it targets an unknown or non-UI-editable key, 400. |
@@ -39,7 +40,8 @@ It exposes application use cases, never storage tables or compressor objects.
 | API-009 | THE SYSTEM SHALL answer 403 to any request under `/tokli/` whose `Host` header is not the bound address and port (or `localhost` / `127.0.0.1` / `[::1]` with that port when bound to loopback). Proxy routes are not affected. |
 | API-010 | THE metrics endpoints SHALL interpret `from` and `to` as ISO-8601 instants with offset, half-open `[from, to)`, defaulting to the last 7 days; `tz` as an IANA time-zone name (default `UTC`) that sets the `timeseries` bucket boundaries; and `compressor` / `kind` as restricting the saving to that compressor's (kind's) marginal savings and the requests to those where it was considered. Invalid values SHALL give 400 `{api_version, error: {type: "invalid_parameter", fields: {<name>: <message>}}}`. |
 | API-011 | WHEN no matching records exist, THE metrics endpoints SHALL return zero counts and `{value: null, reason: "no_data"}` figures. WHEN telemetry is disabled, they SHALL answer 503 `telemetry_disabled`. A failing query SHALL answer 500 `query_failed`, log one WARNING, and never affect proxied traffic. |
-| API-012 | UNTIL a price book exists (S6), THE metrics responses SHALL carry `cost: {value: null, reason: "no_price_book"}`. |
+| API-012 | Retired in S6: superseded by TC-004…TC-006 and API-013. |
+| API-013 | THE summary SHALL carry `cost: {forwarded, saved, original, priced_requests, unpriced_requests, caveats}`, the three money figures per API-002 summed over the priced requests of the range (`{value: null, reason: "no_price_for_model"}` when none is priced, `no_data` when the range is empty); `caveats` per TC-020. THE compressors endpoint SHALL carry `money_saved` per compressor on the same basis (P2). THE requests endpoints SHALL carry each request's money figures. (S6.) |
 
 ## Acceptance criteria
 - AC-API-1: JSON-schema contract tests for every endpoint (golden schemas in `tests/contract/api/`).
@@ -55,7 +57,7 @@ It exposes application use cases, never storage tables or compressor objects.
 `test_metrics_filters_validated` · `test_patch_pinned_key_conflict` · `test_patch_unknown_key_rejected` ·
 `test_mutation_rejects_foreign_origin` · `test_config_change_atomic_snapshot` · `test_import_contracts` ·
 `test_requests_list_newest_first_and_paged` · `test_requests_list_metadata_only` · `test_summary_compressor_filter` ·
-`test_summary_cost_block_null_until_s6` · `test_summary_empty_database` · `test_timeseries_hour_and_day_buckets` ·
+`test_summary_cost_block_hand_computed` · `test_every_api_money_field_has_method` · `test_summary_empty_database` · `test_timeseries_hour_and_day_buckets` ·
 `test_timeseries_buckets_follow_tz_across_dst` · `test_compressors_endpoint_read_only_metadata` ·
 `test_tokli_routes_reject_foreign_host` · `test_proxy_routes_ignore_host_check` · `test_metrics_telemetry_disabled` ·
 `test_metrics_query_failure_isolated`

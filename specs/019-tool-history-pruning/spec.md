@@ -4,6 +4,7 @@ Status: Draft (revised in Phase 0.1) · Slices: S4 (`duplicate_tool_results`, LO
 Approved for S4 (2026-10-03): PR-001…PR-005, PR-009 (never set by duplicates), PR-010…PR-013, PR-015. PR-006…PR-008, PR-014 in S8.
 Approved for S8c (2026-10-04): `edit_args_on_resume`, PR-005 (as changed), PR-020…PR-026, AC-PR-11…AC-PR-16; ADR 0012.
 Approved for S8e (2026-10-04): `reread_by_reference`, PR-030…PR-036, AC-PR-20…AC-PR-26; ADR 0013.
+Changed by S6 SCR-001 (approved 2026-10-05): PR-012 (a later change of a target is kept and the stub reverted), AC-PR-8, AC-PR-24.
 Related: SPEC 001 (canonical model), 009 (compression core, preservation model), 010 (catalogue), 012 (evaluation), PHASE0_1_REVIEW.md
 
 ## Purpose
@@ -123,7 +124,7 @@ saving is at least `pruning.superseded_min_saving_tokens` (default 8,000).
 | PR-009 | THE pruner specs SHALL declare `prefix_stable`, and THE telemetry SHALL record per request whether a non-prefix-stable pruner changed a segment that was already present in the previous turn's position range (`history_rewritten: bool`). |
 | PR-010 | THE pruners SHALL run before segment-level compressors (stage `structural`, request scope), so later compressors never spend work on stubbed content. |
 | PR-011 | WHEN a stubbed result block carries `cache_control` or `is_error`, THE SYSTEM SHALL preserve those attributes (CM-009, AN-004). |
-| PR-012 | THE `duplicate_tool_results` stub SHALL name the earliest byte-identical earlier result, and THE pruner SHALL be subject to reference integrity (CC-019). A later pruner that would stub or otherwise non-equivalently change that earlier result SHALL be rejected for that segment. |
+| PR-012 | THE `duplicate_tool_results` stub SHALL name the earliest byte-identical earlier result, and THE pruner SHALL be subject to reference integrity (CC-019). A transformation of that earlier result by a later pruner or compressor SHALL be kept, and the stub SHALL be reverted (CC-019). (S6 SCR-001.) |
 | PR-013 | THE `duplicate_tool_results` pruner SHALL consider TOOL_RESULT segments of tools listed in `verbatim_tools` (CC-021). |
 | PR-015 | THE `duplicate_tool_results` stub SHALL keep every protected span of the replaced text, verbatim and in order, after the stub line, AND the pruner SHALL consider only tool results whose whole content is one text segment, as stub and as target. `reference_stubs` (TC-014) SHALL count the accepted stubs of the forwarded request. (S4 review P6, P7, A5.) |
 | PR-014 | THE shell-command classification for Codex tools SHALL be exactly the rules in "Shell-command classification" below. A command that matches no rule SHALL get `action: other`. New rules SHALL be added only by a spec change with a test case per rule. |
@@ -261,14 +262,14 @@ superseding.
 - AC-PR-5 (PR-007): read(F) → edit(F) → read(F) with an age of ≥ 4 turns → the first read is stubbed (SELECTIVE, only when enabled). read(F) → edit(F) with no later read → nothing is stubbed.
 - AC-PR-6 (PR-009): a superseding stub on an earlier segment sets `history_rewritten: true`; duplicate stubs never do.
 - AC-PR-7: `superseded_tool_results` runs only when enabled, is never enabled by default, and the "Lossless only" shortcut switches it off (CC-002).
-- AC-PR-8 (PR-012): read(F) → read(F) identical → full read(F) with different content, with both pruners on: the second read is a duplicate stub naming the first; `superseded_tool_results` is rejected on the first read with `reference_target_modified`; the whole-request decode restores every original text.
+- AC-PR-8 (PR-012): read(F) → read(F) identical → full read(F) with different content, with both pruners on: `superseded_tool_results` stubs the first read and the duplicate stub on the second read is reverted with `reference_target_changed` (CC-019 after S6 SCR-001); the whole-request decode restores every original text.
 - AC-PR-9 (PR-013): a duplicate `Read` result (a tool in `verbatim_tools`) is stubbed.
 - AC-PR-10 (PR-014): a table-driven test covers every rule row, each rejection in step 2, and argv vs string forms (bash/PowerShell wrappers, Windows and POSIX paths).
 - AC-PR-20 (PR-031): read(F) → edit one line of F → read(F): the second read keeps the changed lines and becomes two notes with the right line ranges (the ranges shift after an inserted line); the whole-request decode equals the original.
 - AC-PR-21 (PR-031): write(F, text) → read(F) unchanged except one line: the notes name the `Write` call ("content written").
 - AC-PR-22 (PR-032): a result with another numbering, or no earlier record of F, is not changed, with the stated reason.
 - AC-PR-23 (PR-033): read1(F) → read2(F) referenced → read3(F): the notes of read3 name read1, never read2.
-- AC-PR-24 (PR-034, CC-019): a later compressor that would change a source is rejected with `reference_target_modified`.
+- AC-PR-24 (PR-034, CC-019): a later compressor that changes a source is kept, and the notes that name the source are reverted with `reference_target_changed`; no note names a changed source. (S6 SCR-001.)
 - AC-PR-25 (PR-036): a `<system-reminder>` appended to the re-read stays verbatim; `Read` (a verbatim tool) is handled.
 - AC-PR-26 (PR-035): the alignment of a 5,000-line and a 50,000-line re-read with one changed line keeps a time ratio of at most 15 (best of 3), and results over `reread_max_lines` are skipped.
 - AC-PR-11 (PR-021, PR-022): a conversation with a `Write` and an `Edit` at turn 1 and six more human turns; with a clock two hours after the previous request → `content`, `old_string` and `new_string` are stubbed, `file_path`, ids and structure are unchanged. One hour minus a second → nothing changes.

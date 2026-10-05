@@ -49,6 +49,10 @@ class RequestRecord:
     history_rewritten: bool = False
     reference_stubs: int = 0
     header_names: tuple[str, ...] | None = None
+    # Schema v4 (TC-017, ADR 0014): the saving split by usage region, estimate units.
+    saved_cache_read: int | None = None
+    saved_cache_write: int | None = None
+    saved_input: int | None = None
 
 
 @dataclass(frozen=True)
@@ -70,3 +74,6 @@ class CompressorStatsRecord:
     ms_total: float
     skip_reasons: dict[str, int] = field(default_factory=dict)
     tokens_in_accepted: int | None = None  # schema v3 (ADR 0007)
+    saved_cache_read: int | None = None  # schema v4 (TC-017, ADR 0014)
+    saved_cache_write: int | None = None
+    saved_input: int | None = None

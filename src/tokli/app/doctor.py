@@ -18,6 +18,7 @@ from tokli.compression.contract import AnyCompressor
 from tokli.compression.engine import availability_of
 from tokli.compression.registry import REGISTRY
 from tokli.config import EffectiveConfig
+from tokli.pricing.book import USER_FILE, PriceBookError, load_shipped, load_user
 from tokli.tokens import CATALOG, TokenizerSpec, TokenizerState, TokenizerStatus, check_tokenizer
 
 SETUP_FIX = "run 'tokli setup tokenizers'"
@@ -48,12 +49,22 @@ class CompressorLine:
 
 
 @dataclass(frozen=True)
+class PriceBooks:
+    """TC-018: the shipped version and the user book, if any."""
+
+    shipped: str
+    user: str | None = None
+    user_path: Path | None = None
+
+
+@dataclass(frozen=True)
 class DoctorReport:
     environment: Environment
     config: EffectiveConfig
     tokenizers: tuple[TokenizerStatus, ...]
     checks: tuple[Check, ...]
     compressors: tuple[CompressorLine, ...] = ()
+    prices: PriceBooks | None = None
 
     @property
     def ok(self) -> bool:
@@ -118,8 +129,26 @@ def build_report(
         check_tokenizer(catalog[name], config.dirs.data_dir)
         for name in required_tokenizers(config.settings)
     )
-    checks = (_data_dir_check(config), *(_tokenizer_check(s) for s in statuses))
-    return DoctorReport(environment, config, statuses, checks, compressor_lines(config))
+    prices, price_check = _price_books(config)
+    checks = (_data_dir_check(config), *(_tokenizer_check(s) for s in statuses), price_check)
+    return DoctorReport(environment, config, statuses, checks, compressor_lines(config), prices)
+
+
+def _price_books(config: EffectiveConfig) -> tuple[PriceBooks, Check]:
+    shipped = load_shipped().version
+    path = config.dirs.data_dir / USER_FILE
+    try:
+        user = load_user(config.dirs.data_dir)
+    except PriceBookError as exc:
+        return PriceBooks(shipped, "invalid", path), Check(
+            "price book valid",
+            False,
+            cause=str(exc),
+            fix="correct the file, or remove it to use the shipped prices",
+        )
+    if user is None:
+        return PriceBooks(shipped), Check("price book valid", True)
+    return PriceBooks(shipped, user.version, path), Check("price book valid", True)
 
 
 def _source(source: str, normalized: bool) -> str:
@@ -172,6 +201,12 @@ def render(report: DoctorReport, *, normalized: bool) -> str:
     for status in report.tokenizers:
         line = f"  {status.spec.name}  {status.state.value}  {status.spec.tokenizer_id}"
         out.append(line if normalized else f"{line}  {status.path}")
+    if report.prices is not None:
+        prices = report.prices
+        user = "(none)"
+        if prices.user is not None:
+            user = prices.user if normalized else f"{prices.user}  {prices.user_path}"
+        out += ["", "Prices", f"  shipped  {prices.shipped}", f"  user     {user}"]
     out += ["", "Checks"]
     for check in report.checks:
         out.append(f"  {'[ok]  ' if check.ok else '[FAIL]'} {check.name}")

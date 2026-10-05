@@ -20,6 +20,7 @@ from tokli.domain.models import SegmentKind
 from tokli.observability.trace import TraceBuffer
 from tokli.pipeline.pipeline import Pipeline
 from tokli.pipeline.reminders import RemindersStage
+from tokli.pricing.book import PriceBookError, PriceTable, load_shipped, load_user
 from tokli.telemetry.store import TelemetryStore
 from tokli.tokens import CATALOG, TokenizerSpec
 from tokli.tokens.calibration import OutlierWindow
@@ -52,6 +53,7 @@ class Services:
     conversations: ConversationStore = field(default_factory=ConversationStore)
     # Argument strings exposed as TOOL_CALL_ARGS, only while `edit_args_on_resume` is on.
     arg_fields: Mapping[str, Sequence[str]] = field(default_factory=dict)
+    prices: PriceTable = field(default_factory=lambda: PriceTable(load_shipped()))
 
 
 class StartupError(Exception):
@@ -82,6 +84,14 @@ def bootstrap(
         model_map=[(entry.pattern, entry.tokenizer) for entry in settings.tokens.model_map],
     )
 
+    try:
+        prices = PriceTable(load_shipped(), load_user(config.dirs.data_dir))  # TC-018
+    except PriceBookError as exc:
+        raise StartupError(
+            cause=f"invalid price book: {exc}",
+            fix="correct the file, or remove it to use the shipped prices",
+        ) from exc
+
     parts = _compression(config, selector)
     anthropic = settings.upstreams.anthropic
     return Services(
@@ -97,6 +107,7 @@ def bootstrap(
             settings.tls.ca_bundle,
         ),
         traces=TraceBuffer(settings.observability.trace_buffer),
+        prices=prices,
         store=(
             TelemetryStore(config.dirs.data_dir / TELEMETRY_DB, settings.telemetry.retention_days)
             if telemetry

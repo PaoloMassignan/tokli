@@ -66,6 +66,7 @@ persisted by default. It is available in the in-memory trace ring buffer and at
 | `reference_stubs` | int | reference stubs forwarded in this request (TC-014) |
 | `error_code` | text \| null | Tokli error taxonomy (OB spec) |
 | `header_names` | JSON list \| null | client request header names, lower-cased and sorted, never values (OB-012; schema v2) |
+| `saved_cache_read`, `saved_cache_write`, `saved_input` | int \| null | the estimated saving split by the usage region it sat in (TC-017; schema v4, ADR 0014) |
 
 ### CompressorStats (persisted, per request × compressor)
 
@@ -81,6 +82,7 @@ persisted by default. It is available in the in-memory trace ring buffer and at
 | `marginal_saved` | `tokens_in − tokens_out` (≥ 0 by construction) |
 | `ms_total` | Σ wall time spent in `applicable()` + `compress()` + the engine's check for this compressor |
 | `skip_reasons` | JSON histogram, e.g. `{"too_small": 41, "verbatim_tool": 3, "not_json": 12}` |
+| `saved_cache_read`, `saved_cache_write`, `saved_input` | this compressor's saving split by usage region (TC-017; schema v4) |
 
 **Attribution invariant (tested):** for every request,
 `Σ_compressors marginal_saved == est_original_tokens − est_forwarded_tokens`. It holds because
@@ -131,55 +133,88 @@ change the stream the client receives).
 
 ### Price book
 
-A versioned YAML file shipped with Tokli, overridable by the user:
+- **The shipped book** is `tokli/pricing/price_book.yaml`: dated entries with a source note, USD
+  per million tokens.
+  - Version `2026-10-04.1` holds the standard first-party Anthropic prices, copied from the
+    official pricing page on 2026-10-04.
+  - Not modelled: fast mode, batch, data residency (1.1×) and cloud platforms.
+- **A user book** at `<data>/price-book.yaml`, in the same format, takes precedence for the
+  models it matches (TC-018). An invalid user book stops startup with the file and the problem.
+  The doctor shows both versions.
 
 ```yaml
-version: 2026-09-28.1
+version: 2026-10-04.1
 currency: USD
-source_note: "Copied from provider pricing pages on 2026-09-28; verify before relying on it."
+source_note: "Standard first-party prices copied from the provider's pricing page on 2026-10-04."
 models:
-  - match: "claude-sonnet-4*"          # glob on the request's model string
+  - match: ["claude-sonnet-5-5*", "claude-sonnet-5", "claude-sonnet-5-2*"]   # globs on the model
     provider: anthropic
     effective_from: 2026-01-01
-    per_mtok: {input: 3.00, cache_write_5m: 3.75, cache_write_1h: 6.00, cache_read: 0.30, output: 15.00}
-  - match: "gpt-5*"
-    provider: openai
-    effective_from: 2026-01-01
-    per_mtok: {input: 1.25, cache_read: 0.125, output: 10.00}
+    per_mtok: {input: 2, cache_write_5m: 2.50, cache_write_1h: 4, cache_read: 0.20, output: 10}
 ```
 
-The prices above are **placeholders for illustration**. Real values are filled in, and dated, when
-slice S6 is implemented. Tokli never ships a price without a date and source note. A model with no
-match has pricing `unavailable`.
+**Matching (TC-008):**
+1. The most specific matching pattern wins: fewest `*`, then the most literal characters.
+2. Among those, the latest `effective_from` not after the request's start applies.
+3. A model with no match has no price (`no_price_for_model`).
 
 ### What Tokli claims
 
-Tokli only reduces **input-side** tokens. It never claims output savings, even though shorter
-context can change output length. That effect is not attributable and is excluded.
+Tokli only reduces **input-side** tokens. It never claims output savings (TC-007).
 
-For each request with known pricing and known usage:
+**Where a saving sits decides what it is worth.** The provider reports three regions of each
+request, in order:
+1. the prefix read from its cache (cache-read price: 0.1× the input price; 0.05× on Claude Opus
+   5.5);
+2. the part written to its cache (1.25× for 5 minutes, 2× for 1 hour);
+3. the uncached tail (the input price).
+
+**What Tokli records (TC-017).** When a request completes, Tokli places each changed segment at
+its offset in the forwarded request, in the provider's order (tool definitions, system,
+messages). It then records the saving split into the three regions, per request and per
+compressor. The region sizes are converted to estimate units with the request's `k`.
+
+**Over a conversation, this gives the real life of a saved token:**
+- one cache write when it first appears, and again after each rewrite following a pause;
+- a cache read in every later request.
+
+That is the cost structure measured on the developer's sessions (TOKLI_EVIDENCE, E5b-lite).
 
 ```text
-forwarded_cost  = Σ_c usage_c × price_c                               (method: exact-usage × price book)
-saved_tokens    = calibrated (or estimated) input-side saving
-mix_c           = usage_c / Σ input-side usage_c      for c ∈ {input, cache_read, cache_write_*}
-saved_cost_est  = saved_tokens × Σ_c mix_c × price_c                  (method: "proportional")
-saved_cost_low  = saved_tokens × min_c∈present price_c                (usually cache_read)
-saved_cost_high = saved_tokens × max_c∈present price_c                (usually cache_write)
-original_cost   = forwarded_cost + saved_cost_est
+forwarded_cost   = Σ_c usage_c × price_c                       (method: provider_usage)
+saved_c          = split_c × saved / raw                        (scaled to the best saving figure)
+saved_cost_est   = saved_read × p_read + saved_write × p_write + saved_input × p_input
+                                                                (method: positional)
+p_write          = the request's mix of 5-minute and 1-hour write prices
+saved_cost_low   = saved × min_c∈present price_c                (usually cache read)
+saved_cost_high  = saved × max_c∈present price_c                (usually cache write)
+original_cost    = forwarded_cost + saved_cost_est
 ```
 
-Why proportional: Tokli does not know which of the saved tokens would have fallen in the cached
-prefix. The forwarded request's own mix is the best available evidence. The range makes the
-uncertainty visible. With an agent session that is mostly cache reads, a 10,000-token saving can be
-worth 10× less than a naive "× input price" figure. Flat-price dashboards always use the naive figure (H22).
+**Fallbacks, always labelled:**
+- `proportional`: no split (rows from before schema v4, `k` out of range, or partial usage).
+  The saving is priced at the forwarded request's input-side mix.
+- `assumes_uncached`: no provider usage (TC-006). The saving is priced at the input price; the
+  low bound is the cache-read price.
+- `no_price_for_model`: every money field is `null` with that reason. Tokens are still shown.
 
-When usage is unavailable: `saved_cost_est = saved_tokens × price_input`, labelled
-"assumes uncached input", with `saved_cost_low = saved_tokens × price_cache_read` when that price
-is known.
+**Basis (TC-019).** A request made with an OAuth credential (a subscription) is not billed per
+token. Money figures that include one carry `basis: "api_equivalent"`, and the dashboard says
+"value at API prices".
 
-When pricing is unavailable: every cost field is `null` with `reason: "no_price_for_model"`.
-The UI shows "—" with a tooltip. Tokens are still shown.
+**Totals (API-013):**
+- **Method:** a total carries the weakest method of its parts, and `method_shares` when the
+  parts differ.
+- **Requests counted:** the summary also counts priced and unpriced requests.
+- **Caveats (TC-020):** the requests with `history_rewritten` and the configuration changes in
+  the range. Each causes a provider cache rewrite that Tokli does not deduct.
+
+**Validation (E2).** `evals/experiments/e2_cache_economics.py` runs a scripted conversation
+through two Tokli instances (compressors off and on).
+- **Dry run:** against a simulated prompt cache. It runs in the test suite.
+- **Real run:** against the provider, run by the human.
+- **Check:** the positional prediction is compared with the difference the provider actually
+  charges.
 
 ### Cache-invalidation cost (known, not modelled in v1)
 

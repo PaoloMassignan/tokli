@@ -1,5 +1,5 @@
-"""SQLite telemetry store, schema v3 (TC-001, TC-002, TC-010, TC-011, TC-012; ADR 0003, 0005,
-0007).
+"""SQLite telemetry store, schema v4 (TC-001, TC-002, TC-010, TC-011, TC-012; ADR 0003, 0005,
+0007, 0014).
 
 Writes happen on one background thread through a bounded queue, so the request path never waits
 for the disk. A failing write never breaks traffic: it is counted, the store reports unhealthy,
@@ -23,7 +23,7 @@ from typing import Any, Union, get_args, get_origin, get_type_hints
 
 from tokli.telemetry.records import CompressorStatsRecord, RequestRecord
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 _LOG = logging.getLogger("tokli.telemetry")
 _WARN_INTERVAL_S = 60.0
 _CLOSE_TIMEOUT_S = 10.0  # how long close() waits for the writer thread

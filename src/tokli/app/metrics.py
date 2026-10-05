@@ -9,6 +9,7 @@ that has the stronger method (TC-015).
 from __future__ import annotations
 
 import bisect
+import itertools
 import math
 import re
 from collections import defaultdict
@@ -19,6 +20,8 @@ from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
+from tokli.app import money
+from tokli.pricing.book import PriceTable
 from tokli.telemetry import queries
 from tokli.tokens.calibration import in_range
 
@@ -246,9 +249,12 @@ def size_bucket(tokens: int | None) -> str:
 class MetricsQuery:
     """The metrics use cases over one telemetry database (read-only)."""
 
-    def __init__(self, db_path: Path, *, budget_ms: float = 50.0) -> None:
+    def __init__(
+        self, db_path: Path, *, budget_ms: float = 50.0, prices: PriceTable | None = None
+    ) -> None:
         self._db_path = db_path
         self._budget_ms = budget_ms
+        self._prices = prices
 
     # Selection shared by the endpoints: request rows in range and their stats rows, with the
     # provider/model filters, and the compressor/kind filters restricting the request set.
@@ -315,8 +321,68 @@ class MetricsQuery:
             },
             "tokens": tokens,
             "overhead": self._overhead(rows),
-            "cost": {"value": None, "reason": "no_price_book"},  # API-012, until S6
+            "cost": self._cost(rows, stats, filters),
         }
+
+    # -- money (S6: TC-004…TC-006, TC-019, TC-020; API-013) -------------------------------------
+
+    def _price(
+        self, row: Mapping[str, Any], stats: Mapping[str, list[dict[str, Any]]], filters: Filters
+    ) -> tuple[bool, money.PricedRequest | None]:
+        """(measured, priced) for one request row, under the compressor/kind filters."""
+        figures = self._figures(row, stats, filters)
+        if figures.forwarded is None or figures.saved is None or self._prices is None:
+            return figures.forwarded is not None, None
+        restricted = filters.compressor is not None or filters.kind is not None
+        if restricted:
+            matching = stats.get(row["request_id"], [])
+            raw = sum(s["marginal_saved"] for s in matching)
+            split = money.split_of(matching)
+        else:
+            raw = _raw_saving(row)
+            split = money.split_of([row])
+        return True, money.price_request(self._prices, row, figures.saved[0], raw, split)
+
+    def _cost(
+        self,
+        rows: list[dict[str, Any]],
+        stats: Mapping[str, list[dict[str, Any]]],
+        filters: Filters,
+    ) -> dict[str, Any]:
+        measured, priced = 0, []
+        for row in rows:
+            was_measured, result = self._price(row, stats, filters)
+            measured += was_measured
+            if result is not None:
+                priced.append(result)
+        figures = (
+            money.money_block(priced, measured)
+            if self._prices is not None
+            else {
+                name: money.unavailable("no_price_book")
+                for name in ("forwarded", "saved", "original")
+            }
+        )
+        ordered = sorted(rows, key=lambda r: r["ts_start"])
+        hashes = [r["config_hash"] for r in ordered if r["config_hash"] is not None]
+        return {
+            **figures,
+            "priced_requests": len(priced),
+            "unpriced_requests": measured - len(priced),
+            "caveats": {  # TC-020: cache rewrites Tokli does not deduct
+                "history_rewritten_requests": sum(1 for r in rows if r["history_rewritten"]),
+                "config_changes": sum(1 for a, b in itertools.pairwise(hashes) if a != b),
+            },
+        }
+
+    def _request_cost(self, row: Mapping[str, Any]) -> dict[str, Any]:
+        measured, priced = self._price(row, {}, _NO_FILTER)
+        if self._prices is None:
+            return {
+                name: money.unavailable("no_price_book")
+                for name in ("forwarded", "saved", "original")
+            }
+        return money.money_block([priced] if priced is not None else [], int(measured))
 
     @staticmethod
     def _overhead(rows: list[dict[str, Any]]) -> dict[str, Any]:
@@ -386,7 +452,10 @@ class MetricsQuery:
         }
         overall = sum(s["value"] or 0 for s in savings.values())
         result = [
-            self._compressor_row(cid, pairs, savings[cid], overall)
+            {
+                **self._compressor_row(cid, pairs, savings[cid], overall),
+                "money_saved": self._compressor_money(pairs),
+            }
             for cid, pairs in sorted(groups.items())
         ]
         return {
@@ -395,6 +464,22 @@ class MetricsQuery:
             "budget_ms": self._budget_ms,
             "compressors": result,
         }
+
+    def _compressor_money(
+        self, pairs: list[tuple[dict[str, Any], dict[str, Any]]]
+    ) -> dict[str, Any]:
+        """API-013 (P2): each compressor's money from its own split (TC-017)."""
+        if self._prices is None:
+            return money.unavailable("no_price_book")
+        priced = []
+        for row, stat in pairs:
+            saved = _saving(row, stat["marginal_saved"])
+            result = money.price_request(
+                self._prices, row, saved[0], stat["marginal_saved"], money.split_of([stat])
+            )
+            if result is not None:
+                priced.append(result)
+        return money.saved_figure(priced, len(pairs))
 
     @staticmethod
     def _compressor_row(
@@ -478,6 +563,7 @@ class MetricsQuery:
                         "forwarded": figure(figures.forwarded),
                         "saved": figure(figures.saved),
                     },
+                    "cost": self._request_cost(row),
                 }
             )
         return {
@@ -485,6 +571,11 @@ class MetricsQuery:
             "requests": items,
             "next_cursor": page[-1]["request_id"] if more and page else None,
         }
+
+
+_NO_FILTER = Filters(
+    start=datetime.min.replace(tzinfo=UTC), end=datetime.max.replace(tzinfo=UTC), tz=ZoneInfo("UTC")
+)
 
 
 def _matches(stat: Mapping[str, Any], filters: Filters) -> bool:

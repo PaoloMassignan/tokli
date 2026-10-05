@@ -7,6 +7,7 @@ import os
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
@@ -15,7 +16,7 @@ from tokli.compression.registry import REGISTRY
 from tokli.config import EffectiveConfig
 from tokli.eval.cases import load_cases
 from tokli.eval.record import Provenance, write_results
-from tokli.eval.runner import Arm, plan_run, run_smoke
+from tokli.eval.runner import Arm, call_ceiling, plan_run, run_smoke
 from tokli.eval.verdict import FamilyVerdict, family_verdict, overall_verdict
 
 
@@ -30,6 +31,7 @@ class SmokeOptions:
     temperature: str
     evals_dir: Path
     tokli_version: str
+    max_cost: Decimal | None = None  # USD (QE-009, S6)
 
 
 def arm_sets(compressor: str, candidate: bool) -> tuple[str, ...]:
@@ -53,11 +55,6 @@ def smoke(
     if spec is None:
         known = ", ".join(c.spec.id for c in REGISTRY)
         raise StartupError(f"unknown compressor '{options.compressor}'", f"use one of: {known}")
-    if options.max_calls is None:
-        raise StartupError(
-            "no price book yet, so a cost cap in money is not possible (QE-011)",
-            "add --max-calls N; the plan printed by this command shows how many calls a run needs",
-        )
     key = os.environ.get(options.api_key_env, "")
     if not key:
         raise StartupError(
@@ -74,6 +71,18 @@ def smoke(
         Arm("baseline", build(baseline_config, telemetry=False)),
         Arm("candidate", build(candidate_config, telemetry=False)),
     )
+    match = arms[0].services.prices.lookup(options.model, datetime.now(UTC))
+    if match is None and options.max_calls is None:
+        raise StartupError(
+            f"no price for '{options.model}' in the price book, so a cost cap in money is not "
+            "possible (QE-011)",
+            "add --max-calls N; the plan printed by this command shows how many calls a run needs",
+        )
+    if match is not None and options.yes and options.max_cost is None and options.max_calls is None:
+        raise StartupError(
+            "--yes needs a cap: --max-cost <USD> or --max-calls N (QE-009)",
+            "run without --yes to see the estimated cost, or add --max-cost",
+        )
     plan = plan_run(
         cases,
         arms,
@@ -87,10 +96,24 @@ def smoke(
         f"Plan: {exercised} cases ({plan.not_exercised} not exercised) x {options.repetitions} "
         f"repetitions x 2 arms = {plan.calls} calls; call cap {options.max_calls}"
     )
-    out(
-        f"estimated input tokens: {plan.est_input_tokens:,} (local estimate; costs in money "
-        "need a price book, which arrives in S6)"
-    )
+    out(f"estimated input tokens: {plan.est_input_tokens:,} (local estimate)")
+    cost_cap: Decimal | None = None
+    if match is not None:
+        ceiling = sum(
+            (
+                call_ceiling(match.prices, planned.prepared[arm.name]) * options.repetitions
+                for planned in plan.cases
+                if not planned.not_exercised
+                for arm in arms
+            ),
+            Decimal(0),
+        )
+        cost_cap = options.max_cost if options.max_cost is not None else ceiling * Decimal("1.2")
+        out(
+            f"estimated cost: at most ${ceiling:.4f} (an upper bound: input at the uncached price "
+            f"plus max_tokens of output per call; price book {match.version}); "
+            f"cost cap ${cost_cap:.4f}"
+        )
     if not options.yes:
         try:
             answer = ask("Proceed? [y/N] ")
@@ -104,7 +127,15 @@ def smoke(
             out(f"progress: {done}/{total} calls")
 
     result = asyncio.run(
-        run_smoke(plan, arms, api_key=key, max_calls=options.max_calls, progress=progress)
+        run_smoke(
+            plan,
+            arms,
+            api_key=key,
+            max_calls=options.max_calls if options.max_calls is not None else plan.calls,
+            progress=progress,
+            prices=match.prices if match is not None else None,
+            cost_cap=cost_cap,
+        )
     )
     families = _families(result.cases)
     verdict = overall_verdict(families, spec.assumptions)
@@ -134,6 +165,8 @@ def smoke(
     )
     if result.stopped_by_errors:
         out("stopped after 10 consecutive errors: the run cannot judge the compressor")
+    if result.stopped_by_cost:
+        out(f"stopped by the cost cap: ${result.spent:.4f} spent, from provider usage")
     for (kind, message), count in sorted(result.errors.items(), key=lambda item: -item[1]):
         out(f"  errors: {count} x {kind}" + (f": {message}" if message else ""))
     for family in families:

@@ -1,0 +1,36 @@
+{
+  "model": "claude-sonnet-5",
+  "turns": 12,
+  "observed_saving_usd": 0.1282827,
+  "predicted": {
+    "estimate": 0.15369464,
+    "low": 0.0581912,
+    "high": 0.706645,
+    "method": "positional",
+    "currency": "USD",
+    "price_book_version": "2026-10-04.1",
+    "basis": "billed"
+  },
+  "relative_error": 0.1981,
+  "tolerance": 0.25,
+  "verdict": "pass",
+  "arms": {
+    "baseline": {
+      "requests": 12,
+      "input_cost_usd": 0.2889534,
+      "tokens_saved": {
+        "value": 0,
+        "method": "exact"
+      }
+    },
+    "candidate": {
+      "requests": 12,
+      "input_cost_usd": 0.1606707,
+      "tokens_saved": {
+        "value": 282658,
+        "method": "calibrated"
+      }
+    }
+  },
+  "price_book_version": "2026-10-04.1"
+}

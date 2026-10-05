@@ -84,7 +84,44 @@ const REASONS = {
   not_measured: "not measured",
   no_applicable_invocations: "never applied",
   usage_unavailable: "provider gave no figure",
+  no_price_for_model: "no price for this model",
 };
+
+// Money (UI-013): the method in plain words, and the basis label (TC-019).
+const MONEY_METHODS = {
+  provider_usage: "from the provider's usage",
+  positional: "by where the saving sits in the cache",
+  proportional: "by the request's average price mix",
+  assumes_uncached: "assumes no cache",
+};
+
+function usd(value) {
+  return "$" + (Math.abs(value) >= 1 ? value.toFixed(2) : value.toFixed(4));
+}
+
+/** A money figure: the estimate, "estimate", its range and its method; or "—" with the reason. */
+function money(m) {
+  if (!m || m.estimate === undefined) {
+    return el("span", { class: "money unavailable" },
+      el("span", { class: "num" }, "—"),
+      el("span", { class: "reason" }, reasonText((m && m.reason) || "unavailable")));
+  }
+  const shares = m.method_shares
+    ? Object.entries(m.method_shares)
+      .map(([name, share]) => `${Math.round(share * 100)} % ${MONEY_METHODS[name] || name}`)
+      .join(", ")
+    : "";
+  return el("span", { class: "money" },
+    el("span", { class: "num" }, usd(m.estimate)),
+    el("span", { class: "label" }, "estimate"),
+    el("span", { class: "range" }, `${usd(m.low)} – ${usd(m.high)}`),
+    el("span", { class: "money-method" }, MONEY_METHODS[m.method] || m.method),
+    shares ? el("span", { class: "money-shares" }, `(${shares})`) : "");
+}
+
+function basisLabel(m) {
+  return m && m.basis === "api_equivalent" ? "value at API prices" : "estimated money saved";
+}
 
 function reasonText(code) {
   return REASONS[code] ? `${REASONS[code]} (${code})` : code;
@@ -142,6 +179,22 @@ function filterParams() {
 
 function card(key, label, content) {
   return el("div", { class: "card", "data-card": key }, el("div", { class: "label" }, label), content);
+}
+
+function costCard(cost) {
+  const saved = cost.saved;
+  const notes = [];
+  if (saved && saved.price_book_version) notes.push(`price book ${saved.price_book_version}`);
+  if (cost.unpriced_requests) notes.push(`${fmt(cost.unpriced_requests)} requests without a price`);
+  const c = cost.caveats || {};
+  if (c.history_rewritten_requests || c.config_changes) {
+    notes.push(`not deducted: cache rewrites after ${fmt(c.config_changes || 0)} setting changes and ` +
+      `${fmt(c.history_rewritten_requests || 0)} rewritten histories`);
+  }
+  return el("div", { class: "card", "data-card": "cost" },
+    el("div", { class: "label basis" }, basisLabel(saved)),
+    money(saved),
+    notes.length ? el("div", { class: "note" }, notes.join(" · ")) : "");
 }
 
 // Charts are drawn at the container's pixel width, so labels keep their size on any screen.
@@ -249,7 +302,7 @@ async function loadOverview() {
     card("forwarded", "Forwarded tokens", figure(t.forwarded)),
     card("saved", "Saved tokens", figure(t.saved)),
     card("saving_pct", "Saving", figure(t.saving_pct, " %")),
-    card("cost", "Money saved", figure(summary.cost)),
+    costCard(summary.cost),
   );
   document.getElementById("saved-chart").replaceChildren(savedChart(series, chartWidth("saved-chart")));
   document.getElementById("overhead-box").replaceChildren(
@@ -292,6 +345,7 @@ async function loadCompressors() {
     ["Time (total)", "Total time spent, in milliseconds"],
     ["Time per piece", "Average time per piece it could apply to"],
     ["Tokens saved per ms", "Efficiency: tokens saved for each millisecond spent"],
+    ["Money saved", "Estimated money this compressor saved, priced by where its saving sat in the provider's cache"],
     ["", "Warning when it costs time but almost never saves anything"],
   ];
   const head = el("thead", {}, el("tr", {}, columns.map(([h, title]) => el("th", { title }, h))));
@@ -319,6 +373,7 @@ async function loadCompressors() {
       el("td", { class: "n" }, m ? fmt(m.ms_total, 3) : "0"),
       el("td", { class: "n" }, rate(m ? m.avg_ms : empty, { unit: " ms" })),
       el("td", { class: "n" }, figure(m ? m.tokens_saved_per_ms : empty)),
+      el("td", { class: "n money" }, money(m ? m.money_saved : empty)),
       el("td", {}, m && m.latency_without_benefit
         ? el("span", { class: "flag", title: "≥ 90 % zero-benefit, ≥ 1 ms average, ≥ 100 invocations" }, "latency without benefit")
         : ""),
@@ -334,7 +389,7 @@ async function loadRequests(append = false) {
   const table = document.getElementById("requests-table");
   if (!append) {
     table.replaceChildren(
-      el("thead", {}, el("tr", {}, ["Time", "Model", "Outcome", "Status", "Saved", "Forwarded", "Overhead"].map((h) => el("th", {}, h)))),
+      el("thead", {}, el("tr", {}, ["Time", "Model", "Outcome", "Status", "Saved", "Forwarded", "Money saved", "Overhead"].map((h) => el("th", {}, h)))),
       el("tbody"),
     );
   }
@@ -347,6 +402,7 @@ async function loadRequests(append = false) {
       el("td", { class: "n" }, r.status_code === null ? "—" : String(r.status_code)),
       el("td", { class: "n" }, figure(r.tokens.saved)),
       el("td", { class: "n" }, figure(r.tokens.forwarded)),
+      el("td", { class: "n money" }, money(r.cost.saved)),
       el("td", { class: "n" }, r.overhead_ms === null ? "—" : `${fmt(r.overhead_ms, 1)} ms`),
     );
     row.addEventListener("click", () => showDetail(r.request_id));

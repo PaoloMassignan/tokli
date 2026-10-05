@@ -166,3 +166,35 @@ def test_invalid_config_fails_clearly(cli: Cli) -> None:
     assert len(lines) == 2
     assert lines[0].startswith("error: ") and "tokens.defualt" in lines[0]
     assert lines[1].startswith("fix: ")
+
+
+def test_doctor_reports_price_books(env: dict[str, str], tmp_path: Path) -> None:
+    """TC-018: the shipped version, and the user price book when one is active."""
+    from tokli.pricing.book import load_shipped
+
+    data_dir = tmp_path / "data"
+    provision_fake(data_dir)
+    config = load_config(CliOverrides(data_dir=str(data_dir)), env, platform_name())
+    text = render(build_report(config, ENV, catalog=FAKE_CATALOG), normalized=False)
+    assert f"shipped  {load_shipped().version}" in text and "user     (none)" in text
+    (data_dir / "price-book.yaml").write_text(
+        "version: mine-1\ncurrency: USD\nsource_note: s\nmodels:\n"
+        "  - match: claude-x\n    provider: anthropic\n    effective_from: 2026-01-01\n"
+        "    per_mtok: {input: 1, cache_write_5m: 1, cache_write_1h: 1, cache_read: 1,"
+        " output: 1}\n",
+        encoding="utf-8",
+    )
+    report = build_report(config, ENV, catalog=FAKE_CATALOG)
+    assert report.ok
+    assert f"user     mine-1  {data_dir / 'price-book.yaml'}" in render(report, normalized=False)
+
+
+def test_doctor_fails_on_invalid_user_price_book(env: dict[str, str], tmp_path: Path) -> None:
+    data_dir = tmp_path / "data"
+    provision_fake(data_dir)
+    (data_dir / "price-book.yaml").write_text("version: [\n", encoding="utf-8")
+    config = load_config(CliOverrides(data_dir=str(data_dir)), env, platform_name())
+    report = build_report(config, ENV, catalog=FAKE_CATALOG)
+    assert not report.ok
+    text = render(report, normalized=False)
+    assert "[FAIL] price book valid" in text and "price-book.yaml" in text

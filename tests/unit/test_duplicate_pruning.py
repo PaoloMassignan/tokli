@@ -278,24 +278,38 @@ class Lossy:
 
 
 def test_reference_target_integrity_enforced() -> None:
-    """CC-019 / AC-CC-10: a non-equivalent change to a stub's target is rejected; the stub
-    never changes either (its compressor is terminal)."""
+    """CC-019 / AC-CC-10 (S6 SCR-001): a non-equivalent change to a stub's target is kept, and
+    the later stub is reverted, so no stub points at a changed target; the reverted segment is
+    then processed further."""
     enabled = {"duplicate_tool_results": True, "zz_lossy": True}
     body = conversation(FILE, FILE, OTHER, tool="list_items")
     _, result, forwarded = run(body, enabled, extra=(Lossy(),), verify=False)
     first, second, third = results_of(forwarded)
-    assert first == FILE  # the target stays verbatim
-    assert second == stub_for("toolu_00", FILE)
-    assert third == OTHER[: len(OTHER) // 2]  # not a target: the lossy change is accepted
-    lossy = next(s for s in result.stats if s.compressor_id == "zz_lossy")
-    assert lossy.rejected_invariant == 1
-    assert any(i.reason == "reference_target_modified" for i in result.invocations)
+    assert first == FILE[: len(FILE) // 2]  # the earlier segment's change wins
+    assert second == FILE[: len(FILE) // 2]  # the stub was reverted, then halved like any result
+    assert third == OTHER[: len(OTHER) // 2]
+    assert result.reference_stubs == 0
+    duplicate = next(s for s in result.stats if s.compressor_id == "duplicate_tool_results")
+    assert (duplicate.accepted, duplicate.rejected_invariant) == (0, 1)
+    assert duplicate.marginal_saved == 0
+    reverted = [i for i in result.invocations if i.reason == "reference_target_changed"]
+    assert [(i.compressor_id, i.decision) for i in reverted] == [
+        ("duplicate_tool_results", "rejected")
+    ]
+
+
+class StubOnlyLossy(Lossy):
+    """Applies only to stubs, so it never changes a stub's target (CC-019)."""
+
+    def applicable(self, text: str, view: SegmentView, features: Features) -> Applicability:
+        return Applicability(text.startswith(STUB_PREFIX), "not_a_stub")
 
 
 def test_terminal_stops_chain() -> None:
+    """CC-009: no compressor runs on a segment after an accepted terminal one."""
     enabled = {"duplicate_tool_results": True, "zz_lossy": True}
     body = conversation(FILE, FILE, tool="list_items")
-    _, result, _ = run(body, enabled, extra=(Lossy(),), verify=False)
+    _, result, _ = run(body, enabled, extra=(StubOnlyLossy(),), verify=False)
     stub = result.patches[-1]
     assert stub.produced_by == ("duplicate_tool_results",)
     skipped = [

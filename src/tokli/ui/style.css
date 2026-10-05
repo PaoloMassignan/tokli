@@ -90,6 +90,16 @@ nav button[aria-pressed="true"] { border-color: var(--accent); color: var(--acce
 }
 .card .figure { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 4px; }
 
+.money { white-space: nowrap; }
+.money .label, .money .range, .money .money-method, .money .money-shares, .money .reason {
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-left: 4px;
+  white-space: normal;
+}
+.card .money { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 4px; }
+td.money .money-method { display: block; }
+
 .chart-box { width: 100%; }
 .chart-box svg { width: 100%; height: auto; display: block; }
 svg text { fill: var(--muted); font-size: 11px; }

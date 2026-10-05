@@ -218,6 +218,11 @@ attention to it. This is exactly what the evaluation measures.
 
 ## 4a. `reread_by_reference` (S8e)
 
+**With `duplicate_tool_results` (S6 SCR-001).** When a later read is identical to an earlier
+re-read, the earlier re-read keeps its notes. The duplicate stub that would have pointed at
+it is reverted, and the later read becomes notes too. Otherwise the earlier re-read would be
+sent whole again, and the provider would rewrite its cache from there.
+
 **In one sentence.** When the agent reads a file again after changing a line of it, only the
 changed lines are sent; every unchanged run of lines becomes a one-line pointer to the same lines
 in the earlier read.
@@ -683,6 +688,12 @@ when it does (`edit_content_not_needed`). Experiment E10(a) showed both parts on
   remembered with the cached results and repeated on later requests, so that timing never
   changes history already sent (which would cost a provider cache rewrite). Pruners and
   results already cached are never skipped.
+- **Money saved** (S6) prices each compressor's saving by where it sat in the provider's cache:
+  - at the cache-read price when it was in the cached history;
+  - at the cache-write price when it was in the part written that turn;
+  - at the input price when uncached.
+
+  It is an estimate with a range. On a subscription it reads "value at API prices".
 - Each figure carries its method: **exact** (from the provider), **calibrated**, or **estimate**.
 
 ## 12. What the compressors save on real Claude Code traffic (measured 2026-10-04)

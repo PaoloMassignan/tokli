@@ -332,6 +332,50 @@ cases × 3 repetitions × 2 arms (396 calls).
   these cases.
 - **Consequence:** the compressor is on by default (CC-020).
 
+### E2 dry run — a later duplicate undid an earlier re-read (2026-10-05)
+
+**Run:** `evals/experiments/e2_cache_economics.py`, dry run (the test suite runs it). An 8-turn
+synthetic conversation went through two Tokli instances (compressors off and default) to a
+simulated prompt cache.
+- **The simulator:** it reads the longest prefix cached by an earlier request, writes up to the
+  request's last breakpoint, and sends the rest uncached.
+- **Units:** one token per UTF-8 byte of each block's JSON.
+
+**Finding:** before the fix, the candidate arm's cached prefix stopped growing every second
+request, and Tokli's predicted saving was about twice the observed one (relative error +0.98).
+- **The cause:** a read identical to an earlier re-read was stubbed by
+  `duplicate_tool_results`. That made the re-read a reference target, and CC-019 then rejected
+  `reread_by_reference` on it.
+- **The effect:** the re-read, sent as notes on the previous request, went whole on the next.
+  History already sent changed, and the cache was rewritten from there.
+
+**Fix (S6 SCR-001):**
+- the earlier segment's change wins;
+- the later stub is reverted and offered again to the pruners, so the second re-read also
+  becomes notes.
+
+**After the fix:** the candidate's cached prefix grows on every request, and the relative error
+is +0.14, within the ±0.25 tolerance.
+- **The residual is a unit effect of the simulator:** JSON escapes count as extra bytes there,
+  not in Tokli's estimate. It places a little of the old saving in the written region.
+- **The real run** against the provider, run by the human, measures the method in real tokens.
+
+### E2 real run — the positional saving matches what the provider charges (2026-10-05)
+
+**Run:** by the human; the result is in `evals/experiments/e2_result.json`.
+- **Setup:** `claude-sonnet-5`, 12 turns, 2 arms, 24 calls, price book `2026-10-04.1`.
+- **Input-side cost:** baseline $0.2890, candidate $0.1607. The observed saving is
+  **$0.1283 (44 % of the input-side cost)** on this synthetic conversation.
+- **Tokli's positional prediction:** $0.1537 (range $0.0582–$0.7066). Relative error
+  **+0.198**, within ±0.25: **pass**.
+- **Both runs overestimate slightly** (+0.14 dry, +0.20 real). A small part of the saving in old
+  history is placed in the region written to cache, at the write price, where the provider
+  read it from cache.
+  - Cause: the region boundary is an estimate, scaled by `k`.
+  - Effect: the dashboard figure leans high by about a fifth on this traffic. The range always
+    contains the observed value.
+
+
 ### Other quantitative inputs
 
 | Input | Value | Use |

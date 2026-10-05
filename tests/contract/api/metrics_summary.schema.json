@@ -2,44 +2,96 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "metrics_summary.schema.json",
   "type": "object",
-  "required": ["api_version", "range", "requests", "tokens", "overhead", "cost"],
+  "required": [
+    "api_version",
+    "range",
+    "requests",
+    "tokens",
+    "overhead",
+    "cost"
+  ],
   "additionalProperties": false,
   "properties": {
-    "api_version": {"const": 1},
-    "range": {"$ref": "definitions.schema.json#/$defs/range"},
+    "api_version": {
+      "const": 1
+    },
+    "range": {
+      "$ref": "definitions.schema.json#/$defs/range"
+    },
     "requests": {
       "type": "object",
-      "required": ["total", "measured", "by_outcome"],
+      "required": [
+        "total",
+        "measured",
+        "by_outcome"
+      ],
       "additionalProperties": false,
       "properties": {
-        "total": {"type": "integer", "minimum": 0},
-        "measured": {"type": "integer", "minimum": 0},
-        "by_outcome": {"type": "object", "additionalProperties": {"type": "integer"}}
+        "total": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "measured": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "by_outcome": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer"
+          }
+        }
       }
     },
     "tokens": {
       "type": "object",
-      "required": ["original", "forwarded", "saved", "saving_pct"],
+      "required": [
+        "original",
+        "forwarded",
+        "saved",
+        "saving_pct"
+      ],
       "additionalProperties": false,
       "properties": {
-        "original": {"$ref": "definitions.schema.json#/$defs/token_figure"},
-        "forwarded": {"$ref": "definitions.schema.json#/$defs/token_figure"},
-        "saved": {"$ref": "definitions.schema.json#/$defs/token_figure"},
-        "saving_pct": {"$ref": "definitions.schema.json#/$defs/token_figure"}
+        "original": {
+          "$ref": "definitions.schema.json#/$defs/token_figure"
+        },
+        "forwarded": {
+          "$ref": "definitions.schema.json#/$defs/token_figure"
+        },
+        "saved": {
+          "$ref": "definitions.schema.json#/$defs/token_figure"
+        },
+        "saving_pct": {
+          "$ref": "definitions.schema.json#/$defs/token_figure"
+        }
       }
     },
     "overhead": {
       "type": "object",
-      "required": ["target", "groups"],
+      "required": [
+        "target",
+        "groups"
+      ],
       "additionalProperties": false,
       "properties": {
         "target": {
           "type": "object",
-          "required": ["value", "unit", "kind"],
+          "required": [
+            "value",
+            "unit",
+            "kind"
+          ],
           "properties": {
-            "value": {"type": "number"},
-            "unit": {"const": "ms"},
-            "kind": {"const": "target"}
+            "value": {
+              "type": "number"
+            },
+            "unit": {
+              "const": "ms"
+            },
+            "kind": {
+              "const": "target"
+            }
           },
           "additionalProperties": false
         },
@@ -47,21 +99,85 @@
           "type": "array",
           "items": {
             "type": "object",
-            "required": ["policy", "config_hash", "buckets"],
+            "required": [
+              "policy",
+              "config_hash",
+              "buckets"
+            ],
             "additionalProperties": false,
             "properties": {
-              "policy": {"type": "string"},
-              "config_hash": {"type": "string"},
+              "policy": {
+                "type": "string"
+              },
+              "config_hash": {
+                "type": "string"
+              },
               "buckets": {
                 "type": "object",
-                "required": ["lt_10k", "10k_50k", "50k_200k", "gt_200k", "unknown"],
-                "additionalProperties": {"$ref": "definitions.schema.json#/$defs/percentiles"}
+                "required": [
+                  "lt_10k",
+                  "10k_50k",
+                  "50k_200k",
+                  "gt_200k",
+                  "unknown"
+                ],
+                "additionalProperties": {
+                  "$ref": "definitions.schema.json#/$defs/percentiles"
+                }
               }
             }
           }
         }
       }
     },
-    "cost": {"$ref": "definitions.schema.json#/$defs/unavailable"}
+    "cost": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "forwarded",
+        "saved",
+        "original",
+        "priced_requests",
+        "unpriced_requests",
+        "caveats"
+      ],
+      "properties": {
+        "forwarded": {
+          "$ref": "definitions.schema.json#/$defs/money_figure"
+        },
+        "saved": {
+          "$ref": "definitions.schema.json#/$defs/money_figure"
+        },
+        "original": {
+          "$ref": "definitions.schema.json#/$defs/money_figure"
+        },
+        "priced_requests": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unpriced_requests": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "caveats": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "history_rewritten_requests",
+            "config_changes"
+          ],
+          "properties": {
+            "history_rewritten_requests": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "config_changes": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        }
+      }
+    }
   }
 }

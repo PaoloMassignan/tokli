@@ -9,6 +9,7 @@ Changed by S8a SCR-001 (approved for S8a-1, 2026-10-03): CC-021 (per-compressor 
 Changed for S8c (approved 2026-10-04): CC-006 (a request-scope pruner may use the conversation state of ADR 0012).
 Approved for S8e (2026-10-04): CC-019 covers line-range references (ADR 0013); a `Write` argument used as a source is a reference target.
 Changed by S8f SCR-001 (approved 2026-10-04): CC-014 (cached decisions repeat whatever the budget; pruners are never skipped), AC-CC-15.
+Changed by S6 SCR-001 (approved 2026-10-05): CC-019 (the earlier segment's change wins; a reverted stub is offered again), AC-CC-10, AC-CC-16.
 
 ## Purpose
 Define what a compressor is, what "lossless" means in Tokli, how the global policy constrains
@@ -134,7 +135,8 @@ for segment in mutable segments (document order):
     if text != segment.text: emit Patch(segment.id, text, produced_by=[accepted ids])
 # reference integrity (CC-019), checked for every proposal and segment result before acceptance:
 #   a change to a segment that is the target of an accepted reference stub is rejected
-#   (rejected_invariant(reference_target_modified)) unless it is LOSSLESS byte or structural.
+#   unless it is LOSSLESS byte or structural; otherwise the earlier change wins and the later
+#   stub is reverted (rejected_invariant(reference_target_changed); CC-019 after S6 SCR-001).
 ```
 
 ## Requirements
@@ -162,7 +164,7 @@ for segment in mutable segments (document order):
 | CC-015 | EVERY LOSSLESS compressor SHALL ship a property test proving its declared equivalence (segment decode for `byte`/`structural`; whole-request decode plus reference integrity for `reference`), and EVERY SELECTIVE compressor SHALL ship a test per declared guarantee (contract test fails otherwise). |
 | CC-016 | WHEN `compression.verify_lossless` is true (default true in tests and debug, false in normal serving), THE SYSTEM SHALL decode each accepted LOSSLESS output and reject mismatches. |
 | CC-017 | THE compression packages SHALL NOT import protocol, upstream, auth, HTTP, pricing, telemetry-storage or UI modules. |
-| CC-019 | WHILE a reference stub is part of the forwarded request, THE SYSTEM SHALL ensure that the named target segment precedes the stub in the same request and that the target's forwarded text equals its original text under byte or structural equivalence. IF any later transformation would violate this, THEN THE SYSTEM SHALL reject that transformation with `rejected_invariant(reference_target_modified)`. This check SHALL always run, independent of `verify_lossless`. |
+| CC-019 | WHILE a reference stub is part of the forwarded request, THE SYSTEM SHALL ensure that the named target segment precedes the stub in the same request and that the target's forwarded text equals its original text under byte or structural equivalence. THE decision for a segment SHALL NOT depend on a later segment: WHEN a transformation of a segment conflicts with an accepted reference stub on a later segment that names it, THE SYSTEM SHALL keep the transformation and SHALL revert that stub (the stubbed segment keeps its text from before the stub), recording `rejected_invariant(reference_target_changed)`. IF a stub would name a target that is already changed, THEN THE SYSTEM SHALL reject the stub with `rejected_invariant(reference_target_modified)`. THE SYSTEM SHALL offer a reverted segment once more to every request-scope compressor, in chain order, and then to the segment-scope compressors, so that another compressor may still shorten it. These checks SHALL always run, independent of `verify_lossless`. (S6 SCR-001.) |
 | CC-020 | EVERY compressor SHALL declare its behavioural `assumptions`. A compressor with `default_enabled: true` SHALL have an evaluation record (SPEC 012, QE-016) that covers every declared assumption with verdict `no_measurable_damage`, or a `provisional` record permitted by QE-016. Whether the user may enable a compressor SHALL NOT depend on evaluation records. |
 | CC-021 | THE engine SHALL apply the `verbatim_tools` filter to every compressor except (a) those with equivalence `reference`, because a reference stub leaves the original bytes verbatim in the target segment, and such compressors SHALL declare the assumption `quotes_from_reference_target`; and (b) a compressor whose option `compressors.<id>.apply_to_verbatim_tools` is true. That option SHALL default to false, SHALL exist only for compressors that declare it, and SHALL NOT be true by default for any compressor. (S8a SCR-001.) |
 
@@ -188,7 +190,8 @@ each invocation is logged as `(segment_id, kind, compressor, decision, t_in, t_o
 - AC-CC-7 (CC-010): a compressor with `requires=("not_a_module",)` shows as `unavailable(not_a_module)` in API/doctor and is never called.
 - AC-CC-8 (CC-012/013): stats rows match a hand-computed expectation for a 3-segment × 2-compressor fixture, including skip-reason histograms.
 - AC-CC-9 (CC-015): the contract test enumerates the registry and fails if a LOSSLESS compressor has no `prop_<id>_decode_roundtrip` test (or `prop_<id>_decodes_whole_request` for `reference`).
-- AC-CC-10 (CC-019): a fake SELECTIVE request compressor that stubs the target of a duplicate reference is rejected with `reference_target_modified`, and the target stays verbatim. A fake structural compressor that changes the target is accepted, and the trace records the chain guarantee as `structural`.
+- AC-CC-10 (CC-019): a fake LOSSY compressor that changes the target of a duplicate reference is accepted, and the duplicate stub is reverted with `reference_target_changed`, so that no stub points at a changed target. A fake structural compressor that changes the target is accepted and the stub stays, and the trace records the chain guarantee as `structural`. A stub whose target was changed earlier in the chain is rejected with `reference_target_modified`. (S6 SCR-001.)
+- AC-CC-16 (CC-019, PR-004): over a growing conversation in which an edited file is read again twice with the same content, the forwarded history of each request is byte-identical in the next request, with `duplicate_tool_results` and `reread_by_reference` both enabled, and both re-reads are sent as notes. (S6 SCR-001.)
 - AC-CC-11 (CC-020): a registry entry with `default_enabled: true` and an assumption without an evaluation record fails the contract test. The same entry with `default_enabled: false` passes, and the user can still enable it.
 - AC-CC-12 (CC-021): a TOOL_RESULT from a tool in `verbatim_tools` that duplicates an earlier result is stubbed by `duplicate_tool_results`, while `json_minify` is skipped on it with `verbatim_tool`.
 - AC-CC-13 (CC-024): the same request processed twice gives identical forwarded bytes and identical stats, and the second run records only hits. The same text with a different `SegmentView` (e.g. a verbatim tool) or a different compressor config is not served from the cache. The cache never exceeds its bound. With `result_cache_mb: 0` nothing is cached.

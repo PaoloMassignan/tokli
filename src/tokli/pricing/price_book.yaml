@@ -1,0 +1,45 @@
+# Tokli's shipped price book (SPEC 013 TC-008, TC-018; ADR 0014).
+# USD per million tokens. A user book at <data>/price-book.yaml takes precedence.
+version: 2026-10-04.1
+currency: USD
+source_note: >-
+  Standard first-party prices copied from https://platform.claude.com/docs/en/about-claude/pricing
+  on 2026-10-04. Not modelled: fast mode, batch, data residency (inference_geo "us", 1.1x) and
+  cloud platforms. Verify before relying on it.
+models:
+  - match: ["claude-fable-5-1*", "claude-mythos-5-1*"]
+    provider: anthropic
+    effective_from: 2026-01-01
+    per_mtok: {input: 10, cache_write_5m: 12.50, cache_write_1h: 20, cache_read: 0.25, output: 50}
+  - match: ["claude-fable-5", "claude-fable-5-2*", "claude-mythos-5", "claude-mythos-5-2*"]
+    provider: anthropic
+    effective_from: 2026-01-01
+    per_mtok: {input: 10, cache_write_5m: 12.50, cache_write_1h: 20, cache_read: 1, output: 50}
+  - match: ["claude-opus-5-5*"]
+    provider: anthropic
+    effective_from: 2026-01-01
+    per_mtok: {input: 4, cache_write_5m: 5, cache_write_1h: 8, cache_read: 0.20, output: 20}
+  - match: ["claude-opus-5", "claude-opus-5-2*", "claude-opus-4-8*", "claude-opus-4-7*", "claude-opus-4-6*", "claude-opus-4-5*"]
+    provider: anthropic
+    effective_from: 2026-01-01
+    per_mtok: {input: 5, cache_write_5m: 6.25, cache_write_1h: 10, cache_read: 0.50, output: 25}
+  - match: ["claude-opus-4-1*", "claude-opus-4", "claude-opus-4-0*", "claude-opus-4-2*"]
+    provider: anthropic
+    effective_from: 2026-01-01
+    per_mtok: {input: 15, cache_write_5m: 18.75, cache_write_1h: 30, cache_read: 1.50, output: 75}
+  - match: ["claude-sonnet-5-5*", "claude-sonnet-5", "claude-sonnet-5-2*"]
+    provider: anthropic
+    effective_from: 2026-01-01
+    per_mtok: {input: 2, cache_write_5m: 2.50, cache_write_1h: 4, cache_read: 0.20, output: 10}
+  - match: ["claude-sonnet-4-6*", "claude-sonnet-4-5*", "claude-sonnet-4", "claude-sonnet-4-0*", "claude-sonnet-4-2*"]
+    provider: anthropic
+    effective_from: 2026-01-01
+    per_mtok: {input: 3, cache_write_5m: 3.75, cache_write_1h: 6, cache_read: 0.30, output: 15}
+  - match: ["claude-haiku-4-5*"]
+    provider: anthropic
+    effective_from: 2026-01-01
+    per_mtok: {input: 1, cache_write_5m: 1.25, cache_write_1h: 2, cache_read: 0.10, output: 5}
+  - match: ["claude-3-5-haiku*"]
+    provider: anthropic
+    effective_from: 2026-01-01
+    per_mtok: {input: 0.80, cache_write_5m: 1, cache_write_1h: 1.60, cache_read: 0.08, output: 4}

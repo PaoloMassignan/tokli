@@ -61,8 +61,13 @@ Compressors
 Tokenizers
   o200k_base  missing  tiktoken:o200k_base@446a9538cb6c
 
+Prices
+  shipped  2026-10-04.1
+  user     (none)
+
 Checks
   [ok]   data dir writable
   [FAIL] tokenizer o200k_base present
+  [ok]   price book valid
 
 Result: 1 check failed

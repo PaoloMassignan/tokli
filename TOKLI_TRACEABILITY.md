@@ -165,7 +165,7 @@ Evidence codes:
 | CC-016 | defence in depth | AC-CC-9 | `test_verify_lossless_rejects_decode_mismatch` |
 | CC-017 | ARCH §5 | AC-CM-7 | `test_import_contracts` |
 | CC-018 | superseding rewrites sent history (SPEC 019) | AC-PR-6 | `test_history_rewritten_flag` |
-| CC-019 | reference targets keep their content | AC-CC-10 | `test_reference_target_integrity_enforced` |
+| CC-019 | reference targets keep their content; the earlier segment's change wins (S6 SCR-001: E2 dry run) | AC-CC-10, AC-CC-16 | `test_reference_target_integrity_enforced`, `test_reread_source_integrity_enforced`, `test_reread_stays_when_a_later_read_duplicates_it`, `prop_history_stays_stable_with_both_reference_compressors` |
 | CC-020 | R01§2, §7: policy eligibility ≠ default enablement; every transformation relies on model behaviour | AC-CC-11 | `test_every_compressor_declares_assumptions`, `test_registry_default_enabled_requires_eval_record` |
 | CC-021 | the bytes stay verbatim in the target | AC-CC-12 | `test_duplicate_pruning_applies_to_verbatim_tools`; S8a SCR-001: `test_verbatim_opt_in_applies_compressor_to_verbatim_tool`, `test_verbatim_opt_in_defaults_off`, `test_verbatim_opt_in_only_for_declaring_compressors`, `test_verbatim_opt_in_does_not_cover_unresolved_tools`, `test_patch_verbatim_opt_in` |
 | CC-022 | S1 review P1 (POLICY, provisional) | AC-CC-3 | `test_min_segment_tokens_default` |
@@ -187,7 +187,7 @@ Evidence codes:
 | PR-009 | cache invalidation visible | AC-PR-6 | `test_history_rewritten_flag` (duplicates never set it); S8c: `test_resume_pruning_stable_between_resumes` (set at a resume, not between) |
 | PR-010 | no work on stubbed content | — | `test_pruning_runs_before_segment_compressors` |
 | PR-011 | block attributes | — | `test_stub_preserves_cache_control_and_is_error` |
-| PR-012 | reference integrity | AC-PR-8 | `test_reference_target_integrity_enforced`, `test_duplicate_stub_names_earliest_copy` |
+| PR-012 | reference integrity; a later change of the target is kept and the stub reverted (S6 SCR-001) | AC-PR-8 | `test_reference_target_integrity_enforced`, `test_duplicate_stub_names_earliest_copy`, `test_reread_stays_when_a_later_read_duplicates_it` |
 | PR-013 | verbatim tools | AC-PR-9 | `test_duplicate_pruning_applies_to_verbatim_tools` |
 | PR-015 | Claude Code reminders inside results; ambiguous multi-block results (S4 review P6, P7, A5) | — | `test_duplicate_stub_keeps_protected_spans`, `test_multi_block_results_not_pruned`, `test_reference_stubs_counted`, `test_duplicate_require_same_call_option`, `test_pruner_records_why_it_did_not_stub` |
 | PR-014 | shell-command classification defined in the spec; Codex Windows/Unix shapes (MD-13) | AC-PR-10 | `test_shell_command_classification_rules` |
@@ -264,7 +264,7 @@ Evidence codes:
 | QE-015 | R01§8: explicit, honest verdict rule | AC-QE-5 | `test_smoke_verdict_rule`, `test_smoke_insufficient_data`, `test_unexercised_family_does_not_enter_verdict`, `test_assumption_without_exercised_family_is_insufficient` (S8a SCR-002) |
 | QE-016 | R01§7: CC-020 needs a machine-readable record | AC-QE-7 | `test_eval_record_schema_and_provisional_rule`, `test_eval_record_invalidated_by_version_bump`, `test_harness_report_provenance`, `test_registry_default_enabled_requires_eval_record` |
 | QE-017 | the harness must prove it can detect damage | AC-QE-2 | `test_smoke_harness_self_test`, `test_smoke_harness_self_test_reference_families`, `test_reference_families_exist_for_the_pruner` |
-| QE-018 | no price book before S6; S2.5 review X1, P2 | AC-QE-8 | `test_eval_requires_max_calls_without_pricing`, `test_eval_requires_confirmation_or_yes`, `test_eval_stops_at_call_cap` |
+| QE-018 | S2.5 review X1, P2; restated in S6 with the price book | AC-QE-8 | `test_eval_requires_max_calls_without_pricing`, `test_eval_requires_confirmation_or_yes`, `test_eval_stops_at_call_cap`, `test_eval_requires_confirmation_or_max_cost`, `test_eval_stops_at_cost_cap` |
 | QE-019 | the proxy never holds credentials; S2.5 review X2, P3; ADR 0008 | AC-QE-8 | `test_eval_api_key_from_named_env_only`, `test_eval_never_writes_the_key`, `test_eval_sends_key_only_as_header` |
 | QE-020 | H23: checkers that cannot hide removed content; S2.5 review A5; S4 P9 | AC-QE-8 | `test_checker_exact_value`, `test_checker_json_structural`, `test_checker_verbatim_line`; S8c: `test_checker_answer_or_read`, `test_answer_or_read_case_needs_a_read_path`, `test_answer_or_read_counts_a_read_call`; S8e: `test_checker_edit_anchor`, `test_edit_anchor_case_needs_its_fields`, `test_edit_anchor_counts_an_exact_edit` |
 
@@ -275,18 +275,22 @@ Evidence codes:
 | TC-001 | Brief§11/§14 | AC-TC-1 | `test_request_record_persisted_per_outcome`, `test_records_round_trip`, `test_telemetry_db_created_in_data_dir` |
 | TC-002 | Brief§11 | AC-TC-1 | `test_compressor_stats_only_for_considered` |
 | TC-003 | Brief§11 attribution | AC-TC-2 | `prop_marginal_savings_sum_to_total` |
-| TC-004 | Brief§12; H05, H22 | AC-TC-3 | `test_cost_proportional_estimate_and_bounds` |
-| TC-005 | Brief§12 "never fabricate" | AC-TC-4 | `test_cost_unavailable_without_price` |
-| TC-006 | honest fallback | AC-TC-3 | `test_cost_assumes_uncached_without_usage` |
+| TC-004 | Brief§12; H05, H22; S6 P1 (the saving after the provider cache) | AC-TC-3 | `test_forwarded_cost_hand_computed`, `test_cost_positional_estimate_and_bounds`, `test_cost_proportional_without_split`, `test_cost_mixed_cache_writes_priced_at_their_mix`, `test_summary_cost_block_hand_computed`, `test_split_scaled_by_calibrated_saving`, `test_summary_prices_by_position_end_to_end`, `test_e2_dry_run_self_test` |
+| TC-005 | Brief§12 "never fabricate" | AC-TC-4 | `test_cost_unavailable_without_price`, `test_cost_unavailable_without_price_keeps_tokens`, `test_cost_empty_range`, `test_cost_without_price_book` |
+| TC-006 | honest fallback | AC-TC-3 | `test_cost_assumes_uncached_without_usage` (unit and metrics) |
 | TC-007 | Brief§12 claim only affected categories | AC-TC-3 | `test_no_output_savings_claimed` |
-| TC-008 | H22 | AC-TC-5 | `test_price_effective_dates` |
-| TC-009 | Brief§12 pricing ≠ compression | AC-CM-7 | `test_import_contracts` |
+| TC-008 | H22 | AC-TC-5 | `test_price_effective_dates`, `test_price_match_most_specific`, `test_invalid_price_book_is_rejected`, `test_shipped_price_book_is_dated_and_sourced` |
+| TC-009 | Brief§12 pricing ≠ compression; ADR 0014 | AC-CM-7 | `test_import_contracts` (two pricing contracts) |
 | TC-010 | Brief§15 retention | AC-TC-1 | `test_retention_pruning`, `test_retention_zero_keeps_everything` |
 | TC-011 | telemetry must not break traffic | AC-TC-6 | `test_sink_failure_degrades_not_breaks`, `test_write_failure_counts_and_never_raises`, `test_close_never_closes_the_connection_under_a_busy_writer` (S4.5) |
 | TC-012 | additive migrations keep older data readable; ADR 0005 | AC-TC-1, AC-TC-9 | `test_schema_migration_forward`, `test_schema_migration_forward_from_v1` (v1 → v3), `test_schema_version_recorded`, `test_non_ascii_data_dir`, `test_usage_and_calibration_fields_round_trip`; S4.5 D2: `test_column_type_follows_field_annotation`, `test_unmapped_annotation_is_refused`, `test_existing_column_types_unchanged` |
 | TC-013 | R01§9: measure overhead from the first useful slice; target ≠ gate | AC-TC-7 | `test_overhead_percentiles_by_bucket`, `test_target_is_reference_not_status`, `test_unknown_size_bucket`, `test_overhead_groups_by_policy_and_config_hash`, `test_ui_overhead_target_is_reference_line` |
 | TC-014 | PR-009 flag was not in the record schema (R01§10 consistency pass) | AC-TC-8 | `test_request_record_pruning_fields` |
 | TC-015 | honest totals (H21); S3 review A1–A4, P4 | AC-TC-11 | `test_summary_totals_hand_computed`, `test_summary_labels_mixed_totals_as_estimate_with_share`, `test_requests_list_metadata_only` |
+| TC-017 | S6 P1, P2: where a saving sits decides its price; ADR 0014 | AC-TC-13 | `test_saving_regions_hand_computed`, `test_saving_regions_scale_by_k`, `test_saving_in_an_emptied_segment_sits_at_its_offset`, `prop_saving_regions_sum_to_saving`, `test_segment_places_follow_provider_order`, `test_saving_regions_recorded_end_to_end`, `test_saving_in_written_region_end_to_end`, `test_schema_migration_v3_to_v4` |
+| TC-018 | S6 P4, P5: dated, sourced prices; the user's own prices | AC-TC-14 | `test_user_price_book_overrides_shipped`, `test_user_price_book_used_at_startup`, `test_invalid_user_price_book_stops_startup`, `test_doctor_reports_price_books`, `test_doctor_fails_on_invalid_user_price_book` |
+| TC-019 | S6 P3: a subscription is not billed per token | AC-TC-15 | `test_oauth_cost_basis_api_equivalent` |
+| TC-020 | S6 P8: cache rewrites Tokli causes are not deducted | AC-TC-16 | `test_cost_caveats_hand_computed`, `test_summary_cost_block_without_price_book` |
 | TC-016 | which compressor saves, at what latency (TOKLI_TELEMETRY_AND_COST §3); ADR 0007 | AC-TC-12 | `test_compressor_aggregates_hand_computed`, `test_compressor_rates_without_applicable_are_null`, `test_latency_without_benefit_flag`, `test_stats_record_tokens_in_of_accepted_calls` |
 
 ## Observability (SPEC 014)
@@ -312,7 +316,7 @@ Evidence codes:
 | Req | Why | AC | Tests |
 |---|---|---|---|
 | API-001 | Brief§13 no content | AC-API-2 | `test_api_returns_no_content_or_credentials`, `test_api_returns_no_content_or_credentials_s3`, `test_requests_list_metadata_only`, `test_trace_served_from_db_after_buffer_eviction` |
-| API-002 | Brief§10/§12 labelling | AC-API-1 | `test_every_api_token_field_has_method`, `test_every_api_token_field_has_method_s3`, `test_api_contract_schemas`, `test_api_contract_schemas_s3` |
+| API-002 | Brief§10/§12 labelling | AC-API-1 | `test_every_api_token_field_has_method`, `test_every_api_token_field_has_method_s3`, `test_every_api_money_field_has_method`, `test_api_contract_schemas`, `test_api_contract_schemas_s3` |
 | API-003 | Brief§13 breakdowns | AC-API-1 | `test_metrics_filters_validated`, `test_metrics_filters_validated_over_http`, `test_filters_default_to_last_seven_days` |
 | API-004 | replaceable UI (Brief§4) | AC-API-1 | `test_api_contract_schemas`, `test_api_contract_schemas_s3` |
 | API-005 | config ownership | AC-API-3 | `test_patch_pinned_key_conflict`, `test_patch_unknown_key_rejected`, `test_patch_rejects_malformed_body` |
@@ -322,7 +326,8 @@ Evidence codes:
 | API-009 | DNS rebinding; S3 review M4, P7 | AC-API-6 | `test_tokli_routes_reject_foreign_host`, `test_proxy_routes_ignore_host_check` |
 | API-010 | S3 review A5, A6 | AC-API-7 | `test_summary_compressor_filter`, `test_timeseries_hour_and_day_buckets`, `test_timeseries_buckets_follow_tz_across_dst`, `test_metrics_filters_validated` |
 | API-011 | S3 review M2 | — | `test_summary_empty_database`, `test_summary_missing_database_file`, `test_metrics_telemetry_disabled`, `test_metrics_query_failure_isolated` |
-| API-012 | S3 review X1, P6 | — | `test_summary_cost_block_null_until_s6`, `test_ui_money_shows_dash_with_reason` |
+| API-012 | S3 review X1, P6; retired in S6 | — | superseded by API-013 |
+| API-013 | S6: money in the summary, per compressor and per request | AC-TC-3 | `test_summary_cost_block_hand_computed`, `test_compressor_money_saved`, `test_requests_list_carries_money`, `test_requests_list_metadata_only`, `test_summary_cost_block_without_price_book` |
 
 ## Dashboard (SPEC 016)
 
@@ -340,6 +345,7 @@ Evidence codes:
 | UI-011 | S3 review M3, P8; Windows file-type registry | AC-UI-5 | `test_dashboard_served_at_tokli_root`, `test_ui_assets_served_with_explicit_content_types`, `test_serve_prints_dashboard_address` |
 | UI-012 | the verbatim opt-in is the user's informed choice (S8a SCR-001, E5b-lite) | — | `test_ui_verbatim_opt_in_toggle` |
 | UI-010 | honest wording (S4 SCR-001) | — | `test_ui_policy_explanations_text` |
+| UI-013 | S6: money with its range, method and basis | — | `test_ui_cost_card_shows_estimate_range_and_method`, `test_ui_compressor_money_column` |
 
 ## Configuration (SPEC 017)
 

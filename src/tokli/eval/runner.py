@@ -10,15 +10,19 @@ from __future__ import annotations
 import json
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
+from decimal import Decimal
 from typing import Any
 
 from tokli.app.api import compression_report
 from tokli.app.bootstrap import Services
 from tokli.domain.stage import StageContext
+from tokli.domain.usage import Usage
 from tokli.eval.cases import Case
 from tokli.eval.checkers import CHECKERS, TOOL_CHECKERS, ToolCall
 from tokli.eval.record import ArmTotals
 from tokli.eval.verdict import CaseResult
+from tokli.pricing.book import Prices
+from tokli.pricing.cost import MILLION, UsageTokens, forwarded_cost
 from tokli.protocols.anthropic_messages import estimate_request_tokens, parse, render
 from tokli.protocols.anthropic_usage import BodyUsageParser
 from tokli.upstream.forwarder import UpstreamError
@@ -88,6 +92,8 @@ class RunResult:
     cases: list[CaseResult] = field(default_factory=list)
     calls: int = 0
     stopped_by_cap: bool = False
+    stopped_by_cost: bool = False  # QE-010 (S6): the money cap, a kind of cap
+    spent: Decimal = Decimal(0)  # from provider usage at the price book
     stopped_by_errors: bool = False
     errors: dict[tuple[str, str], int] = field(default_factory=dict)
     rows: list[dict[str, Any]] = field(default_factory=list)
@@ -159,9 +165,13 @@ async def run_smoke(
     api_key: str,
     max_calls: int,
     progress: Callable[[int, int], None] | None = None,
+    prices: Prices | None = None,
+    cost_cap: Decimal | None = None,
 ) -> RunResult:
     """Runs every exercised case in both arms, repetition by repetition, and stops before the
-    call that would exceed ``max_calls`` (QE-010, QE-018)."""
+    call that would exceed ``max_calls``, or before the call whose worst case (its estimated
+    input at the uncached price plus ``max_tokens`` of output) would take the spending past
+    ``cost_cap`` (QE-010)."""
     upstream = arms[0].services.upstream
     headers = [
         ("x-api-key", api_key),
@@ -190,10 +200,19 @@ async def run_smoke(
                         result.stopped_by_errors = True
                         break
                     prepared = planned.prepared[arm.name]
+                    if (
+                        prices is not None
+                        and cost_cap is not None
+                        and result.spent + call_ceiling(prices, prepared) > cost_cap
+                    ):
+                        result.stopped_by_cap = result.stopped_by_cost = True
+                        break
                     result.calls += 1
-                    outcome, tokens, answer, status, error, stop = await _call(
+                    outcome, tokens, answer, status, error, stop, usage = await _call(
                         upstream, headers, prepared.body, planned.case
                     )
+                    if prices is not None and usage is not None and usage.input is not None:
+                        result.spent += forwarded_cost(prices, _usage_tokens(usage))
                     if error is not None:
                         key = (error["type"], error["message"])
                         result.errors[key] = result.errors.get(key, 0) + 1
@@ -260,10 +279,33 @@ def _provider_error(payload: Any, status: int) -> dict[str, str]:
     return _error(f"http_{status}")
 
 
+CallResult = tuple[
+    str, int | None, str, int | None, dict[str, str] | None, str | None, Usage | None
+]
+
+
+def call_ceiling(prices: Prices, prepared: Prepared) -> Decimal:
+    """The most one call can cost: its estimated input at the uncached price plus its
+    ``max_tokens`` of output (QE-018 after S6)."""
+    max_tokens = json.loads(prepared.body).get("max_tokens", 0)
+    return (prepared.est_tokens * prices.input + int(max_tokens) * prices.output) / MILLION
+
+
+def _usage_tokens(usage: Usage) -> UsageTokens:
+    return UsageTokens(
+        input=usage.input or 0,
+        cache_read=usage.cache_read or 0,
+        cache_write_5m=usage.cache_write_5m or 0,
+        cache_write_1h=usage.cache_write_1h or 0,
+        output=usage.output or 0,
+    )
+
+
 async def _call(
     upstream: Any, headers: list[tuple[str, str]], body: bytes, case: Case
-) -> tuple[str, int | None, str, int | None, dict[str, str] | None, str | None]:
-    """One provider call: (outcome, exact input tokens, answer text, status, error, stop reason)."""
+) -> CallResult:
+    """One provider call: (outcome, exact input tokens, answer text, status, error, stop reason,
+    usage)."""
     try:
         response = await upstream.open("POST", "/v1/messages", "", headers, body)
         try:
@@ -271,31 +313,40 @@ async def _call(
         finally:
             await response.aclose()
     except UpstreamError as exc:
-        return "error", None, "", None, _error(exc.kind), None
+        return "error", None, "", None, _error(exc.kind), None, None
     except OSError as exc:
-        return "error", None, "", None, _error("connection_error", type(exc).__name__), None
-    usage = BodyUsageParser(_RESPONSE_LIMIT)
-    usage.feed(data)
-    tokens = usage.result().input_total
+        return ("error", None, "", None, _error("connection_error", type(exc).__name__), None, None)
+    parser = BodyUsageParser(_RESPONSE_LIMIT)
+    parser.feed(data)
+    usage = parser.result()
+    tokens = usage.input_total
     status = response.status_code
     try:
         payload = json.loads(data)
     except ValueError:
-        return "error", tokens, "", status, _error(f"http_{status}", "response is not JSON"), None
+        return (
+            "error",
+            tokens,
+            "",
+            status,
+            _error(f"http_{status}", "response is not JSON"),
+            None,
+            usage,
+        )
     stop = payload.get("stop_reason") if isinstance(payload, dict) else None
     if status >= 400:
-        return "error", tokens, "", status, _provider_error(payload, status), stop
+        return "error", tokens, "", status, _provider_error(payload, status), stop, usage
     answer = _answer(payload)
     if payload.get("stop_reason") == "refusal":
-        return "error", tokens, answer, status, _error("refusal"), stop
+        return "error", tokens, answer, status, _error("refusal"), stop, usage
     if case.checker in TOOL_CHECKERS:  # S8c/S8e: a tool call can be the answer
         calls = _tool_calls(payload)
         if not answer and not calls:
-            return "error", tokens, answer, status, _error("empty_answer"), stop
+            return "error", tokens, answer, status, _error("empty_answer"), stop, usage
         seen = answer + "".join(f"\n[tool_use {name} {json.dumps(args)}]" for name, args in calls)
         passed = TOOL_CHECKERS[case.checker](answer, calls, case)
-        return ("pass" if passed else "fail"), tokens, seen, status, None, stop
+        return ("pass" if passed else "fail"), tokens, seen, status, None, stop, usage
     if not answer:
-        return "error", tokens, answer, status, _error("empty_answer"), stop
+        return "error", tokens, answer, status, _error("empty_answer"), stop, usage
     passed = CHECKERS[case.checker](answer, case.expected)
-    return ("pass" if passed else "fail"), tokens, answer, status, None, stop
+    return ("pass" if passed else "fail"), tokens, answer, status, None, stop, usage

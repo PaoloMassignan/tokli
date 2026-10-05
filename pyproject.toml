@@ -91,7 +91,7 @@ layers = [
     "tokli.app",
     "tokli.compressors",
     "tokli.compression",
-    "tokli.pipeline | tokli.protocols | tokli.upstream | tokli.auth | tokli.telemetry | tokli.observability | tokli.config | tokli.tokens",
+    "tokli.pipeline | tokli.protocols | tokli.upstream | tokli.auth | tokli.telemetry | tokli.observability | tokli.config | tokli.tokens | tokli.pricing",
     "tokli.domain",
 ]
 # CC-011 places the explicit registry list in tokli.compression.registry.
@@ -104,6 +104,21 @@ source_modules = ["tokli.compression", "tokli.compressors"]
 forbidden_modules = [
     "tokli.protocols", "tokli.upstream", "tokli.auth", "tokli.http", "tokli.telemetry",
     "tokli.app", "tokli.pipeline", "tokli.config",
+]
+
+[[tool.importlinter.contracts]]
+name = "Pricing is computed at query time: telemetry and compression never import it (TC-009, ADR 0014)"
+type = "forbidden"
+source_modules = ["tokli.telemetry", "tokli.compression", "tokli.compressors"]
+forbidden_modules = ["tokli.pricing"]
+
+[[tool.importlinter.contracts]]
+name = "Pricing knows prices only, not storage, compression, protocols or HTTP (ADR 0014)"
+type = "forbidden"
+source_modules = ["tokli.pricing"]
+forbidden_modules = [
+    "tokli.telemetry", "tokli.compression", "tokli.compressors", "tokli.protocols",
+    "tokli.http", "tokli.upstream",
 ]
 
 [[tool.importlinter.contracts]]

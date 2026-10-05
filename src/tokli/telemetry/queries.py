@@ -37,6 +37,12 @@ REQUEST_COLUMNS = (
     "usage_cache_write_1h",
     "calibration_k",
     "ms_tokli_overhead",
+    "usage_output",
+    "credential_kind",
+    "history_rewritten",
+    "saved_cache_read",  # schema v4 (TC-017)
+    "saved_cache_write",
+    "saved_input",
 )
 STATS_COLUMNS = (
     "request_id",
@@ -52,6 +58,9 @@ STATS_COLUMNS = (
     "marginal_saved",
     "ms_total",
     "tokens_in_accepted",
+    "saved_cache_read",  # schema v4 (TC-017)
+    "saved_cache_write",
+    "saved_input",
 )
 
 
@@ -97,7 +106,20 @@ def stats_between(path: Path, start: datetime, end: datetime) -> list[dict[str, 
     return [dict(zip(STATS_COLUMNS, row, strict=True)) for row in rows]
 
 
-STATS_REQUEST_COLUMNS = ("outcome", "calibration_k", "provider", "model")
+STATS_REQUEST_COLUMNS = (
+    "outcome",
+    "calibration_k",
+    "provider",
+    "model",
+    "ts_start",  # S6: what pricing a compressor's saving needs (API-013)
+    "credential_kind",
+    "usage_source",
+    "usage_input",
+    "usage_cache_read",
+    "usage_cache_write_5m",
+    "usage_cache_write_1h",
+    "usage_output",
+)
 
 
 def stats_with_request(path: Path, start: datetime, end: datetime) -> list[dict[str, Any]]:

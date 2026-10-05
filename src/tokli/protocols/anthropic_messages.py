@@ -19,6 +19,7 @@ from tokli.domain.models import (
     Patch,
     Segment,
     SegmentKind,
+    SegmentPlace,
     ToolRecord,
 )
 
@@ -379,3 +380,46 @@ def estimate_request_tokens(request: CanonicalRequest, count: Callable[[str], in
         for part in parts:
             total += count(json.dumps(part, ensure_ascii=False, separators=(",", ":")))
     return total
+
+
+_PROMPT_ORDER = ("tools", "system", "messages")  # the provider's order of the cached prefix
+
+
+def segment_places(request: CanonicalRequest, count: Callable[[str], int]) -> list[SegmentPlace]:
+    """The place of every segment in the provider's order: tool
+    definitions, system, then messages (TC-017). Offsets use the accounting of
+    :func:`estimate_request_tokens`; within a part, its structure comes before its texts, and
+    the request's other keys (parameters, not prompt) come last."""
+    body = request.original_json
+    if not isinstance(body, dict):
+        return []
+    pointers = frozenset(s.locator for s in request.segments)
+    keys = [k for k in _PROMPT_ORDER if k in body] + [k for k in body if k not in _PROMPT_ORDER]
+    places: list[SegmentPlace] = []
+    offset = 0
+
+    # Segments grouped by their part (a top-level key, or one message), in request order, so
+    # placing is linear in the request size.
+    parts: dict[str, list[Segment]] = {}
+    for segment in request.segments:
+        pieces = segment.locator.split("/")
+        part = "/".join(pieces[:3] if len(pieces) > 2 and pieces[1] == "messages" else pieces[:2])
+        parts.setdefault(part, []).append(segment)
+
+    def place(pointer: str, structure: Any) -> None:
+        nonlocal offset
+        offset += count(json.dumps(structure, ensure_ascii=False, separators=(",", ":")))
+        for segment in parts.get(pointer, ()):
+            length = count(segment.text)
+            places.append(SegmentPlace(segment.id, offset, length))
+            offset += length
+
+    for key in keys:
+        value = body[key]
+        pointer = f"/{key.replace('~', '~0').replace('/', '~1')}"
+        if key == "messages" and isinstance(value, list):
+            for i, message in enumerate(value):
+                place(f"{pointer}/{i}", _skeleton(message, f"{pointer}/{i}", pointers))
+        else:
+            place(pointer, {key: _skeleton(value, pointer, pointers)})
+    return places

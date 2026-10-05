@@ -282,3 +282,42 @@ def test_ui_assets_load_offline() -> None:
         text = path.read_text(encoding="utf-8").replace("http://www.w3.org/2000/svg", "")
         for marker in ("http://", "https://", "//cdn", "@import url("):
             assert marker not in text, (path.name, marker)
+
+
+def _money(node: Any, path: str = "") -> list[tuple[str, dict[str, Any]]]:
+    found: list[tuple[str, dict[str, Any]]] = []
+    if isinstance(node, dict):
+        if "estimate" in node:
+            found.append((path, node))
+        for key, value in node.items():
+            found.extend(_money(value, f"{path}/{key}"))
+    elif isinstance(node, list):
+        for i, value in enumerate(node):
+            found.extend(_money(value, f"{path}/{i}"))
+    return found
+
+
+def test_every_api_money_field_has_method(tokli: Start, upstream: FakeUpstream) -> None:
+    """API-002 (S6): every money figure carries its method, currency, price-book version and
+    basis, and its range contains the estimate."""
+    usage_upstream(upstream)
+    t = tokli()
+    traffic(t)
+    seen = 0
+    for path in (
+        "/tokli/api/metrics/summary",
+        "/tokli/api/metrics/compressors",
+        "/tokli/api/requests",
+    ):
+        for where, money in _money(get(t, path).json()):
+            seen += 1
+            assert money["method"] in (
+                "provider_usage",
+                "positional",
+                "proportional",
+                "assumes_uncached",
+            ), where
+            assert money["currency"] == "USD" and money["price_book_version"], where
+            assert money["basis"] in ("billed", "api_equivalent"), where
+            assert money["low"] <= money["estimate"] <= money["high"], where
+    assert seen > 0

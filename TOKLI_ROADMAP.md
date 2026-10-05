@@ -230,9 +230,19 @@ slice on 2026-10-04.
 
 ## S6 — Pricing and cost estimates
 
-- Price book (dated, sourced), matching, query-time cost with method and bounds (TC-*).
-- Dashboard cost cards and per-compressor estimated monetary saving.
-- E2 (cache economics) executed; proportional method validated or revised.
+- **Price book:** dated, sourced, with matching and a user override (TC-008, TC-018).
+- **Query-time cost:** with method and bounds. The **positional** method prices a saving by the
+  cache region it sat in (TC-004, TC-017, ADR 0014; P1).
+- **Dashboard:** the money card, per-compressor and per-request money, and the OAuth basis label
+  (UI-013, TC-019).
+- **`tokli eval`:** cost caps (QE-009…QE-011).
+- **E2 (cache economics):** a scripted API conversation, run with compressors off and on.
+  - Its dry run against a simulated cache is in the suite.
+  - The real run is made by the human: the positional prediction must be within ±25 % of the
+    observed saving (P6).
+- **S6 SCR-001** (found by the E2 dry run): the earlier segment's change wins over a later
+  reference stub (CC-019).
+- **Accepted 2026-10-05** (`slices/S6/COMPLETION_REPORT.md`): the E2 real run passed (+19.8 %, tolerance 25 %).
 
 ## S7 — OpenAI Chat Completions
 

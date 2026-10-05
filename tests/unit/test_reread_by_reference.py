@@ -158,7 +158,8 @@ def test_reread_never_chains_notes() -> None:
 
 
 def test_reread_source_integrity_enforced() -> None:
-    """AC-PR-24 (CC-019): a later compressor that would change a source is rejected."""
+    """AC-PR-24 (CC-019 after S6 SCR-001): a later compressor that changes a source is kept, and
+    the notes naming it are reverted; no note names a changed source."""
     old = module(30)
     new = [*old[:10], "an inserted line", *old[10:]]
     shrink = Fake(cid="zz_shrink", kind="SELECTIVE", transform=lambda t: t[: len(t) // 2])
@@ -172,13 +173,12 @@ def test_reread_source_integrity_enforced() -> None:
     _, outcome, forwarded = run(
         conversation(("read", old), ("edit", None), ("read", new)), shrink, verbatim=frozenset()
     )
-    assert results(forwarded)[0] == numbered(old)
-    rejected = [
-        i
-        for i in outcome.invocations
-        if i.compressor_id == "zz_shrink" and i.decision == "rejected"
-    ]
-    assert any(i.reason == "reference_target_modified" for i in rejected)
+    source, _, reread = results(forwarded)
+    assert source == numbered(old)[: len(numbered(old)) // 2]  # the earlier change wins
+    assert "[tokli:" not in reread  # the notes were reverted, then the shrink applied
+    assert outcome.reference_stubs == 0
+    reverted = [i for i in outcome.invocations if i.reason == "reference_target_changed"]
+    assert [i.compressor_id for i in reverted] == ["reread_by_reference"]
 
 
 def test_reread_keeps_reminders_and_verbatim_tool() -> None:
@@ -260,6 +260,55 @@ def test_reread_prefix_stable_across_turns() -> None:
     _, _, second = run(later)
     shared = len(turn["messages"]) - 1
     assert second["messages"][:shared] == first["messages"][:shared]
+
+
+def test_reread_stays_when_a_later_read_duplicates_it() -> None:
+    """Regression (found by the S6 E2 dry run; S6 SCR-001). Root cause: a later read identical
+    to an earlier re-read is stubbed first by `duplicate_tool_results`, which makes the re-read a
+    reference target; CC-019 / PR-012 then reject `reread_by_reference` on it. The re-read was
+    sent as notes on the previous request and is sent whole on this one: history already sent
+    changes, and the provider rewrites its cache from there. The decision for a segment must
+    not depend on a later segment (PR-004)."""
+    from tokli.compressors.duplicate_tool_results import DuplicateToolResults
+
+    old = module(30)
+    new = [*old[:10], "an inserted line", *old[10:]]
+    turn = conversation(("read", old), ("edit", None), ("read", new))
+    later = conversation(("read", old), ("edit", None), ("read", new), ("read", new))
+    _, _, first = run(turn, DuplicateToolResults(0, False))
+    _, outcome, second = run(later, DuplicateToolResults(0, False))
+    shared = len(turn["messages"]) - 1
+    assert results(first)[2].startswith("[tokli: lines")  # the re-read was sent as notes
+    assert second["messages"][:shared] == first["messages"][:shared]
+    # AC-CC-16: the later identical read is compressed too (second pass), not sent whole
+    assert results(second)[3].startswith("[tokli: lines")
+    reasons = {(i.compressor_id, i.reason) for i in outcome.invocations if i.decision == "rejected"}
+    assert ("duplicate_tool_results", "reference_target_changed") in reasons
+
+
+@settings(max_examples=60, deadline=None)
+@given(st.lists(st.sampled_from(["read", "edit"]), min_size=2, max_size=7), st.randoms())
+def prop_history_stays_stable_with_both_reference_compressors(steps: list[str], rnd: Any) -> None:
+    """AC-CC-16 (CC-019, PR-004): whatever the sequence of reads and edits, the forwarded history
+    of each turn is unchanged in the next turn, with both reference compressors on."""
+    from tokli.compressors.duplicate_tool_results import DuplicateToolResults
+
+    lines = module(30)
+    history: list[tuple[str, Any]] = []
+    previous: dict[str, Any] | None = None
+    for step in steps:
+        if step == "edit":
+            at = rnd.randrange(len(lines))
+            lines = [*lines[:at], f"edited line {at}", *lines[at + 1 :]]
+            history.append(("edit", None))
+        else:
+            history.append(("read", list(lines)))
+        data = conversation(*history)
+        _, _, forwarded = run(data, DuplicateToolResults(0, False))
+        if previous is not None:
+            shared = len(previous["messages"]) - 1  # the old last message is the old question
+            assert forwarded["messages"][:shared] == previous["messages"][:shared]
+        previous = forwarded
 
 
 def test_reread_on_by_default_and_declared() -> None:

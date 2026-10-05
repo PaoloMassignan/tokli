@@ -204,13 +204,13 @@ def test_schema_migration_forward_from_v1(tmp_path: Path) -> None:
     store.flush()
     got = store.get(new.request_id)
     store.close()
-    assert SCHEMA_VERSION == 3
+    assert SCHEMA_VERSION == 4
     assert old is not None and old["record"]["header_names"] is None
     assert old["record"]["est_original_tokens"] == 100 and old["record"]["ms_total"] == 904.0
     assert got is not None and got["record"]["header_names"] == ["x-api-key"]
     with sqlite3.connect(path) as db:
         assert db.execute("SELECT value FROM meta WHERE key = 'schema_version'").fetchone() == (
-            "3",
+            "4",
         )
         assert db.execute("SELECT COUNT(*) FROM requests").fetchone() == (2,)
         columns = {row[1] for row in db.execute("PRAGMA table_info(compressor_stats)")}
@@ -365,3 +365,72 @@ def test_close_never_closes_the_connection_under_a_busy_writer(
     assert store.failures == 0
     with sqlite3.connect(tmp_path / "t.db") as db:
         assert db.execute("SELECT COUNT(*) FROM requests").fetchone() == (1,)
+
+
+V4_REQUEST = ("saved_cache_read", "saved_cache_write", "saved_input")
+
+
+def test_schema_migration_v3_to_v4(tmp_path: Path) -> None:
+    """TC-012, ADR 0014: a v3 database gains the saving-region columns in place; its rows keep
+    every value and read the new columns as null; new rows store them."""
+    from dataclasses import asdict, fields
+
+    from tokli.telemetry.store import _REQUEST_TYPES, _STATS_TYPES
+
+    path = tmp_path / "t.db"
+    columns = [f.name for f in fields(RequestRecord) if f.name not in V4_REQUEST]
+    stats_columns = [f.name for f in fields(CompressorStatsRecord) if f.name not in V4_REQUEST]
+    row = {k: v for k, v in asdict(RECORD).items() if k in columns}
+    row["header_names"] = None
+    stat = asdict(STATS)
+    stat["skip_reasons"] = "{}"
+    with sqlite3.connect(path) as db:  # a database exactly as a v3 build wrote it
+        db.execute("CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)")
+        db.execute("INSERT INTO meta VALUES ('schema_version', '3')")
+        db.execute(
+            "CREATE TABLE requests ("
+            + ", ".join(
+                f"{c} {_REQUEST_TYPES[c]}" + (" PRIMARY KEY" if c == "request_id" else "")
+                for c in columns
+            )
+            + ")"
+        )
+        db.execute(
+            f"INSERT INTO requests ({', '.join(columns)}) "
+            f"VALUES ({', '.join('?' for _ in columns)})",
+            [row[c] for c in columns],
+        )
+        db.execute(
+            "CREATE TABLE compressor_stats ("
+            + ", ".join(f"{c} {_STATS_TYPES[c]}" for c in stats_columns)
+            + ", PRIMARY KEY (request_id, compressor_id))"
+        )
+        db.execute(
+            f"INSERT INTO compressor_stats ({', '.join(stats_columns)}) "
+            f"VALUES ({', '.join('?' for _ in stats_columns)})",
+            [stat[c] for c in stats_columns],
+        )
+    sqlite3.connect(path).close()
+    store = open_store(path)
+    old = store.get(RECORD.request_id)
+    new = replace(
+        RECORD,
+        request_id="01NEW00000000000000000000B",
+        saved_cache_read=7,
+        saved_cache_write=2,
+        saved_input=1,
+    )
+    store.submit(new, [replace(STATS, request_id=new.request_id, saved_cache_read=7)])
+    store.flush()
+    got = store.get(new.request_id)
+    store.close()
+    assert old is not None and old["record"]["saved_cache_read"] is None
+    assert old["record"]["est_original_tokens"] == RECORD.est_original_tokens
+    assert old["compressors"][0]["saved_input"] is None
+    assert got is not None
+    assert (got["record"]["saved_cache_read"], got["record"]["saved_cache_write"]) == (7, 2)
+    assert got["compressors"][0]["saved_cache_read"] == 7
+    with sqlite3.connect(path) as db:
+        assert db.execute("SELECT value FROM meta WHERE key = 'schema_version'").fetchone() == (
+            "4",
+        )

@@ -10,9 +10,9 @@ from __future__ import annotations
 import time
 from dataclasses import dataclass
 
-from tokli.domain.models import CanonicalRequest
+from tokli.domain.models import CanonicalRequest, SegmentPlace
 from tokli.domain.usage import Usage
-from tokli.protocols.anthropic_messages import estimate_request_tokens
+from tokli.protocols.anthropic_messages import estimate_request_tokens, segment_places
 from tokli.tokens.calibration import K_MAX, K_MIN, Calibration, OutlierWindow, calibrate
 from tokli.tokens.counter import TokenCounter
 
@@ -37,16 +37,19 @@ class RequestEstimate:
     forwarded: int
     started: float  # perf_counter
     ended: float
+    places: tuple[SegmentPlace, ...] = ()  # TC-017: where each segment sits, provider order
 
 
 def whole_request_estimates(
     request: CanonicalRequest, counter: TokenCounter, saved: int
 ) -> RequestEstimate:
     """The original request's estimate, and the forwarded one (``original - saved``: segment
-    texts are counted one by one, so the mutable-scope saving carries over exactly)."""
+    texts are counted one by one, so the mutable-scope saving carries over exactly), with the
+    place of every segment (TC-017)."""
     started = time.perf_counter()
     original = estimate_request_tokens(request, counter.count)
-    return RequestEstimate(original, original - saved, started, time.perf_counter())
+    places = tuple(segment_places(request, counter.count)) if saved else ()
+    return RequestEstimate(original, original - saved, started, time.perf_counter(), places)
 
 
 def calibrate_request(

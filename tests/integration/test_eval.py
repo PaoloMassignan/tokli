@@ -636,3 +636,33 @@ def test_edit_anchor_counts_an_exact_edit(tmp_path: Path, upstream: FakeUpstream
     assert plan.not_exercised == 0
     result = asyncio.run(run_smoke(plan, (baseline, candidate), api_key=KEY, max_calls=10_000))
     assert all(set(c.candidate) == {"pass"} and set(c.baseline) == {"pass"} for c in result.cases)
+
+
+PRICED = ("--model", "claude-haiku-4-5")
+
+
+def test_eval_requires_confirmation_or_max_cost(
+    eval_cli, upstream: FakeUpstream, monkeypatch: pytest.MonkeyPatch
+) -> None:  # type: ignore[no-untyped-def]
+    """QE-009 (S6): for a priced model the plan shows the estimated cost; `--yes` alone is not
+    enough without a cap, and a declined prompt makes no call."""
+    run_cli, _ = eval_cli
+    result = run_cli("--api-key-env", "EVAL_TEST_ANTHROPIC_KEY", *PRICED, "--yes")
+    assert result.code != 0 and "--max-cost" in result.err
+    assert upstream.received == []
+    monkeypatch.setattr("builtins.input", lambda prompt="": "n")
+    result = run_cli("--api-key-env", "EVAL_TEST_ANTHROPIC_KEY", *PRICED)
+    assert "estimated cost: at most $" in result.out
+    assert result.code != 0 and upstream.received == []
+
+
+def test_eval_stops_at_cost_cap(eval_cli, upstream: FakeUpstream) -> None:  # type: ignore[no-untyped-def]
+    """QE-010: the run stops before the call that would exceed `--max-cost`, counting the cost
+    from provider usage, and says so."""
+    run_cli, _ = eval_cli
+    result = run_cli(
+        "--api-key-env", "EVAL_TEST_ANTHROPIC_KEY", *PRICED, "--max-cost", "0.01", "--yes"
+    )
+    assert result.code == 0, result.err
+    assert 0 < len(upstream.received) < 88
+    assert "stopped by the cost cap" in result.out

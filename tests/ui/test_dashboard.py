@@ -85,11 +85,36 @@ def test_ui_renders_method_labels(page: Page) -> None:
     assert checked >= 10
 
 
-def test_ui_money_shows_dash_with_reason(page: Page) -> None:
-    """X1 / API-012: no price book yet, so money is "—" with the reason."""
-    money = page.locator('[data-card="cost"] .figure')
-    assert money.locator(".num").inner_text().strip() == "—"
-    assert "no_price_book" in money.locator(".reason").inner_text()
+MONEY_METHODS = (
+    "by where the saving sits in the cache",
+    "by the request's average price mix",
+    "assumes no cache",
+)
+
+
+def test_ui_cost_card_shows_estimate_range_and_method(page: Page) -> None:
+    """UI-013 / UI-002 (S6; API-012 retired): the money card shows the estimate, its range,
+    its method in plain words, its basis label and the price-book version."""
+    card = page.locator('[data-card="cost"]')
+    money = card.locator(".money")
+    assert money.locator(".num").inner_text().strip().startswith("$")
+    low_high = money.locator(".range").inner_text()
+    assert low_high.count("$") == 2 and "\u2013" in low_high
+    assert money.locator(".money-method").inner_text().strip() in MONEY_METHODS
+    assert card.locator(".basis").inner_text().strip() in (
+        "estimated money saved",
+        "value at API prices",
+    )
+    assert "price book" in card.inner_text()
+
+
+def test_ui_compressor_money_column(page: Page) -> None:
+    """UI-013: the Compressors page shows each compressor's money saved with its method."""
+    show(page, "compressors")
+    table = page.locator("#compressors-table")
+    assert "Money saved" in table.locator("thead").inner_text()
+    cells = table.locator("td.money").all_inner_texts()
+    assert cells and any(cell.strip().startswith("$") for cell in cells)
 
 
 def test_ui_shows_kind_equivalence_and_assumptions(page: Page) -> None:

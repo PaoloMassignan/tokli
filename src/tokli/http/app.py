@@ -112,6 +112,7 @@ def create_app(services: Services, listen: str | None = None) -> ASGIApp:
         MetricsQuery(
             services.store.path,
             budget_ms=services.config.settings.compression.request_budget_ms,
+            prices=services.prices,
         )
         if services.store is not None
         else None

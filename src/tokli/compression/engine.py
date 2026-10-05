@@ -16,6 +16,7 @@ import time
 from collections import OrderedDict
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
+from functools import partial
 from typing import Protocol
 
 from tokli.compression import text_shapes
@@ -121,6 +122,20 @@ class _RequestState:
     chains: dict[str, list[str]]
     terminal: set[str] = field(default_factory=set)
     targets: dict[str, list[str]] = field(default_factory=dict)  # target id -> stub ids
+    stubs: dict[str, _Stub] = field(default_factory=dict)  # stub id -> how to revert it
+    reopened: set[str] = field(default_factory=set)  # stubs reverted (CC-019, S6 SCR-001)
+
+
+@dataclass(frozen=True)
+class _Stub:
+    """An accepted reference stub, kept so that CC-019 can revert it (S6 SCR-001)."""
+
+    compressor_id: str
+    before: str
+    tokens_in: int
+    tokens_out: int
+    terminal_added: bool
+    invocation: int  # index of its "accepted" invocation
 
 
 CacheKey = tuple[str, str, SegmentView, Features, int, bytes]
@@ -300,7 +315,7 @@ class Engine:
                 state.texts[segment.id],
                 state.chains[segment.id],
                 segment.id in state.terminal,
-                segment.id in state.targets,
+                partial(self._revert_stubs, segment.id, state, stats, invocations),
                 view,
                 counter,
                 start,
@@ -360,58 +375,123 @@ class Engine:
         conversation: ConversationView | None,
     ) -> None:
         """Pruners (PR-001, PR-010): each proposal passes the same gate as a segment result, plus
-        reference integrity (CC-019), and is attributed to its compressor."""
-        settings = self._settings
+        reference integrity (CC-019), and is attributed to its compressor. A stub reverted
+        because its target changed is offered once more to every pruner (S6 SCR-001), so that
+        another compressor can still shorten it."""
         tools = tuple(
             ToolRecordView(t.call_id, t.name, t.arguments, t.human_turns_after)
             for t in request.tools
         )
-        position = {s.id: i for i, s in enumerate(segments)}
+        args = (segments, originals, view, counter, stats, invocations, state, conversation, tools)
         for compressor in self._request_scope:
-            spec = compressor.spec
-            stat = stats[spec.id]
-            candidates = [s for s in segments if s.kind in spec.segment_kinds]
+            self._pruner_pass(compressor, *args, only=None)
+        if state.reopened:
+            reopened = set(state.reopened)
+            for compressor in self._request_scope:
+                self._pruner_pass(compressor, *args, only=reopened)
 
-            def skip_all(reason: str) -> None:
-                stat.skip_reasons[reason] = stat.skip_reasons.get(reason, 0) + len(candidates)  # noqa: B023
-                for s in candidates:  # noqa: B023
-                    invocations.append(Invocation(s.id, spec.id, "skipped", reason, 0, 0, 0.0))  # noqa: B023
+    def _revert_stubs(
+        self,
+        target: str,
+        state: _RequestState,
+        stats: dict[str, CompressorStats],
+        invocations: list[Invocation],
+    ) -> None:
+        """CC-019 (S6 SCR-001): ``target`` is being changed, so every later stub naming it is
+        reverted to its text from before the stub; the earlier segment's decision wins."""
+        for sid in state.targets.pop(target, []):
+            stub = state.stubs.pop(sid)
+            state.texts[sid] = stub.before
+            if state.chains[sid] and state.chains[sid][-1] == stub.compressor_id:
+                state.chains[sid].pop()
+            if stub.terminal_added:
+                state.terminal.discard(sid)
+            stat = stats[stub.compressor_id]
+            stat.accepted -= 1
+            stat.tokens_in_accepted -= stub.tokens_in
+            stat.tokens_out += stub.tokens_in - stub.tokens_out
+            stat.rejected_invariant += 1
+            invocations[stub.invocation] = Invocation(
+                sid,
+                stub.compressor_id,
+                "rejected",
+                "reference_target_changed",
+                stub.tokens_in,
+                stub.tokens_in,
+                invocations[stub.invocation].ms,
+            )
+            state.reopened.add(sid)
 
-            reason = self._pre_filter(compressor)
-            if reason:
+    def _pruner_pass(
+        self,
+        compressor: RequestCompressor,
+        segments: Sequence[Segment],
+        originals: Mapping[str, str],
+        view: StageView,
+        counter: Counter,
+        stats: dict[str, CompressorStats],
+        invocations: list[Invocation],
+        state: _RequestState,
+        conversation: ConversationView | None,
+        tools: tuple[ToolRecordView, ...],
+        *,
+        only: set[str] | None,
+    ) -> None:
+        """One pruner over the request. With ``only``, a second pass: proposals are taken for
+        those segments alone, and nothing is counted as considered again."""
+        settings = self._settings
+        position = {s.id: i for i, s in enumerate(segments)}
+        spec = compressor.spec
+        stat = stats[spec.id]
+        candidates = [s for s in segments if s.kind in spec.segment_kinds]
+
+        def skip_all(reason: str) -> None:
+            stat.skip_reasons[reason] = stat.skip_reasons.get(reason, 0) + len(candidates)
+            for s in candidates:
+                invocations.append(Invocation(s.id, spec.id, "skipped", reason, 0, 0, 0.0))
+
+        reason = self._pre_filter(compressor)
+        if reason:
+            if only is None:
                 skip_all(reason)
-                continue
+            return
+        if only is None:
             stat.considered += len(candidates)
-            # No budget check: a pruner's decisions must be the same on every request (CC-014).
-            refs = [
-                SegmentRef(
-                    s.id,
-                    SegmentView(
-                        s.kind, s.role, s.tool_name, s.is_error, tuple(view.spans.get(s.id, ()))
-                    ),
-                    s.tool_call_id,
-                    s.whole_result,
-                )
-                for s in candidates
-                if s.id not in state.terminal
-            ]
-            call_start = self._clock()
-            try:
-                proposals = compressor.plan(
-                    refs,
-                    {r.segment_id: state.texts[r.segment_id] for r in refs},
-                    tools,
-                    counter.count,
-                    conversation,
-                )
-            except Exception:  # isolation (CC-008)
-                ms = (self._clock() - call_start) * 1000
-                stat.ms_total += ms
-                stat.failed += 1
-                invocations.append(Invocation("*", spec.id, "failed", "exception", 0, 0, ms))
-                continue
+        elif not any(s.id in only and s.id not in state.terminal for s in candidates):
+            return
+        # No budget check: a pruner's decisions must be the same on every request (CC-014).
+        refs = [
+            SegmentRef(
+                s.id,
+                SegmentView(
+                    s.kind, s.role, s.tool_name, s.is_error, tuple(view.spans.get(s.id, ()))
+                ),
+                s.tool_call_id,
+                s.whole_result,
+            )
+            for s in candidates
+            if s.id not in state.terminal
+        ]
+        call_start = self._clock()
+        try:
+            proposals = compressor.plan(
+                refs,
+                {r.segment_id: state.texts[r.segment_id] for r in refs},
+                tools,
+                counter.count,
+                conversation,
+            )
+        except Exception:  # isolation (CC-008)
             ms = (self._clock() - call_start) * 1000
             stat.ms_total += ms
+            stat.failed += 1
+            invocations.append(Invocation("*", spec.id, "failed", "exception", 0, 0, ms))
+            return
+        ms = (self._clock() - call_start) * 1000
+        stat.ms_total += ms
+        if only is not None:
+            proposals = [p for p in proposals if p.segment_id in only]
+        else:
             proposed = {p.segment_id for p in proposals}
             quiet = sum(1 for r in refs if r.segment_id not in proposed)
             if quiet:
@@ -424,74 +504,72 @@ class Engine:
                 invocations.append(
                     Invocation(declined.segment_id, spec.id, "not_applicable", code, 0, 0, 0.0)
                 )
-            by_ref = {r.segment_id: r for r in refs}
-            for proposal in proposals:
-                new_text = proposal.new_text
-                if new_text is None:
-                    continue  # declined, recorded above
-                sid = proposal.segment_id
-                ref = by_ref.get(sid)
-                if ref is None:
-                    continue  # a proposal for a segment the compressor was not given
-                text = state.texts[sid]
-                t_in = counter.count(text)
+        by_ref = {r.segment_id: r for r in refs}
+        for proposal in proposals:
+            new_text = proposal.new_text
+            if new_text is None:
+                continue  # declined, recorded above
+            sid = proposal.segment_id
+            ref = by_ref.get(sid)
+            if ref is None:
+                continue  # a proposal for a segment the compressor was not given
+            text = state.texts[sid]
+            t_in = counter.count(text)
 
-                def record(decision: str, why: str, t_out: int = t_in) -> None:
-                    invocations.append(Invocation(sid, spec.id, decision, why, t_in, t_out, 0.0))  # noqa: B023
+            def record(decision: str, why: str, t_out: int = t_in) -> None:
+                invocations.append(Invocation(sid, spec.id, decision, why, t_in, t_out, 0.0))  # noqa: B023
 
-                if t_in < max(spec.min_tokens, settings.min_segment_tokens):
-                    stat.skip_reasons["too_small"] = stat.skip_reasons.get("too_small", 0) + 1
-                    record("skipped", "too_small")
-                    continue
-                stat.applicable += 1
-                stat.tokens_in += t_in
-                target = proposal.target_id
-                broken = sid in state.targets or (
-                    target is not None
-                    and (
-                        target not in position
-                        or position[target] >= position[sid]
-                        or target in state.terminal
-                        or state.texts[target] != originals[target]
-                    )
+            if t_in < max(spec.min_tokens, settings.min_segment_tokens):
+                stat.skip_reasons["too_small"] = stat.skip_reasons.get("too_small", 0) + 1
+                record("skipped", "too_small")
+                continue
+            stat.applicable += 1
+            stat.tokens_in += t_in
+            target = proposal.target_id
+            broken = target is not None and (
+                target not in position
+                or position[target] >= position[sid]
+                or target in state.terminal
+                or state.texts[target] != originals[target]
+            )
+            if broken:
+                stat.rejected_invariant += 1
+                stat.tokens_out += t_in
+                record("rejected", "reference_target_modified")
+                continue
+            why, t_out = self._gate(
+                originals[sid], ref.view.protected, text, new_text, t_in, counter
+            )
+            if why:
+                stat.rejected_no_gain += why != "protected_span_changed"
+                stat.rejected_invariant += why == "protected_span_changed"
+                stat.tokens_out += t_in
+                record("rejected", why)
+                continue
+            if settings.verify_lossless and spec.equivalence == "reference" and target is not None:
+                decoded = compressor.decode_request(
+                    {sid: new_text, target: state.texts[target]}, refs
                 )
-                if broken:
+                if decoded.get(sid) != originals[sid]:
                     stat.rejected_invariant += 1
                     stat.tokens_out += t_in
-                    record("rejected", "reference_target_modified")
+                    record("rejected", "decode_mismatch")
                     continue
-                why, t_out = self._gate(
-                    originals[sid], ref.view.protected, text, new_text, t_in, counter
-                )
-                if why:
-                    stat.rejected_no_gain += why != "protected_span_changed"
-                    stat.rejected_invariant += why == "protected_span_changed"
-                    stat.tokens_out += t_in
-                    record("rejected", why)
-                    continue
-                if (
-                    settings.verify_lossless
-                    and spec.equivalence == "reference"
-                    and target is not None
-                ):
-                    decoded = compressor.decode_request(
-                        {sid: new_text, target: state.texts[target]}, refs
-                    )
-                    if decoded.get(sid) != originals[sid]:
-                        stat.rejected_invariant += 1
-                        stat.tokens_out += t_in
-                        record("rejected", "decode_mismatch")
-                        continue
-                stat.accepted += 1
-                stat.tokens_in_accepted += t_in
-                stat.tokens_out += t_out
-                record("accepted", "", t_out)
-                state.texts[sid] = new_text
-                state.chains[sid].append(spec.id)
-                if spec.terminal:
-                    state.terminal.add(sid)
-                if target is not None:
-                    state.targets.setdefault(target, []).append(sid)
+            if sid in state.targets:  # CC-019: this earlier segment's change wins
+                self._revert_stubs(sid, state, stats, invocations)
+            stat.accepted += 1
+            stat.tokens_in_accepted += t_in
+            stat.tokens_out += t_out
+            index = len(invocations)
+            record("accepted", "", t_out)
+            state.texts[sid] = new_text
+            state.chains[sid].append(spec.id)
+            terminal_added = spec.terminal and sid not in state.terminal
+            if spec.terminal:
+                state.terminal.add(sid)
+            if target is not None:
+                state.targets.setdefault(target, []).append(sid)
+                state.stubs[sid] = _Stub(spec.id, text, t_in, t_out, terminal_added, index)
 
     def _run_segment(
         self,
@@ -500,7 +578,7 @@ class Engine:
         text: str,
         accepted_by: list[str],
         terminal_reached: bool,
-        is_target: bool,
+        on_target_change: Callable[[], None],
         view: StageView,
         counter: Counter,
         start: float,
@@ -615,11 +693,6 @@ class Engine:
                 record("rejected", why, t_in, t_in, ms)
                 continue
             assert output is not None  # the gate accepts only a real output
-            if is_target and spec.equivalence not in _TARGET_SAFE:  # CC-019
-                stat.rejected_invariant += 1
-                stat.tokens_out += t_in
-                record("rejected", "reference_target_modified", t_in, t_in, ms)
-                continue
             decoder = self._decoders.get(spec.id)
             if (
                 settings.verify_lossless
@@ -631,6 +704,8 @@ class Engine:
                 record("rejected", "decode_mismatch", t_in, t_in, ms)
                 continue
 
+            if spec.equivalence not in _TARGET_SAFE:  # CC-019: the earlier change wins
+                on_target_change()
             stat.accepted += 1
             stat.tokens_in_accepted += t_in
             stat.tokens_out += t_out

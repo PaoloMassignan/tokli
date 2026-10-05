@@ -16,6 +16,7 @@ from typing import Any
 from tokli.app.api import request_view, stats_records
 from tokli.app.bootstrap import Services
 from tokli.app.measurement import Calibration, RequestEstimate
+from tokli.app.regions import split_for
 from tokli.compression.engine import EngineResult
 from tokli.domain.usage import Usage
 from tokli.observability.logs import REQUEST_LOGGER, log_fields
@@ -71,6 +72,12 @@ def record_request(
 ) -> RequestRecord:
     """Stores the record and its per-compressor rows, keeps the trace view and logs one line."""
     usage = observed.usage
+    split = (
+        split_for(engine.invocations, estimate.places, usage, calibration.k)
+        if engine is not None and estimate is not None
+        else None
+    )
+    request_parts = split.request if split is not None else (None, None, None)
     record = RequestRecord(
         request_id=observed.request_id,
         ts_start=observed.ts_start,
@@ -113,8 +120,15 @@ def record_request(
         header_names=observed.header_names,
         history_rewritten=observed.history_rewritten,
         reference_stubs=engine.reference_stubs if engine else 0,
+        saved_cache_read=request_parts[0],
+        saved_cache_write=request_parts[1],
+        saved_input=request_parts[2],
     )
-    stats = stats_records(observed.request_id, engine.stats if engine else ())
+    stats = stats_records(
+        observed.request_id,
+        engine.stats if engine else (),
+        split.per_compressor if split is not None else None,
+    )
     if services.store is not None:
         services.store.submit(record, stats)
     services.traces.add(observed.request_id, request_view(record, stats, dict(trace)))
