@@ -6,6 +6,7 @@ Approved for S3 (2026-10-03): Overview, Compressors (read-only), Recent requests
 Approved for S4 (2026-10-03): Settings page; UI-003 (evaluation status), UI-004, UI-005, UI-010, AC-UI-3; saved tokens per compressor on the Overview.
 Approved for S8a-1 (2026-10-03): UI-012 (S8a SCR-001).
 Approved for S6 (2026-10-04): the money card (Overview), the money column (Compressors), UI-002 for money, UI-013.
+Approved for S6.5 (2026-10-05): presentation, wording and layout review; no behavioural or API change.
 
 ## Purpose
 Operational visibility first: how much is saved, by which compressor, at what latency. Then

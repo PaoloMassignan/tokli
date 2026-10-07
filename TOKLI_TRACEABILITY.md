@@ -334,18 +334,18 @@ Evidence codes:
 | Req | Why | AC | Tests |
 |---|---|---|---|
 | UI-001 | Brief§8, §13 | AC-UI-1 | `test_ui_has_no_compressor_specific_code` |
-| UI-002 | Brief§10/§12 | AC-UI-2 | `test_ui_renders_method_labels`, `test_ui_money_shows_dash_with_reason` |
-| UI-003 | Brief§8 kind visibility; R01§3 equivalence and assumptions visible | AC-UI-2 | `test_ui_shows_kind_equivalence_and_assumptions`, `test_ui_shows_equivalence_assumptions_and_eval_status`, `test_compressors_endpoint_shows_locks_and_evaluation`, `test_current_record`, `test_outdated_record_shown_as_outdated`, `test_wheel_contains_eval_records` |
+| UI-002 | Brief§10/§12 | AC-UI-2 | `test_ui_renders_method_labels`, `test_ui_money_shows_dash_with_reason`, `test_ui_timeseries_values_show_methods` |
+| UI-003 | Brief§8 kind visibility; R01§3 equivalence and assumptions visible | AC-UI-2 | `test_ui_shows_kind_equivalence_and_assumptions`, `test_ui_shows_equivalence_assumptions_and_eval_status`, `test_ui_compressor_summary_and_full_details`, `test_ui_settings_primary_controls_and_disclosures`, `test_compressors_endpoint_shows_locks_and_evaluation`, `test_current_record`, `test_outdated_record_shown_as_outdated`, `test_wheel_contains_eval_records` |
 | UI-004 | S4 SCR-001: toggles plus the Lossless only shortcut | AC-UI-3 | `test_ui_lossless_only_shortcut_switches_off_non_lossless`, `test_ui_toggle_patches_config` |
 | UI-005 | config ownership | AC-UI-3 | `test_ui_locked_settings_show_source` |
 | UI-006 | H41, MD-21 | AC-UI-4 | `test_wheel_contains_ui_assets`, `test_ui_assets_load_offline`, `test_ui_assets_load_offline_in_browser` |
 | UI-007 | Brief§15 | AC-OB-5 | `test_debug_content_banner_visible` |
-| UI-008 | usability | AC-UI-2 | `test_ui_usable_at_360px` |
-| UI-009 | R01§9: expensive compressors visible and controllable | AC-UI-2 | `test_ui_overhead_target_is_reference_line`, `test_compressor_aggregates_hand_computed` (cost class, average latency, budget-skip rate, `budget_ms`) |
+| UI-008 | usability | AC-UI-2 | `test_ui_usable_at_360px`, `test_ui_focus_is_visible_in_both_colour_schemes`, `test_ui_help_reveals_contextual_field_descriptions`, `test_ui_compressor_columns_share_one_alignment_grid`, `test_ui_screenshots` |
+| UI-009 | R01§9: expensive compressors visible and controllable | AC-UI-2 | `test_ui_overhead_target_is_reference_line`, `test_ui_all_overhead_groups_and_percentiles_are_reachable`, `test_ui_compressor_summary_and_full_details`, `test_compressor_aggregates_hand_computed` (cost class, average latency, budget-skip rate, `budget_ms`) |
 | UI-011 | S3 review M3, P8; Windows file-type registry | AC-UI-5 | `test_dashboard_served_at_tokli_root`, `test_ui_assets_served_with_explicit_content_types`, `test_serve_prints_dashboard_address` |
 | UI-012 | the verbatim opt-in is the user's informed choice (S8a SCR-001, E5b-lite) | — | `test_ui_verbatim_opt_in_toggle` |
-| UI-010 | honest wording (S4 SCR-001) | — | `test_ui_policy_explanations_text` |
-| UI-013 | S6: money with its range, method and basis | — | `test_ui_cost_card_shows_estimate_range_and_method`, `test_ui_compressor_money_column` |
+| UI-010 | honest wording (S4 SCR-001) | — | `test_ui_policy_explanations_text`, `test_ui_settings_primary_controls_and_disclosures`, `test_ui_help_reveals_contextual_field_descriptions` |
+| UI-013 | S6: money with its range, method and basis | — | `test_ui_cost_card_shows_estimate_range_and_method`, `test_ui_compressor_money_column`, `test_ui_compressor_summary_and_full_details`, `test_ui_recent_request_money_is_compact_with_descriptions_in_help` |
 
 ## Configuration (SPEC 017)
 
