@@ -18,6 +18,12 @@ HEADERS = {"x-api-key": "sk-ant-api03-TOKLI-CANARY-KEY", "anthropic-version": "2
 Start = Callable[..., Tokli]
 
 
+# The request budget (CC-014) is lifted: these tests are about what json_minify changes, not
+# about time. On a slow CI runner (Windows / Python 3.11, run 37581915336) the cold first
+# request exceeded 50 ms and json_minify was skipped with `budget_exhausted`.
+NO_BUDGET = ("compression.request_budget_ms=100000",)
+
+
 def send(tokli: Tokli, content: bytes) -> httpx.Response:
     return httpx.post(
         tokli.url + "/anthropic/v1/messages", content=content, headers=HEADERS, timeout=10
@@ -55,7 +61,7 @@ def test_only_json_tool_results_of_non_verbatim_tools_change(
 ) -> None:
     content = (FIXTURES / f"{name}.json").read_bytes()
     send(
-        tokli("compressors.duplicate_tool_results.enabled=false"), content
+        tokli("compressors.duplicate_tool_results.enabled=false", *NO_BUDGET), content
     )  # json_minify alone (S1 acceptance 2)
     before, after = json.loads(content), json.loads(upstream.received[-1].body)
     before_leaves, after_leaves = leaves(before), leaves(after)
@@ -71,7 +77,7 @@ def test_only_json_tool_results_of_non_verbatim_tools_change(
 def test_expected_changes_in_tool_use_fixture(tokli: Start, upstream: FakeUpstream) -> None:
     content = (FIXTURES / "tool_use_and_results.json").read_bytes()
     send(
-        tokli("compressors.duplicate_tool_results.enabled=false"), content
+        tokli("compressors.duplicate_tool_results.enabled=false", *NO_BUDGET), content
     )  # json_minify alone (S1 acceptance 2)
     after = json.loads(upstream.received[-1].body)
     before = json.loads(content)
