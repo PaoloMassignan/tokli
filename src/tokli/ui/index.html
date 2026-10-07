@@ -15,8 +15,10 @@
       <button type="button" data-tab="compressors" aria-pressed="false">Compressors</button>
       <button type="button" data-tab="requests" aria-pressed="false">Recent requests</button>
       <button type="button" data-tab="settings" aria-pressed="false">Settings</button>
+      <button type="button" id="help-toggle" aria-expanded="false" aria-controls="page-help">Help</button>
     </nav>
     <form id="filters" aria-label="Filters">
+      <strong>Filters</strong>
       <label>Range
         <select name="range">
           <option value="1">last 24 hours</option>
@@ -37,33 +39,43 @@
       </label>
     </form>
     <p class="note" id="status" role="status"></p>
+    <aside id="page-help" hidden>
+      <h2 id="help-title"></h2>
+      <div id="help-content"></div>
+    </aside>
   </header>
 
   <main>
     <section data-panel="overview">
       <div id="overview-body">
-        <div id="cards" class="cards"></div>
-        <dl class="legend" aria-label="How each number was obtained">
-          <div><dt>exact</dt><dd>counted by the provider</dd></div>
-          <div><dt>calibrated</dt><dd>Tokli's count, corrected with the provider's count</dd></div>
-          <div><dt>estimate</dt><dd>Tokli's own count (the provider gave no figure to compare)</dd></div>
-        </dl>
+        <h2>Savings</h2>
+        <div id="cards">
+          <div id="primary-metrics" class="metrics"></div>
+          <details id="overview-breakdown">
+            <summary>How this total is made</summary>
+            <div id="secondary-metrics" class="metrics secondary-metrics"></div>
+          </details>
+        </div>
         <h2>Saved tokens per compressor</h2>
         <div class="scroll"><table id="per-compressor"></table></div>
         <h2>Saved tokens over time</h2>
         <div class="chart-box" id="saved-chart"></div>
+        <details id="timeseries-values">
+          <summary>Values and methods</summary>
+          <div class="scroll"><table id="timeseries-table"></table></div>
+        </details>
         <h2>Time Tokli adds to each request</h2>
-        <p class="note"><strong>Typical</strong>: half of the requests take less than this.
-          <strong>Slowest</strong>: only 1 request in 20 takes longer. Requests are grouped by
-          size. The dashed line is the goal: a reference, not a limit.</p>
         <div class="chart-box" id="overhead-box"></div>
+        <details id="overhead-values">
+          <summary>All policies and configurations</summary>
+          <div class="scroll"><table id="overhead-table"></table></div>
+        </details>
       </div>
     </section>
 
     <section data-panel="compressors" hidden>
       <div id="compressors-body">
-        <p class="note">When several compressors work on the same text, each one is credited only
-          with what it saved after the ones before it.</p>
+        <h2>Compressors</h2>
         <p class="note" id="budget"></p>
         <div class="scroll"><table id="compressors-table"></table></div>
       </div>
@@ -71,16 +83,11 @@
 
     <section data-panel="settings" hidden>
       <div id="settings-body">
-        <p class="note">Each compressor is switched on or off here. Changes apply to the next
-          request; requests in progress finish with the settings they started with.
-          Configuration <span id="config-hash"></span>.</p>
-        <div class="kinds">
-          <p><strong>Lossless</strong> — Keeps all information in the request: exactly, structurally (e.g. JSON whitespace), or by reference to an identical earlier tool result. This does not guarantee identical model behaviour. Defaults are chosen from evaluations.</p>
-          <p><strong>Selective / lossy</strong> — Drops information: selective ones keep a declared part verbatim, lossy ones do not. Enable them only with evidence that your tasks are not affected.</p>
-        </div>
+        <h2>Compressor settings</h2>
+        <span id="config-hash" hidden></span>
         <p><button type="button" id="lossless-only">Lossless only</button>
           <span class="note">switches off every compressor that drops information</span></p>
-        <div id="compressor-cards" class="compressor-cards"></div>
+        <div id="compressor-cards" class="compressor-list"></div>
         <h2>Data</h2>
         <form id="retention-form" class="retention">
           <label>Keep request records for
@@ -95,6 +102,7 @@
 
     <section data-panel="requests" hidden>
       <div id="requests-body">
+        <h2>Recent requests</h2>
         <div class="scroll"><table id="requests-table"></table></div>
         <button type="button" id="more" hidden>Older requests</button>
         <div id="request-detail" hidden></div>

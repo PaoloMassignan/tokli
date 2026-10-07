@@ -93,19 +93,22 @@ MONEY_METHODS = (
 
 
 def test_ui_cost_card_shows_estimate_range_and_method(page: Page) -> None:
-    """UI-013 / UI-002 (S6; API-012 retired): the money card shows the estimate, its range,
-    its method in plain words, its basis label and the price-book version."""
+    """UI-013 / UI-002: the card stays compact and Help carries its full provenance."""
     card = page.locator('[data-card="cost"]')
     money = card.locator(".money")
     assert money.locator(".num").inner_text().strip().startswith("$")
     low_high = money.locator(".range").inner_text()
     assert low_high.count("$") == 2 and "\u2013" in low_high
-    assert money.locator(".money-method").inner_text().strip() in MONEY_METHODS
-    assert card.locator(".basis").inner_text().strip() in (
+    assert money.locator(".money-method, .basis, .price-book").count() == 0
+
+    page.get_by_role("button", name="Help").click()
+    help_money = page.locator("#page-help .help-money .money")
+    assert help_money.locator(".money-method").inner_text().strip() in MONEY_METHODS
+    assert help_money.locator(".basis").inner_text().strip() in (
         "estimated money saved",
         "value at API prices",
     )
-    assert "price book" in card.inner_text()
+    assert "price book" in help_money.inner_text()
 
 
 def test_ui_compressor_money_column(page: Page) -> None:
@@ -113,13 +116,21 @@ def test_ui_compressor_money_column(page: Page) -> None:
     show(page, "compressors")
     table = page.locator("#compressors-table")
     assert "Money saved" in table.locator("thead").inner_text()
-    cells = table.locator("td.money").all_inner_texts()
-    assert cells and any(cell.strip().startswith("$") for cell in cells)
+    summaries = table.locator(".compressor-detail > summary .money").all_inner_texts()
+    assert summaries and any(cell.strip().startswith("$") for cell in summaries)
+    assert all("price book" not in cell for cell in summaries)
+    first = table.locator("tbody tr").first
+    first.locator("summary").click()
+    detail = first.locator(".compressor-money-detail .money").inner_text()
+    assert "estimate" in detail and "price book" in detail
+    assert "estimated money saved" in detail or "value at API prices" in detail
 
 
 def test_ui_shows_kind_equivalence_and_assumptions(page: Page) -> None:
     """UI-003 (without evaluation status in S3)."""
     show(page, "compressors")
+    first = page.locator("#compressors-table tbody tr").first
+    first.locator("summary").click()
     table = page.locator("#compressors-table").inner_text()
     spec = REGISTRY[0].spec
     assert "lossless · structural" in table
@@ -139,7 +150,7 @@ def test_ui_overhead_target_is_reference_line(page: Page) -> None:
 
 def test_ui_request_detail_renders_trace(page: Page) -> None:
     show(page, "requests")
-    page.locator("#requests-table tbody tr").first.click()
+    page.locator("#requests-table tbody tr").first.get_by_role("button", name="View").click()
     detail = page.locator("#request-detail")
     detail.wait_for()
     for span in ("route", "upstream", "usage"):
@@ -230,7 +241,9 @@ def test_ui_shows_equivalence_assumptions_and_eval_status(fresh: Tokli) -> None:
     with sync_playwright() as p:
         browser = p.chromium.launch()
         page = open_settings(browser, fresh)
-        card = page.locator('[data-compressor="json_minify"]').inner_text()
+        item = page.locator('[data-compressor="json_minify"]')
+        item.locator("details.evidence summary").click()
+        card = item.inner_text()
         browser.close()
     assert "lossless · structural" in card
     assert "reads_minified_json" in card
@@ -242,7 +255,8 @@ def test_ui_policy_explanations_text(fresh: Tokli) -> None:
     with sync_playwright() as p:
         browser = p.chromium.launch()
         page = open_settings(browser, fresh)
-        text = page.locator('section[data-panel="settings"]').inner_text()
+        page.get_by_role("button", name="Help").click()
+        text = page.locator("#page-help").inner_text()
         browser.close()
     assert (
         "Keeps all information in the request: exactly, structurally (e.g. JSON whitespace), or "
@@ -356,3 +370,211 @@ def test_ui_verbatim_opt_in_toggle(fresh: Tokli) -> None:
     values = fresh.services.config.reload().values
     assert values["compressors.log_filter.apply_to_verbatim_tools"] is True
     assert values["compressors.log_filter.enabled"] is False  # the two toggles are independent
+
+
+# -- S6.5: plain hierarchy, reachable detail and visual-review artifacts ----------------------
+
+
+def test_ui_filters_are_only_on_metrics_pages(page: Page) -> None:
+    """S6.5 P1: metrics filters are contextual and keep their values between metrics pages."""
+    filters = page.locator("#filters")
+    assert filters.is_visible()
+    filters.locator('[name="provider"]').fill("anthropic")
+    show(page, "compressors")
+    assert filters.is_visible()
+    assert filters.locator('[name="provider"]').input_value() == "anthropic"
+    for tab in ("requests", "settings"):
+        show(page, tab)
+        assert not filters.is_visible()
+
+
+def test_ui_overview_prioritises_savings_and_keeps_totals_reachable(page: Page) -> None:
+    """S6.5 P2: the first figures answer saving; input totals remain one disclosure away."""
+    primary = page.locator("#primary-metrics")
+    assert primary.locator('[data-card="saved"]').count() == 1
+    assert primary.locator('[data-card="cost"]').count() == 1
+    assert primary.locator('[data-card="saving_pct"]').count() == 1
+    breakdown = page.locator("#overview-breakdown")
+    assert not breakdown.get_attribute("open")
+    for key in ("requests", "original", "forwarded"):
+        assert breakdown.locator(f'[data-card="{key}"]').count() == 1
+    breakdown.locator("summary").click()
+    assert breakdown.locator(".legend").count() == 0
+
+
+def test_ui_timeseries_values_show_methods(page: Page) -> None:
+    """UI-002 / S6.5 F8: every reachable saved-token bucket has method or unavailable reason."""
+    details = page.locator("#timeseries-values")
+    details.locator("summary").click()
+    figures = details.locator(".figure")
+    assert figures.count() >= 1
+    for i in range(figures.count()):
+        item = figures.nth(i)
+        assert item.locator(".method, .reason").inner_text().strip()
+
+
+def test_ui_all_overhead_groups_and_percentiles_are_reachable(page: Page) -> None:
+    """UI-009 / TC-013: all groups expose n, p50, p95, p99 and max without pass/fail."""
+    details = page.locator("#overhead-values")
+    details.locator("summary").click()
+    headings = details.locator("thead").inner_text()
+    for label in ("Policy", "Configuration", "Requests", "p50", "p95", "p99", "Max"):
+        assert label in headings
+    assert details.locator("tbody tr").count() >= 5
+    assert "pass" not in details.inner_text().lower()
+    assert "fail" not in details.inner_text().lower()
+
+
+def test_ui_compressor_summary_and_full_details(page: Page) -> None:
+    """UI-009 / UI-013: compact comparison rows retain every detailed measurement and label."""
+    show(page, "compressors")
+    table = page.locator("#compressors-table")
+    headings = table.locator("thead").inner_text()
+    for label in ("Compressor", "On", "Kind", "Tokens saved", "Money saved", "Attention"):
+        assert label in headings
+    row = table.locator("tbody tr").first
+    row.locator("summary").click()
+    text = row.inner_text()
+    for label in (
+        "Effective budget",
+        "Cost class",
+        "Average latency",
+        "Skipped for budget",
+        "Considered",
+        "Applicable",
+        "Accepted",
+        "Tokens processed",
+        "Total latency",
+        "Assumptions",
+    ):
+        assert label in text
+    money_text = row.locator(".compressor-money-detail .money").inner_text()
+    assert "estimate" in money_text
+    assert "price book" in money_text
+    assert "estimated money saved" in money_text or "value at API prices" in money_text
+
+
+def test_ui_recent_requests_show_provider_and_native_detail_button(page: Page) -> None:
+    """SPEC 016 / S6.5 P4: provider is visible and detail uses a keyboard-native button."""
+    show(page, "requests")
+    table = page.locator("#requests-table")
+    assert "Provider" in table.locator("thead").inner_text()
+    first = table.locator("tbody tr").first
+    assert first.locator("td").nth(1).inner_text().strip()
+    button = first.get_by_role("button", name="View")
+    button.focus()
+    page.keyboard.press("Space")
+    page.locator("#request-detail").wait_for()
+    assert button.get_attribute("aria-current") == "true"
+    detail = page.locator("#request-detail").inner_text()
+    assert first.locator("td").nth(1).inner_text().strip() in detail
+
+
+def test_ui_recent_request_money_is_compact_with_descriptions_in_help(page: Page) -> None:
+    """Gate 2 feedback: request rows retain estimate/range without verbose provenance labels."""
+    show(page, "requests")
+    money = page.locator("#requests-table tbody tr").first.locator("td").nth(7)
+    assert money.locator(".num").inner_text().strip().startswith("$")
+    assert money.locator(".label").inner_text().strip() == "estimate"
+    assert money.locator(".range").inner_text().count("$") == 2
+    assert money.locator(".money-method, .basis, .price-book").count() == 0
+
+    page.get_by_role("button", name="Help").click()
+    help_text = page.locator("#page-help").inner_text()
+    for label in ("money range", "money method", "basis", "price book"):
+        assert label in help_text
+
+
+def test_ui_compressor_columns_share_one_alignment_grid(page: Page) -> None:
+    """Gate 2 feedback: headers and compact compressor values use the same column geometry."""
+    show(page, "compressors")
+    table = page.locator("#compressors-table")
+    header = table.locator("thead tr")
+    summary = table.locator("tbody tr").first.locator("summary")
+    assert header.evaluate("e => getComputedStyle(e).gridTemplateColumns") == summary.evaluate(
+        "e => getComputedStyle(e).gridTemplateColumns"
+    )
+    for index in (3, 4):
+        assert (
+            header.locator("th").nth(index).evaluate("e => getComputedStyle(e).textAlign")
+            == "right"
+        )
+
+
+@pytest.mark.parametrize("scheme", ["light", "dark"])
+def test_ui_focus_is_visible_in_both_colour_schemes(page: Page, scheme: str) -> None:
+    """UI-008 / S6.5 F4: keyboard focus has an explicit visible indicator in both themes."""
+    page.emulate_media(color_scheme=scheme)
+    page.locator('[data-tab="overview"]').focus()
+    style = page.locator('[data-tab="overview"]').evaluate(
+        "e => ({style: getComputedStyle(e).outlineStyle, width: getComputedStyle(e).outlineWidth})"
+    )
+    assert style["style"] != "none"
+    assert float(style["width"].removesuffix("px")) >= 2
+
+
+def test_ui_settings_primary_controls_and_disclosures(page: Page) -> None:
+    """UI-003/UI-004/UI-010: primary controls precede exact reference text and evidence."""
+    show(page, "settings")
+    panel = page.locator('section[data-panel="settings"]')
+    assert panel.locator("#lossless-only").is_visible()
+    card = panel.locator('[data-compressor="json_minify"]')
+    assert card.get_by_text("Enabled", exact=True).count() == 1
+    evidence = card.locator("details.evidence")
+    assert not evidence.get_attribute("open")
+    evidence.locator("summary").click()
+    assert "Assumptions" in evidence.inner_text()
+
+
+def test_ui_help_reveals_contextual_field_descriptions(page: Page) -> None:
+    """Gate 2 feedback: explanatory copy is hidden until the single Help button is used."""
+    button = page.get_by_role("button", name="Help")
+    help_panel = page.locator("#page-help")
+    assert button.get_attribute("aria-expanded") == "false"
+    assert not help_panel.is_visible()
+    button.click()
+    assert help_panel.is_visible()
+    assert "counted by the provider" in help_panel.inner_text()
+    button.click()
+    assert not help_panel.is_visible()
+
+    show(page, "compressors")
+    assert "credited only with what it saved" not in page.locator("#compressors-body").inner_text()
+    button.click()
+    assert "credited only with what it saved" in help_panel.inner_text()
+
+    show(page, "settings")
+    settings_panel = page.locator('section[data-panel="settings"]')
+    assert "Keeps all information in the request" not in settings_panel.inner_text()
+    button.click()
+    assert "Keeps all information in the request" in help_panel.inner_text()
+
+
+def test_ui_screenshots(tokli: Tokli) -> None:
+    """S6.5: optionally write the 16 human-review screenshots; never commit them."""
+    configured = os.environ.get("UI_SCREENSHOTS_DIR")
+    if not configured:
+        pytest.skip("set UI_SCREENSHOTS_DIR to write S6.5 review screenshots")
+    output = Path(configured)
+    output.mkdir(parents=True, exist_ok=True)
+    sizes = ((1280, 900), (360, 740))
+    with sync_playwright() as p:
+        browser = p.chromium.launch()
+        for scheme in ("light", "dark"):
+            for width, height in sizes:
+                context = browser.new_context(
+                    viewport={"width": width, "height": height}, color_scheme=scheme
+                )
+                shot = context.new_page()
+                shot.goto(tokli.url + "/tokli/")
+                shot.wait_for_selector("#primary-metrics .figure")
+                for tab in TABS:
+                    if tab != "overview":
+                        show(shot, tab)
+                    shot.screenshot(
+                        path=output / f"{tab}-{width}x{height}-{scheme}.png",
+                        animations="disabled",
+                    )
+                context.close()
+        browser.close()
+    assert len(list(output.glob("*.png"))) == 16

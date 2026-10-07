@@ -18,7 +18,7 @@ const EQUIVALENCE = {
   reference: "lossless · by reference",
 };
 
-const state = { tab: "overview", version: 0, loaded: {}, cursor: null };
+const state = { tab: "overview", version: 0, loaded: {}, cursor: null, overviewMoney: null };
 
 // -- small DOM helpers -------------------------------------------------------------------------
 
@@ -116,7 +116,18 @@ function money(m) {
     el("span", { class: "label" }, "estimate"),
     el("span", { class: "range" }, `${usd(m.low)} – ${usd(m.high)}`),
     el("span", { class: "money-method" }, MONEY_METHODS[m.method] || m.method),
-    shares ? el("span", { class: "money-shares" }, `(${shares})`) : "");
+    shares ? el("span", { class: "money-shares" }, `(${shares})`) : "",
+    m.basis ? el("span", { class: "basis" }, basisLabel(m)) : "",
+    m.price_book_version ? el("span", { class: "price-book" }, `price book ${m.price_book_version}`) : "");
+}
+
+/** Compact money for comparison rows; full UI-013 labels stay in that compressor's detail. */
+function moneySummary(m) {
+  if (!m || m.estimate === undefined) return money(m);
+  return el("span", { class: "money money-summary" },
+    el("span", { class: "num" }, usd(m.estimate)),
+    el("span", { class: "label" }, "estimate"),
+    el("span", { class: "range" }, `${usd(m.low)} – ${usd(m.high)}`));
 }
 
 function basisLabel(m) {
@@ -183,8 +194,8 @@ function card(key, label, content) {
 
 function costCard(cost) {
   const saved = cost.saved;
+  state.overviewMoney = saved;
   const notes = [];
-  if (saved && saved.price_book_version) notes.push(`price book ${saved.price_book_version}`);
   if (cost.unpriced_requests) notes.push(`${fmt(cost.unpriced_requests)} requests without a price`);
   const c = cost.caveats || {};
   if (c.history_rewritten_requests || c.config_changes) {
@@ -192,9 +203,9 @@ function costCard(cost) {
       `${fmt(c.history_rewritten_requests || 0)} rewritten histories`);
   }
   return el("div", { class: "card", "data-card": "cost" },
-    el("div", { class: "label basis" }, basisLabel(saved)),
-    money(saved),
-    notes.length ? el("div", { class: "note" }, notes.join(" · ")) : "");
+    el("div", { class: "label" }, "Money saved"),
+    moneySummary(saved),
+    notes.length ? el("ul", { class: "cost-notes" }, notes.map((note) => el("li", {}, note))) : "");
 }
 
 // Charts are drawn at the container's pixel width, so labels keep their size on any screen.
@@ -206,6 +217,7 @@ function savedChart(series, width) {
   const height = 170, pad = 28;
   const values = series.buckets.map((b) => (b.saved.value === null ? 0 : b.saved.value));
   const max = Math.max(1, ...values);
+  const maxBucket = series.buckets[values.indexOf(Math.max(...values))] || null;
   const chart = svg("svg", { viewBox: `0 0 ${width} ${height}`, role: "img", "aria-label": "Saved tokens per bucket" });
   chart.append(svg("line", { class: "axis", x1: pad, y1: height - pad, x2: width, y2: height - pad }));
   const step = (width - pad) / Math.max(1, values.length);
@@ -216,7 +228,8 @@ function savedChart(series, width) {
       width: Math.max(1, step - 2), height: h,
     }));
   });
-  chart.append(svg("text", { x: pad, y: 12 }, `max ${fmt(max)} tokens per ${series.bucket}`));
+  const maxMethod = maxBucket && maxBucket.saved.value !== null ? ` · ${methodText(maxBucket.saved)}` : "";
+  chart.append(svg("text", { x: pad, y: 12 }, `max ${fmt(max)} tokens per ${series.bucket}${maxMethod}`));
   if (series.buckets.length) {
     const first = new Date(series.buckets[0].start).toLocaleDateString();
     const last = new Date(series.buckets[series.buckets.length - 1].start).toLocaleDateString();
@@ -270,6 +283,43 @@ function overheadChart(overhead, width) {
   return box;
 }
 
+function timeseriesTable(series) {
+  return [
+    el("thead", {}, el("tr", {}, el("th", {}, "Period"), el("th", {}, "Saved tokens"))),
+    el("tbody", {}, series.buckets.length
+      ? series.buckets.map((bucket) => el("tr", {},
+        el("td", {}, new Date(bucket.start).toLocaleString()),
+        el("td", { class: "n" }, figure(bucket.saved))))
+      : [el("tr", {}, el("td", { colspan: "2" }, figure({ value: null, reason: "no_data" })))]),
+  ];
+}
+
+function overheadTable(overhead) {
+  const rows = [];
+  for (const group of overhead.groups) {
+    for (const [key, label] of SIZE_BUCKETS) {
+      const bucket = group.buckets[key];
+      const duration = (value) => value === null ? "—" : `${fmt(value, 1)} ms`;
+      rows.push(el("tr", {},
+        el("td", {}, group.policy.replaceAll("_", " ").toLowerCase()),
+        el("td", {}, group.config_hash.slice(0, 12)),
+        el("td", {}, label),
+        el("td", { class: "n" }, fmt(bucket.n)),
+        el("td", { class: "n" }, duration(bucket.p50)),
+        el("td", { class: "n" }, duration(bucket.p95)),
+        el("td", { class: "n" }, duration(bucket.p99)),
+        el("td", { class: "n" }, duration(bucket.max))));
+    }
+  }
+  const headings = ["Policy", "Configuration", "Request size", "Requests", "p50", "p95", "p99", "Max"];
+  return [
+    el("thead", {}, el("tr", {}, headings.map((heading) => el("th", {}, heading)))),
+    el("tbody", {}, rows.length
+      ? rows
+      : [el("tr", {}, el("td", { colspan: String(headings.length) }, "— no data in this range"))]),
+  ];
+}
+
 async function loadOverview() {
   const { days, params } = filterParams();
   const [summary, series, perCompressor, registry] = await Promise.all([
@@ -294,19 +344,23 @@ async function loadOverview() {
   );
   const t = summary.tokens;
   const requests = summary.requests;
-  document.getElementById("cards").replaceChildren(
+  document.getElementById("primary-metrics").replaceChildren(
+    card("saved", "Saved tokens", figure(t.saved)),
+    costCard(summary.cost),
+    card("saving_pct", "Saving", figure(t.saving_pct, " %")),
+  );
+  document.getElementById("secondary-metrics").replaceChildren(
     card("requests", "Requests", el("div", { class: "stat" },
       el("span", { class: "big" }, fmt(requests.total)),
       el("div", { class: "note" }, `${fmt(requests.measured)} with token figures`))),
     card("original", "Original tokens", figure(t.original)),
     card("forwarded", "Forwarded tokens", figure(t.forwarded)),
-    card("saved", "Saved tokens", figure(t.saved)),
-    card("saving_pct", "Saving", figure(t.saving_pct, " %")),
-    costCard(summary.cost),
   );
   document.getElementById("saved-chart").replaceChildren(savedChart(series, chartWidth("saved-chart")));
+  document.getElementById("timeseries-table").replaceChildren(...timeseriesTable(series));
   document.getElementById("overhead-box").replaceChildren(
     overheadChart(summary.overhead, chartWidth("overhead-box")));
+  document.getElementById("overhead-table").replaceChildren(...overheadTable(summary.overhead));
 }
 
 // -- compressors -------------------------------------------------------------------------------
@@ -323,61 +377,52 @@ async function loadCompressors() {
     api("/tokli/api/metrics/compressors", params),
   ]);
   document.getElementById("budget").textContent =
-    `Compression may spend at most ${fmt(metrics.budget_ms)} ms per request (setting compression.request_budget_ms). ` +
-    `Policy: ${registry.policy === "LOSSLESS_ONLY" ? "lossless only" : registry.policy}. Hover a column title for its meaning.`;
+    `Effective request budget: ${fmt(metrics.budget_ms)} ms · ` +
+    `Policy: ${registry.policy === "LOSSLESS_ONLY" ? "lossless only" : registry.policy}.`;
   const empty = { value: null, reason: "no_data" };
-  const columns = [
-    ["Compressor", "Name, version and the assumptions it relies on"],
-    ["Kind", "Lossless: nothing in the request is lost. Selective or lossy: some information is dropped"],
-    ["On", "Whether the compressor is switched on"],
-    ["Available", "Whether it can run on this machine"],
-    ["Speed class", "Declared cost: cheap, moderate or expensive"],
-    ["Looked at", "Pieces of text it was offered"],
-    ["Could apply", "Pieces where it could do something (for example, the text was JSON)"],
-    ["Shortened", "Pieces it actually made shorter"],
-    ["Tokens read", "Tokens in the pieces it could apply to"],
-    ["Tokens saved", "Tokens removed by this compressor"],
-    ["Share of all savings", "Its part of the total saving"],
-    ["Saving when it shortens", "Average reduction of a piece it shortened"],
-    ["Tried, no saving", "Of the pieces it could apply to, how many it could not shorten"],
-    ["Errors", "Pieces where it failed or took too long (the original text was kept)"],
-    ["Skipped for time", "Pieces skipped because the request's time budget was used up"],
-    ["Time (total)", "Total time spent, in milliseconds"],
-    ["Time per piece", "Average time per piece it could apply to"],
-    ["Tokens saved per ms", "Efficiency: tokens saved for each millisecond spent"],
-    ["Money saved", "Estimated money this compressor saved, priced by where its saving sat in the provider's cache"],
-    ["", "Warning when it costs time but almost never saves anything"],
-  ];
-  const head = el("thead", {}, el("tr", {}, columns.map(([h, title]) => el("th", { title }, h))));
+  const columns = ["Compressor", "On", "Kind", "Tokens saved", "Money saved", "Attention"];
+  const head = el("thead", {}, el("tr", {}, columns.map((heading) => el("th", {}, heading))));
   const body = el("tbody");
+  const item = (label, value) => el("div", {}, el("dt", {}, label), el("dd", {}, value));
   for (const c of registry.compressors) {
     const m = metrics.compressors.find((row) => row.compressor_id === c.id) || null;
     const n = (name) => (m ? fmt(m[name]) : "0");
-    body.append(el("tr", {},
-      el("td", {}, el("strong", {}, c.name), ` v${c.version}`,
-        el("ul", { class: "assumptions" }, c.assumptions.map((a) => el("li", {}, a)))),
-      el("td", {}, kindBadge(c)),
-      el("td", {}, c.enabled ? "yes" : "no"),
-      el("td", {}, c.availability),
-      el("td", {}, c.cost_class),
-      el("td", { class: "n" }, n("considered")),
-      el("td", { class: "n" }, n("applicable")),
-      el("td", { class: "n" }, n("accepted")),
-      el("td", { class: "n" }, figure(m ? m.tokens_in : empty)),
-      el("td", { class: "n" }, figure(m ? m.marginal_saved : empty)),
-      el("td", { class: "n" }, rate(m ? m.share_of_saving : empty, { percent: true })),
-      el("td", { class: "n" }, rate(m ? m.avg_saving_pct_per_accepted : empty, { unit: " %" })),
-      el("td", { class: "n" }, rate(m ? m.zero_benefit_rate : empty, { percent: true })),
-      el("td", { class: "n" }, rate(m ? m.failure_rate : empty, { percent: true })),
-      el("td", { class: "n" }, rate(m ? m.skipped_budget_rate : empty, { percent: true })),
-      el("td", { class: "n" }, m ? fmt(m.ms_total, 3) : "0"),
-      el("td", { class: "n" }, rate(m ? m.avg_ms : empty, { unit: " ms" })),
-      el("td", { class: "n" }, figure(m ? m.tokens_saved_per_ms : empty)),
-      el("td", { class: "n money" }, money(m ? m.money_saved : empty)),
-      el("td", {}, m && m.latency_without_benefit
-        ? el("span", { class: "flag", title: "≥ 90 % zero-benefit, ≥ 1 ms average, ≥ 100 invocations" }, "latency without benefit")
-        : ""),
-    ));
+    const attention = m && m.latency_without_benefit
+      ? el("span", { class: "flag" }, "latency without benefit")
+      : "—";
+    const detail = el("details", { class: "compressor-detail" },
+      el("summary", {},
+        el("span", { class: "compressor-summary-name" }, c.name),
+        el("span", {}, c.enabled ? "yes" : "no"),
+        el("span", {}, kindBadge(c)),
+        el("span", { class: "compressor-summary-number" }, figure(m ? m.marginal_saved : empty)),
+        el("span", { class: "compressor-summary-number" }, moneySummary(m ? m.money_saved : empty)),
+        el("span", {}, attention)),
+      el("div", { class: "compressor-detail-body" },
+        el("p", { class: "budget-group" },
+          `Effective budget: ${fmt(metrics.budget_ms)} ms per request · `,
+          `Cost class: ${c.cost_class} · Average latency: `,
+          rate(m ? m.avg_ms : empty, { unit: " ms" }), " · Skipped for budget: ",
+          rate(m ? m.skipped_budget_rate : empty, { percent: true })),
+        el("dl", { class: "metric-list" },
+          item("Version", c.version),
+          item("Availability", c.availability),
+          item("Considered", n("considered")),
+          item("Applicable", n("applicable")),
+          item("Accepted", n("accepted")),
+          item("Tokens processed", figure(m ? m.tokens_in : empty)),
+          item("Tokens saved", figure(m ? m.marginal_saved : empty)),
+          item("Share of all savings", rate(m ? m.share_of_saving : empty, { percent: true })),
+          item("Average saving when accepted", rate(m ? m.avg_saving_pct_per_accepted : empty, { unit: " %" })),
+          item("Zero-benefit rate", rate(m ? m.zero_benefit_rate : empty, { percent: true })),
+          item("Failure rate", rate(m ? m.failure_rate : empty, { percent: true })),
+          item("Total latency", `${m ? fmt(m.ms_total, 3) : "0"} ms`),
+          item("Tokens saved per ms", figure(m ? m.tokens_saved_per_ms : empty))),
+        el("div", { class: "compressor-money-detail" },
+          el("strong", {}, "Money saved: "), money(m ? m.money_saved : empty)),
+        el("div", { class: "meta" }, "Assumptions"),
+        el("ul", { class: "assumptions" }, c.assumptions.map((assumption) => el("li", {}, assumption)))));
+    body.append(el("tr", { "data-compressor": c.id }, el("td", { colspan: "6" }, detail)));
   }
   document.getElementById("compressors-table").replaceChildren(head, body);
 }
@@ -389,24 +434,26 @@ async function loadRequests(append = false) {
   const table = document.getElementById("requests-table");
   if (!append) {
     table.replaceChildren(
-      el("thead", {}, el("tr", {}, ["Time", "Model", "Outcome", "Status", "Saved", "Forwarded", "Money saved", "Overhead"].map((h) => el("th", {}, h)))),
+      el("thead", {}, el("tr", {}, ["Time", "Provider", "Model", "Outcome", "Status", "Saved", "Forwarded", "Money saved", "Overhead", "Action"].map((h) => el("th", {}, h)))),
       el("tbody"),
     );
   }
   const tbody = table.querySelector("tbody");
   for (const r of body.requests) {
-    const row = el("tr", { tabindex: "0" },
+    const button = el("button", { type: "button", class: "view-request" }, "View");
+    const row = el("tr", { "data-request-id": r.request_id },
       el("td", {}, new Date(r.ts_start).toLocaleString()),
+      el("td", {}, r.provider),
       el("td", {}, r.model || "—"),
       el("td", {}, r.outcome + (r.reason ? ` (${r.reason})` : "")),
       el("td", { class: "n" }, r.status_code === null ? "—" : String(r.status_code)),
       el("td", { class: "n" }, figure(r.tokens.saved)),
       el("td", { class: "n" }, figure(r.tokens.forwarded)),
-      el("td", { class: "n money" }, money(r.cost.saved)),
+      el("td", { class: "n money" }, moneySummary(r.cost.saved)),
       el("td", { class: "n" }, r.overhead_ms === null ? "—" : `${fmt(r.overhead_ms, 1)} ms`),
+      el("td", {}, button),
     );
-    row.addEventListener("click", () => showDetail(r.request_id));
-    row.addEventListener("keydown", (event) => { if (event.key === "Enter") showDetail(r.request_id); });
+    button.addEventListener("click", () => showDetail(r.request_id));
     tbody.append(row);
   }
   state.cursor = body.next_cursor;
@@ -416,8 +463,22 @@ async function loadRequests(append = false) {
 async function showDetail(requestId) {
   const box = document.getElementById("request-detail");
   const d = await api(`/tokli/api/requests/${encodeURIComponent(requestId)}`);
+  for (const row of document.querySelectorAll("#requests-table tbody tr")) {
+    const selected = row.getAttribute("data-request-id") === requestId;
+    row.classList.toggle("selected-request", selected);
+    const button = row.querySelector("button.view-request");
+    if (selected) {
+      button.setAttribute("aria-current", "true");
+      button.textContent = "Viewing";
+    } else {
+      button.removeAttribute("aria-current");
+      button.textContent = "View";
+    }
+  }
   const parts = [el("h2", {}, `Request ${d.request_id}`)];
   const record = d.record;
+  parts.push(el("p", { class: "request-context" },
+    `${record.provider} · ${record.model || "model unknown"} · ${record.outcome}`));
   parts.push(el("p", {}, "Saved: ", figure(record.saving), " · forwarded input (provider): ",
     figure(record.usage_input), " · k: ", record.calibration_k === null ? "—" : fmt(record.calibration_k, 3)));
   if (d.trace) {
@@ -488,13 +549,15 @@ function renderSettings() {
     input.addEventListener("change", () => changeSettings({ [key]: input.checked }));
     return el("div", { class: "compressor-card", "data-compressor": c.id },
       el("h3", {}, el("span", {}, c.name, " ", el("span", { class: "note" }, `v${c.version}`)),
-        el("label", { class: "switch" }, input, input.checked ? "on" : "off")),
+        el("label", { class: "switch" }, input, "Enabled")),
       el("div", {}, kindBadge(c), " ", el("span", { class: "meta" }, c.availability)),
       c.kind !== "LOSSLESS" ? el("div", { class: "warn" }, "drops information") : null,
       verbatimOptIn(c, config),
-      el("div", { class: "meta" }, "Evaluation: ", evaluationText(c.evaluation)),
-      el("div", { class: "meta" }, "Assumptions:"),
-      el("ul", { class: "assumptions" }, c.assumptions.map((a) => el("li", {}, a))),
+      el("details", { class: "evidence" },
+        el("summary", {}, "Evidence and assumptions"),
+        el("div", { class: "meta" }, "Evaluation: ", evaluationText(c.evaluation)),
+        el("div", { class: "meta" }, "Assumptions"),
+        el("ul", { class: "assumptions" }, c.assumptions.map((a) => el("li", {}, a)))),
       locked ? el("div", { class: "lock" }, `locked by ${locked}`) : null);
   });
   document.getElementById("compressor-cards").replaceChildren(...cards);
@@ -524,6 +587,89 @@ async function loadSettings() {
   settingsState.config = config;
   renderSettings();
 }
+
+function helpDefinitions(items) {
+  return el("dl", { class: "help-definitions" }, items.flatMap(([term, description]) =>
+    [el("dt", {}, term), el("dd", {}, description)]));
+}
+
+function helpContent(tab) {
+  if (tab === "overview") {
+    return [
+      el("p", {}, "Labels beside each token figure state how it was obtained. Money values keep " +
+        "their estimate and range in the main view; the remaining provenance is collected here."),
+      helpDefinitions([
+        ["exact", "counted by the provider"],
+        ["calibrated", "Tokli's count, corrected with the provider's count"],
+        ["estimate", "Tokli's own count (the provider gave no figure to compare)"],
+        ["money range", "the low and high values obtained from the applicable input prices"],
+        ["money method", "how Tokli placed the saving in the provider cache price regions"],
+      ]),
+      el("div", { class: "help-money" },
+        el("strong", {}, "Current Money saved provenance: "), money(state.overviewMoney)),
+      el("p", {}, "For request overhead, Typical is p50: half of requests are faster. Slowest is " +
+        "p95: only one request in twenty is slower. The dashed target is a reference, not a limit."),
+    ];
+  }
+  if (tab === "compressors") {
+    return [
+      el("p", {}, "When several compressors work on the same text, each one is credited only with " +
+        "what it saved after the ones before it."),
+      helpDefinitions([
+        ["Considered", "pieces of text offered after policy, enabled and availability checks"],
+        ["Applicable", "pieces where the compressor could do useful work"],
+        ["Accepted", "results that were shorter and passed the safety checks"],
+        ["Zero-benefit rate", "applicable work that produced no accepted saving"],
+        ["Skipped for budget", "work not started because the request time budget was used"],
+        ["Tokens saved per ms", "marginal tokens saved for each millisecond spent"],
+        ["Attention", "flags substantial latency with little or no saving"],
+      ]),
+      el("p", {}, "Open a compressor row for the effective request budget, latency, rates, " +
+        "assumptions and the full money method, basis and price-book labels."),
+    ];
+  }
+  if (tab === "requests") {
+    return [
+      el("p", {}, "Open View to see the request metadata and in-memory trace. The dashboard " +
+        "shows no prompt, response or credential content. Older traces may no longer be in memory; " +
+        "their metadata remains in the database until retention removes it."),
+      helpDefinitions([
+        ["money range", "the low and high values obtained from the applicable input prices"],
+        ["money method", "how Tokli placed the saving in the provider cache price regions"],
+        ["basis", "whether the figure is an estimated saving or a value at API prices"],
+        ["price book", "the dated set of provider prices used for the calculation"],
+      ]),
+    ];
+  }
+  const hash = settingsState.config ? settingsState.config.config_hash.slice(0, 12) : "unavailable";
+  return [
+    el("p", {}, "Changes apply to the next request; requests in progress finish with the settings " +
+      `they started with. Configuration ${hash}.`),
+    el("p", {}, el("strong", {}, "Lossless — "),
+      "Keeps all information in the request: exactly, structurally (e.g. JSON whitespace), or by " +
+      "reference to an identical earlier tool result. This does not guarantee identical model " +
+      "behaviour. Defaults are chosen from evaluations."),
+    el("p", {}, el("strong", {}, "Selective / lossy — "),
+      "Drops information: selective ones keep a declared part verbatim, lossy ones do not. Enable " +
+      "them only with evidence that your tasks are not affected."),
+  ];
+}
+
+function closeHelp() {
+  document.getElementById("page-help").hidden = true;
+  document.getElementById("help-toggle").setAttribute("aria-expanded", "false");
+}
+
+document.getElementById("help-toggle").addEventListener("click", () => {
+  const panel = document.getElementById("page-help");
+  const opening = panel.hidden;
+  if (opening) {
+    document.getElementById("help-title").textContent = `Help: ${state.tab === "requests" ? "Recent requests" : state.tab[0].toUpperCase() + state.tab.slice(1)}`;
+    document.getElementById("help-content").replaceChildren(...helpContent(state.tab));
+  }
+  panel.hidden = !opening;
+  document.getElementById("help-toggle").setAttribute("aria-expanded", String(opening));
+});
 
 document.getElementById("lossless-only").addEventListener("click", () => {
   const { registry, config } = settingsState;
@@ -556,6 +702,8 @@ const LOADERS = {
 
 async function show(tab) {
   state.tab = tab;
+  closeHelp();
+  document.getElementById("filters").hidden = !["overview", "compressors"].includes(tab);
   for (const name of TABS) {
     document.querySelector(`[data-tab="${name}"]`).setAttribute("aria-pressed", String(name === tab));
     document.querySelector(`section[data-panel="${name}"]`).hidden = name !== tab;
