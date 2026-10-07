@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import gc
 import time
 
 import pytest
@@ -233,7 +234,11 @@ def test_search_group_spec() -> None:
 
 
 def test_search_group_linear_time() -> None:
-    """Correctness constraint (TOKLI_TEST_STRATEGY §8): a cheap compressor is linear."""
+    """Correctness constraint (TOKLI_TEST_STRATEGY §8): a cheap compressor is linear.
+
+    The best of 7 runs with the garbage collector paused measures the algorithm itself, as in
+    `test_reread_linear_time` (S8f): with the best of 3 and the collector on, a busy machine
+    measured 16.3x once (2026-10-07) and then 3 passes in a row."""
     block = "".join(
         f"src/module_{n % 7}/file.py:{n}:    value = compute({n})\n" for n in range(200)
     )
@@ -241,10 +246,15 @@ def test_search_group_linear_time() -> None:
     def elapsed(megabytes: int) -> float:
         text = block * (megabytes * 1_000_000 // len(block))
         best = float("inf")
-        for _ in range(3):
-            start = time.perf_counter()
-            GROUP.compress(text, VIEW)
-            best = min(best, time.perf_counter() - start)
+        gc.collect()
+        gc.disable()
+        try:
+            for _ in range(7):
+                start = time.perf_counter()
+                GROUP.compress(text, VIEW)
+                best = min(best, time.perf_counter() - start)
+        finally:
+            gc.enable()
         return best
 
     elapsed(1)

@@ -10,3 +10,6 @@ dist/
 
 # Per-case evaluation outputs (raw model answers); the report is committed (ADR 0008).
 evals/results/*/cases.jsonl
+
+# Screenshots produced for human review (S6.5); never committed.
+slices/*/screenshots/

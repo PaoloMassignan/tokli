@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "tokli"
-version = "0.1.0.dev0"
+version = "0.1.0"
 description = "Local transparent proxy that reduces and measures the tokens coding agents send to LLM providers"
 readme = "README.md"
 requires-python = ">=3.11,<3.14"

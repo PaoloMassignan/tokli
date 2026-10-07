@@ -1,6 +1,10 @@
 # Tokli
 
-**Status: specification approved (Phase 0.1). Current slice: S0 (`slices/S0/`). Licence: Apache-2.0.**
+**Status: v0.1.0, usable with Claude Code and the Anthropic API. Slices S0–S6.5 and S8a-1…S8f
+are accepted (`TOKLI_ROADMAP.md`). Licence: Apache-2.0.**
+
+**To use Tokli, start with [`docs/GETTING_STARTED.md`](docs/GETTING_STARTED.md).** The rest of
+this page is for people working on Tokli itself.
 
 Tokli is a local, transparent proxy that reduces the tokens and cost that coding agents (Claude
 Code, Codex, SDK clients) send to Anthropic and OpenAI. It proves how much it saved and which
