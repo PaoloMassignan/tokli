@@ -80,7 +80,7 @@ content was read or stored. Token figures are local `cl100k` estimates, not prov
 Limits: one real workspace, two days, one developer.
 
 Consequences in the specification: tool-history pruning is in v1 (SPEC 019); LOSSLESS ONLY should
-expect low single-digit text-compression savings (README risk R3); latency is a real product risk
+expect low single-digit text-compression savings (risk R3 in docs/DEVELOPMENT.md); latency is a real product risk
 (CC-014, E9, TOKLI_TEST_STRATEGY §8).
 
 ### E5b-lite — composition, cost and saving on real Claude Code sessions (2026-10-03/04)
