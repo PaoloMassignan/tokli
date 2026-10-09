@@ -5,6 +5,7 @@ Approved for S4 (2026-10-03): PR-001…PR-005, PR-009 (never set by duplicates),
 Approved for S8c (2026-10-04): `edit_args_on_resume`, PR-005 (as changed), PR-020…PR-026, AC-PR-11…AC-PR-16; ADR 0012.
 Approved for S8e (2026-10-04): `reread_by_reference`, PR-030…PR-036, AC-PR-20…AC-PR-26; ADR 0013.
 Changed by S6 SCR-001 (approved 2026-10-05): PR-012 (a later change of a target is kept and the stub reverted), AC-PR-8, AC-PR-24.
+Changed by S8h SCR-001 (approved 2026-10-09): PR-032 (Claude Code's `Read` numbering), AC-PR-22; `reread_by_reference` version 2, back on by default with its version 2 smoke record (`no_measurable_damage`, 2026-10-09; CC-020).
 Related: SPEC 001 (canonical model), 009 (compression core, preservation model), 010 (catalogue), 012 (evaluation), PHASE0_1_REVIEW.md
 
 ## Purpose
@@ -130,7 +131,7 @@ saving is at least `pruning.superseded_min_saving_tokens` (default 8,000).
 | PR-014 | THE shell-command classification for Codex tools SHALL be exactly the rules in "Shell-command classification" below. A command that matches no rule SHALL get `action: other`. New rules SHALL be added only by a spec change with a test case per rule. |
 | PR-030 | THE `reread_by_reference` pruner SHALL be LOSSLESS with equivalence `reference`, request scope, `prefix_stable: true`, and SHALL be off by default until a smoke record allows its default (CC-020). |
 | PR-031 | WHEN a result of a tool in `pruning.reread_tools` names a file path for which an earlier record of the same request holds original text (a whole result of a re-read tool, or the `content` of a `Write`), THE pruner SHALL take the latest such record as source and SHALL replace each run of at least `pruning.reread_min_run_lines` consecutive numbered lines whose contents equal, in order, consecutive source lines with one note in the exact format of this section, keeping every other line verbatim and in place. |
-| PR-032 | THE pruner SHALL apply only to results whose numbered lines all carry the prefix `"{n:>6}\t"` with consecutive numbers; otherwise it SHALL report `not_applicable(nonstandard_numbering)`. Without a source it SHALL report `not_applicable(no_source)`, and without a qualifying run `not_applicable(no_run)`. |
+| PR-032 | THE pruner SHALL apply only to results whose numbered lines all carry the same numbering style with consecutive numbers: either `"{n:>6}\t"` (`cat -n`) or `"{n}\t"` (Claude Code's `Read`). Otherwise it SHALL report `not_applicable(nonstandard_numbering)`. The lines it keeps and the lines that decoding rebuilds SHALL use the result's own style. WHEN the style cannot be recovered from the replaced result and its source alone, THE pruner SHALL NOT replace it, and SHALL report `not_applicable(ambiguous_numbering)`. Without a source it SHALL report `not_applicable(no_source)`, and without a qualifying run `not_applicable(no_run)`. (S8h SCR-001.) |
 | PR-033 | THE pruner SHALL NOT use as source a text that a reference pruner changed, so that notes never point to notes. |
 | PR-034 | THE pruner's decode SHALL rebuild the original result byte for byte from the notes and the source, AND every source SHALL be a reference target under CC-019. |
 | PR-035 | THE pruner SHALL NOT consider a result or a source with more than `pruning.reread_max_lines` lines, and its time SHALL grow at most linearly with the lines of a typical re-read (a run-dominated alignment). |
@@ -267,7 +268,7 @@ superseding.
 - AC-PR-10 (PR-014): a table-driven test covers every rule row, each rejection in step 2, and argv vs string forms (bash/PowerShell wrappers, Windows and POSIX paths).
 - AC-PR-20 (PR-031): read(F) → edit one line of F → read(F): the second read keeps the changed lines and becomes two notes with the right line ranges (the ranges shift after an inserted line); the whole-request decode equals the original.
 - AC-PR-21 (PR-031): write(F, text) → read(F) unchanged except one line: the notes name the `Write` call ("content written").
-- AC-PR-22 (PR-032): a result with another numbering, or no earlier record of F, is not changed, with the stated reason.
+- AC-PR-22 (PR-032): a result with another numbering, or no earlier record of F, is not changed, with the stated reason. A result numbered `"{n}\t"` (Claude Code), re-read after an edit, is replaced by notes and decodes byte for byte; a result mixing the two styles is not changed (`nonstandard_numbering`). (S8h SCR-001.)
 - AC-PR-23 (PR-033): read1(F) → read2(F) referenced → read3(F): the notes of read3 name read1, never read2.
 - AC-PR-24 (PR-034, CC-019): a later compressor that changes a source is kept, and the notes that name the source are reverted with `reference_target_changed`; no note names a changed source. (S6 SCR-001.)
 - AC-PR-25 (PR-036): a `<system-reminder>` appended to the re-read stays verbatim; `Read` (a verbatim tool) is handled.

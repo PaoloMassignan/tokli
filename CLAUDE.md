@@ -66,6 +66,12 @@ of a different gate is **not** approval. Approval of one gate never extends to t
    Do the architecture review (import contracts green; no seam without justification, §5), the
    observability checklist (`TOKLI_OBSERVABILITY.md §8`) and the portability checks the slice
    requires. Record measured performance as the slice requires (`TOKLI_TEST_STRATEGY.md §8`).
+   For a slice that adds or changes a compressor:
+   - run the real-traffic replay (`python -m tools.replay`) with the human's consent, and record
+     its counters in the completion report;
+   - a default-on compressor that applies to 0 % of real traffic cannot pass Gate 2 without the
+     human's explicit decision (S8h P4).
+
    Update traceability and docs.
 10. **HUMAN GATE 2 — slice acceptance.** Write `slices/S<n>/COMPLETION_REPORT.md` (template in §7).
     Give a concise summary in chat, then stop and wait for explicit acceptance.
@@ -171,6 +177,7 @@ Requirements implemented (ids) · requirements deferred (ids, why)
 Tests and evidence (commands run, counts, CI links, fixtures)
 Architecture changes (modules, contracts, ADRs)
 Measured performance (per TOKLI_TEST_STRATEGY §8; reported, not gated unless the spec says so)
+Real-traffic replay (compressor slices: considered / applicable / accepted, skip reasons, saving)
 Observability evidence (checklist §8, sample trace, reason codes)
 Known limitations
 Unresolved questions

@@ -87,6 +87,20 @@ const REASONS = {
   no_price_for_model: "no price for this model",
 };
 
+// Main skip reasons in plain words, for "does not apply to your traffic" (UI-014).
+const SKIP_REASONS = {
+  "not_applicable(not_json)": "the results are not JSON",
+  "not_applicable(nonstandard_numbering)": "line numbers are in a format it does not read",
+  "not_applicable(too_few_grep_lines)": "no search results to group",
+  "not_applicable(too_few_leveled_lines)": "no log lines",
+  "not_applicable(no_proposal)": "nothing it could replace",
+  "not_applicable(no_earlier_copy)": "no repeated results",
+  "not_applicable(not_resume)": "no conversation resumed after a long pause",
+  too_small: "the texts are too short",
+  verbatim_tool: "the results come from tools whose output is kept as is",
+  kind_not_supported: "the texts are of a kind it does not handle",
+};
+
 // Money (UI-013): the method in plain words, and the basis label (TC-019).
 const MONEY_METHODS = {
   provider_usage: "from the provider's usage",
@@ -387,9 +401,14 @@ async function loadCompressors() {
   for (const c of registry.compressors) {
     const m = metrics.compressors.find((row) => row.compressor_id === c.id) || null;
     const n = (name) => (m ? fmt(m[name]) : "0");
-    const attention = m && m.latency_without_benefit
-      ? el("span", { class: "flag" }, "latency without benefit")
-      : "—";
+    const notApplying = m && m.not_applying && m.not_applying.flag;
+    const attention = notApplying
+      ? el("span", { class: "flag" }, "does not apply to your traffic",
+        el("span", { class: "reason" },
+          " (" + (SKIP_REASONS[m.not_applying.reason] || m.not_applying.reason || "no reason recorded") + ")"))
+      : m && m.latency_without_benefit
+        ? el("span", { class: "flag" }, "latency without benefit")
+        : "—";
     const detail = el("details", { class: "compressor-detail" },
       el("summary", {},
         el("span", { class: "compressor-summary-name" }, c.name),

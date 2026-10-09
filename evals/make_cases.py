@@ -584,7 +584,7 @@ def reread_case(rng: random.Random, n: int) -> dict[str, Any]:
 
 # -- re-read families (S8e): read, edit one function, read again; then work on another function --
 
-CASE_SET_S8E = "2026-10-04.3"
+CASE_SET_S8E = "2026-10-09.1"  # S8h: Claude Code numbering (was 2026-10-04.3)
 REREAD_EDIT_TOOLS = [tool for tool in REREAD_TOOLS if tool["name"] in ("Read", "Edit")]
 
 
@@ -621,8 +621,9 @@ def reread_history(rng: random.Random, n: int) -> dict[str, Any]:
     target = edited + 2
     new = [*old[:target], old[target], "    base = round(base, 3)", *old[target + 1 :]]
     function = old[edited].split("(")[0][4:]
-    numbered_old = "\n".join(f"{k:>6}\t{line}" for k, line in enumerate(old, start=1))
-    numbered_new = "\n".join(f"{k:>6}\t{line}" for k, line in enumerate(new, start=1))
+    # Claude Code's `Read` numbering: "{n}\t", no padding (S8h SCR-001).
+    numbered_old = "\n".join(f"{k}\t{line}" for k, line in enumerate(old, start=1))
+    numbered_new = "\n".join(f"{k}\t{line}" for k, line in enumerate(new, start=1))
     messages: list[dict[str, Any]] = [
         {"role": "user", "content": f"Look at {path}."},
         {

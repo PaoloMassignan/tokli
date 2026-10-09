@@ -122,7 +122,14 @@ FILE_EXPECTED: dict[str, object] = {
 DEFAULT_BEHAVIOUR_JSON = {
     "compression": {
         "segment_kinds": ["TOOL_RESULT", "USER_TEXT"],
-        "verbatim_tools": ["Read", "Bash", "shell", "shell_command", "container.exec"],
+        "verbatim_tools": [
+            "Read",
+            "Bash",
+            "PowerShell",  # S8h SCR-002
+            "shell",
+            "shell_command",
+            "container.exec",
+        ],
         "min_segment_tokens": 64,
         "min_gain_tokens": 4,
         "min_gain_ratio": 0.01,
@@ -138,7 +145,7 @@ DEFAULT_BEHAVIOUR_JSON = {
         "search_group": {"enabled": False, "min_group_lines": 5, "apply_to_verbatim_tools": False},
         "log_filter": {"enabled": False, "debug_sample": 10, "apply_to_verbatim_tools": False},
         "edit_args_on_resume": {"enabled": False},  # S8c
-        "reread_by_reference": {"enabled": True},  # S8e: on after its smoke record
+        "reread_by_reference": {"enabled": True},  # S8h: on with its version 2 smoke record
     },
     "limits": {"max_transform_bytes": 33554432, "usage_parser_buffer": 1048576},
     "pruning": {

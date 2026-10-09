@@ -268,6 +268,23 @@ slice on 2026-10-04.
   - release v0.1.1.
 - **Accepted 2026-10-09** (`slices/S6.6/COMPLETION_REPORT.md`).
 
+## S8h — Real agent formats
+
+- **Requested** by the human on 2026-10-09, after the dogfood dashboard showed almost no
+  saving. `reread_by_reference` had never acted: Claude Code's `Read` numbering is `"{n}\t"`.
+- **Contents:**
+  - SCR-001: both numbering styles (version 2);
+  - format fixtures of real Claude Code shapes, with a contract test per compressor (P2);
+  - the `not_applying` flag on the Compressors page and in `/tokli/health` (P3);
+  - the real-traffic replay `tools/replay.py`, now part of every compressor slice (P4);
+  - the reread smoke families in Claude Code's numbering (P1);
+  - SCR-002: `PowerShell` is a verbatim tool by default.
+- **Accepted 2026-10-09** (`slices/S8h/COMPLETION_REPORT.md`): version 2 is on by default with its smoke record.
+- **Exit:**
+  - the version 2 smoke record, run by the human; with `no_measurable_damage` it goes back on
+    by default;
+  - the replay on the human's sessions shows that it applies.
+
 ## S7 — OpenAI Chat Completions
 
 - Adapter `openai_chat` (OC-*): `role:"tool"` + user text; usage only when the client asked.

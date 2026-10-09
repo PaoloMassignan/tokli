@@ -376,6 +376,58 @@ is +0.14, within the ±0.25 tolerance.
     contains the observed value.
 
 
+### Dogfood, first week — a default-on compressor never acted (2026-10-09)
+
+**Source:** Tokli's own records on the developer's machine (metadata only), and counters of the
+format of `Read` results in the developer's Claude Code sessions (with consent, no content).
+
+| Measure | Value |
+|---|---|
+| Requests | 174 |
+| Compressed | 11 |
+| Saved | 0.04 % of input, $0.004 of $15.72 at API prices |
+| `reread_by_reference` considered | 1,627 |
+| `reread_by_reference` applicable | **0** (36 rejected as `nonstandard_numbering`) |
+
+**Every one of 1,684 numbered `Read` results was numbered `"{n}\t"` with no padding.** The
+compressor accepted only `cat -n`'s `"{n:>6}\t"`. Its tests, smoke families, E10(e) and E2 had
+used synthetic reads in the `cat -n` style.
+
+**Consequences (S8h):**
+- the fix (SCR-001);
+- shape fixtures measured from real traffic;
+- a `not_applying` flag;
+- a mandatory real-traffic replay before Gate 2 of any compressor slice.
+
+**The same shape count found a related gap:** Claude Code on Windows also uses a `PowerShell`
+tool (381 results in 21 days). `PowerShell` is not in the default `verbatim_tools`.
+
+### Dictionaries measured on real traffic (2026-10-09)
+
+**Method:** 21 days of the developer's Claude Code sessions (43 files), with consent, counters
+only.
+- **Candidates:** whole repeated lines (at least 3 words and 20 characters, no digit, no URL).
+  This is a lower bound for the phrase rule of `dictionary`.
+- **Weighting:** by the requests that resend each result.
+- **Cost:** typical relative prices.
+
+| Variant | Weighted tool-result volume | Total cost |
+|---|---|---|
+| `dictionary` inside one result, without `Read`/`Bash`/`PowerShell` | 0.00 % | 0.00 % |
+| the same, with them | 0.37 % | 0.04 % |
+| forward dictionary across the conversation, without them | 1.69 % | 0.17 % |
+| the same, with them | 5.54 % | 0.56 % |
+
+**Consequences:**
+- The repetitions sit in history priced at the cache-read rate, so even the largest variant is
+  worth about half a percent of cost.
+- That largest variant needs symbols inside `Read`/`Bash` output, which agents quote into edit
+  anchors.
+- Neither dictionary is built.
+
+The same week's real-traffic replay (S8h) put all lossless compressors together at about 0.1 % of
+tool-result tokens.
+
 ### Other quantitative inputs
 
 | Input | Value | Use |

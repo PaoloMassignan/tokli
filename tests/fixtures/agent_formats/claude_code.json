@@ -1,0 +1,236 @@
+{
+ "model": "claude-opus-5-5",
+ "max_tokens": 1024,
+ "stream": true,
+ "messages": [
+  {
+   "role": "user",
+   "content": "Start the synthetic task."
+  },
+  {
+   "role": "assistant",
+   "content": [
+    {
+     "type": "tool_use",
+     "id": "toolu_01",
+     "name": "Read",
+     "input": {
+      "file_path": "C:\\work\\demo\\src\\module.py"
+     }
+    }
+   ]
+  },
+  {
+   "role": "user",
+   "content": [
+    {
+     "type": "tool_result",
+     "tool_use_id": "toolu_01",
+     "content": "1\tdef synthetic_function_1(value):  # demo line 1\n2\tdef synthetic_function_2(value):  # demo line 2\n3\tdef synthetic_function_3(value):  # demo line 3\n4\tdef synthetic_function_4(value):  # demo line 4\n5\tdef synthetic_function_5(value):  # demo line 5\n6\tdef synthetic_function_6(value):  # demo line 6\n7\tdef synthetic_function_7(value):  # demo line 7\n8\tdef synthetic_function_8(value):  # demo line 8\n9\tdef synthetic_function_9(value):  # demo line 9\n10\tdef synthetic_function_10(value):  # demo line 10\n11\tdef synthetic_function_11(value):  # demo line 11\n12\tdef synthetic_function_12(value):  # demo line 12\n13\tdef synthetic_function_13(value):  # demo line 13\n14\tdef synthetic_function_14(value):  # demo line 14\n15\tdef synthetic_function_15(value):  # demo line 15\n16\tdef synthetic_function_16(value):  # demo line 16\n17\tdef synthetic_function_17(value):  # demo line 17\n18\tdef synthetic_function_18(value):  # demo line 18\n19\tdef synthetic_function_19(value):  # demo line 19\n20\tdef synthetic_function_20(value):  # demo line 20\n21\tdef synthetic_function_21(value):  # demo line 21\n22\tdef synthetic_function_22(value):  # demo line 22\n23\tdef synthetic_function_23(value):  # demo line 23\n24\tdef synthetic_function_24(value):  # demo line 24\n25\tdef synthetic_function_25(value):  # demo line 25\n26\tdef synthetic_function_26(value):  # demo line 26\n27\tdef synthetic_function_27(value):  # demo line 27\n28\tdef synthetic_function_28(value):  # demo line 28\n29\tdef synthetic_function_29(value):  # demo line 29\n30\tdef synthetic_function_30(value):  # demo line 30\n31\tdef synthetic_function_31(value):  # demo line 31\n32\tdef synthetic_function_32(value):  # demo line 32\n33\tdef synthetic_function_33(value):  # demo line 33\n34\tdef synthetic_function_34(value):  # demo line 34\n35\tdef synthetic_function_35(value):  # demo line 35\n36\tdef synthetic_function_36(value):  # demo line 36\n37\tdef synthetic_function_37(value):  # demo line 37\n38\tdef synthetic_function_38(value):  # demo line 38\n39\tdef synthetic_function_39(value):  # demo line 39\n40\tdef synthetic_function_40(value):  # demo line 40\n\n<system-reminder>\nA synthetic reminder about the session.\n</system-reminder>"
+    }
+   ]
+  },
+  {
+   "role": "assistant",
+   "content": [
+    {
+     "type": "tool_use",
+     "id": "toolu_02",
+     "name": "Edit",
+     "input": {
+      "file_path": "C:\\work\\demo\\src\\module.py",
+      "old_string": "def synthetic_function_21(value):  # demo line 21",
+      "new_string": "def synthetic_function_21(value):  # demo line 21, edited",
+      "replace_all": false
+     }
+    }
+   ]
+  },
+  {
+   "role": "user",
+   "content": [
+    {
+     "type": "tool_result",
+     "tool_use_id": "toolu_02",
+     "content": "The file C:\\work\\demo\\src\\module.py has been updated successfully."
+    }
+   ]
+  },
+  {
+   "role": "assistant",
+   "content": [
+    {
+     "type": "tool_use",
+     "id": "toolu_03",
+     "name": "Read",
+     "input": {
+      "file_path": "C:\\work\\demo\\src\\module.py"
+     }
+    }
+   ]
+  },
+  {
+   "role": "user",
+   "content": [
+    {
+     "type": "tool_result",
+     "tool_use_id": "toolu_03",
+     "content": "1\tdef synthetic_function_1(value):  # demo line 1\n2\tdef synthetic_function_2(value):  # demo line 2\n3\tdef synthetic_function_3(value):  # demo line 3\n4\tdef synthetic_function_4(value):  # demo line 4\n5\tdef synthetic_function_5(value):  # demo line 5\n6\tdef synthetic_function_6(value):  # demo line 6\n7\tdef synthetic_function_7(value):  # demo line 7\n8\tdef synthetic_function_8(value):  # demo line 8\n9\tdef synthetic_function_9(value):  # demo line 9\n10\tdef synthetic_function_10(value):  # demo line 10\n11\tdef synthetic_function_11(value):  # demo line 11\n12\tdef synthetic_function_12(value):  # demo line 12\n13\tdef synthetic_function_13(value):  # demo line 13\n14\tdef synthetic_function_14(value):  # demo line 14\n15\tdef synthetic_function_15(value):  # demo line 15\n16\tdef synthetic_function_16(value):  # demo line 16\n17\tdef synthetic_function_17(value):  # demo line 17\n18\tdef synthetic_function_18(value):  # demo line 18\n19\tdef synthetic_function_19(value):  # demo line 19\n20\tdef synthetic_function_20(value):  # demo line 20\n21\tdef synthetic_function_21(value):  # demo line 21, edited\n22\tdef synthetic_function_22(value):  # demo line 22\n23\tdef synthetic_function_23(value):  # demo line 23\n24\tdef synthetic_function_24(value):  # demo line 24\n25\tdef synthetic_function_25(value):  # demo line 25\n26\tdef synthetic_function_26(value):  # demo line 26\n27\tdef synthetic_function_27(value):  # demo line 27\n28\tdef synthetic_function_28(value):  # demo line 28\n29\tdef synthetic_function_29(value):  # demo line 29\n30\tdef synthetic_function_30(value):  # demo line 30\n31\tdef synthetic_function_31(value):  # demo line 31\n32\tdef synthetic_function_32(value):  # demo line 32\n33\tdef synthetic_function_33(value):  # demo line 33\n34\tdef synthetic_function_34(value):  # demo line 34\n35\tdef synthetic_function_35(value):  # demo line 35\n36\tdef synthetic_function_36(value):  # demo line 36\n37\tdef synthetic_function_37(value):  # demo line 37\n38\tdef synthetic_function_38(value):  # demo line 38\n39\tdef synthetic_function_39(value):  # demo line 39\n40\tdef synthetic_function_40(value):  # demo line 40"
+    }
+   ]
+  },
+  {
+   "role": "assistant",
+   "content": [
+    {
+     "type": "tool_use",
+     "id": "toolu_04",
+     "name": "mcp__demo__list_items",
+     "input": {}
+    }
+   ]
+  },
+  {
+   "role": "user",
+   "content": [
+    {
+     "type": "tool_result",
+     "tool_use_id": "toolu_04",
+     "content": [
+      {
+       "type": "text",
+       "text": "{\n  \"items\": [\n    {\n      \"id\": 0,\n      \"name\": \"item-0\",\n      \"tags\": [\n        \"alpha\",\n        \"beta\"\n      ]\n    },\n    {\n      \"id\": 1,\n      \"name\": \"item-1\",\n      \"tags\": [\n        \"alpha\",\n        \"beta\"\n      ]\n    },\n    {\n      \"id\": 2,\n      \"name\": \"item-2\",\n      \"tags\": [\n        \"alpha\",\n        \"beta\"\n      ]\n    },\n    {\n      \"id\": 3,\n      \"name\": \"item-3\",\n      \"tags\": [\n        \"alpha\",\n        \"beta\"\n      ]\n    },\n    {\n      \"id\": 4,\n      \"name\": \"item-4\",\n      \"tags\": [\n        \"alpha\",\n        \"beta\"\n      ]\n    },\n    {\n      \"id\": 5,\n      \"name\": \"item-5\",\n      \"tags\": [\n        \"alpha\",\n        \"beta\"\n      ]\n    },\n    {\n      \"id\": 6,\n      \"name\": \"item-6\",\n      \"tags\": [\n        \"alpha\",\n        \"beta\"\n      ]\n    },\n    {\n      \"id\": 7,\n      \"name\": \"item-7\",\n      \"tags\": [\n        \"alpha\",\n        \"beta\"\n      ]\n    },\n    {\n      \"id\": 8,\n      \"name\": \"item-8\",\n      \"tags\": [\n        \"alpha\",\n        \"beta\"\n      ]\n    },\n    {\n      \"id\": 9,\n      \"name\": \"item-9\",\n      \"tags\": [\n        \"alpha\",\n        \"beta\"\n      ]\n    },\n    {\n      \"id\": 10,\n      \"name\": \"item-10\",\n      \"tags\": [\n        \"alpha\",\n        \"beta\"\n      ]\n    },\n    {\n      \"id\": 11,\n      \"name\": \"item-11\",\n      \"tags\": [\n        \"alpha\",\n        \"beta\"\n      ]\n    }\n  ]\n}"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "role": "assistant",
+   "content": [
+    {
+     "type": "tool_use",
+     "id": "toolu_05",
+     "name": "Grep",
+     "input": {
+      "pattern": "compute_",
+      "path": "C:\\work\\demo",
+      "output_mode": "content",
+      "-n": true
+     }
+    }
+   ]
+  },
+  {
+   "role": "user",
+   "content": [
+    {
+     "type": "tool_result",
+     "tool_use_id": "toolu_05",
+     "content": "src/module_0.py:10:    value = compute_0(value)\nsrc/module_0.py:11:    value = compute_1(value)\nsrc/module_0.py:12:    value = compute_2(value)\nsrc/module_0.py:13:    value = compute_3(value)\nsrc/module_0.py:14:    value = compute_4(value)\nsrc/module_0.py:15:    value = compute_5(value)\nsrc/module_1.py:10:    value = compute_0(value)\nsrc/module_1.py:11:    value = compute_1(value)\nsrc/module_1.py:12:    value = compute_2(value)\nsrc/module_1.py:13:    value = compute_3(value)\nsrc/module_1.py:14:    value = compute_4(value)\nsrc/module_1.py:15:    value = compute_5(value)\nsrc/module_2.py:10:    value = compute_0(value)\nsrc/module_2.py:11:    value = compute_1(value)\nsrc/module_2.py:12:    value = compute_2(value)\nsrc/module_2.py:13:    value = compute_3(value)\nsrc/module_2.py:14:    value = compute_4(value)\nsrc/module_2.py:15:    value = compute_5(value)"
+    }
+   ]
+  },
+  {
+   "role": "assistant",
+   "content": [
+    {
+     "type": "tool_use",
+     "id": "toolu_06",
+     "name": "Bash",
+     "input": {
+      "command": "python run_worker.py",
+      "description": "Run the worker"
+     }
+    }
+   ]
+  },
+  {
+   "role": "user",
+   "content": [
+    {
+     "type": "tool_result",
+     "tool_use_id": "toolu_06",
+     "content": "2026-10-09 10:00:00 INFO worker 0 step 0 done\n2026-10-09 10:00:01 DEBUG worker 1 step 1 done\n2026-10-09 10:00:02 DEBUG worker 2 step 2 done\n2026-10-09 10:00:03 DEBUG worker 0 step 3 done\n2026-10-09 10:00:04 INFO worker 1 step 4 done\n2026-10-09 10:00:05 DEBUG worker 2 step 5 done\n2026-10-09 10:00:06 DEBUG worker 0 step 6 done\n2026-10-09 10:00:07 DEBUG worker 1 step 7 done\n2026-10-09 10:00:08 INFO worker 2 step 8 done\n2026-10-09 10:00:09 DEBUG worker 0 step 9 done\n2026-10-09 10:00:10 DEBUG worker 1 step 10 done\n2026-10-09 10:00:11 DEBUG worker 2 step 11 done\n2026-10-09 10:00:12 INFO worker 0 step 12 done\n2026-10-09 10:00:13 DEBUG worker 1 step 13 done\n2026-10-09 10:00:14 DEBUG worker 2 step 14 done\n2026-10-09 10:00:15 DEBUG worker 0 step 15 done\n2026-10-09 10:00:16 INFO worker 1 step 16 done\n2026-10-09 10:00:17 DEBUG worker 2 step 17 done\n2026-10-09 10:00:18 DEBUG worker 0 step 18 done\n2026-10-09 10:00:19 DEBUG worker 1 step 19 done\n2026-10-09 10:00:20 INFO worker 2 step 20 done\n2026-10-09 10:00:21 DEBUG worker 0 step 21 done\n2026-10-09 10:00:22 DEBUG worker 1 step 22 done\n2026-10-09 10:00:23 DEBUG worker 2 step 23 done\n2026-10-09 10:00:24 INFO worker 0 step 24 done\n2026-10-09 10:00:25 DEBUG worker 1 step 25 done\n2026-10-09 10:00:26 DEBUG worker 2 step 26 done\n2026-10-09 10:00:27 DEBUG worker 0 step 27 done\n2026-10-09 10:00:28 INFO worker 1 step 28 done\n2026-10-09 10:00:29 DEBUG worker 2 step 29 done\n2026-10-09 10:00:30 DEBUG worker 0 step 30 done\n2026-10-09 10:00:31 DEBUG worker 1 step 31 done\n2026-10-09 10:00:32 INFO worker 2 step 32 done\n2026-10-09 10:00:33 DEBUG worker 0 step 33 done\n2026-10-09 10:00:34 DEBUG worker 1 step 34 done\n2026-10-09 10:00:35 DEBUG worker 2 step 35 done\n2026-10-09 10:00:36 INFO worker 0 step 36 done\n2026-10-09 10:00:37 DEBUG worker 1 step 37 done\n2026-10-09 10:00:38 DEBUG worker 2 step 38 done\n2026-10-09 10:00:39 DEBUG worker 0 step 39 done"
+    }
+   ]
+  },
+  {
+   "role": "assistant",
+   "content": [
+    {
+     "type": "tool_use",
+     "id": "toolu_07",
+     "name": "Write",
+     "input": {
+      "file_path": "C:\\work\\demo\\src\\helpers.py",
+      "content": "HELPER_1 = 1 * 7  # synthetic helper constant\nHELPER_2 = 2 * 7  # synthetic helper constant\nHELPER_3 = 3 * 7  # synthetic helper constant\nHELPER_4 = 4 * 7  # synthetic helper constant\nHELPER_5 = 5 * 7  # synthetic helper constant\nHELPER_6 = 6 * 7  # synthetic helper constant\nHELPER_7 = 7 * 7  # synthetic helper constant\nHELPER_8 = 8 * 7  # synthetic helper constant\nHELPER_9 = 9 * 7  # synthetic helper constant\nHELPER_10 = 10 * 7  # synthetic helper constant\nHELPER_11 = 11 * 7  # synthetic helper constant\nHELPER_12 = 12 * 7  # synthetic helper constant\nHELPER_13 = 13 * 7  # synthetic helper constant\nHELPER_14 = 14 * 7  # synthetic helper constant\nHELPER_15 = 15 * 7  # synthetic helper constant\nHELPER_16 = 16 * 7  # synthetic helper constant\nHELPER_17 = 17 * 7  # synthetic helper constant\nHELPER_18 = 18 * 7  # synthetic helper constant\nHELPER_19 = 19 * 7  # synthetic helper constant\nHELPER_20 = 20 * 7  # synthetic helper constant\nHELPER_21 = 21 * 7  # synthetic helper constant\nHELPER_22 = 22 * 7  # synthetic helper constant\nHELPER_23 = 23 * 7  # synthetic helper constant\nHELPER_24 = 24 * 7  # synthetic helper constant\nHELPER_25 = 25 * 7  # synthetic helper constant\nHELPER_26 = 26 * 7  # synthetic helper constant\nHELPER_27 = 27 * 7  # synthetic helper constant\nHELPER_28 = 28 * 7  # synthetic helper constant\nHELPER_29 = 29 * 7  # synthetic helper constant\nHELPER_30 = 30 * 7  # synthetic helper constant\n"
+     }
+    }
+   ]
+  },
+  {
+   "role": "user",
+   "content": [
+    {
+     "type": "tool_result",
+     "tool_use_id": "toolu_07",
+     "content": "File created successfully at: C:\\work\\demo\\src\\helpers.py"
+    }
+   ]
+  },
+  {
+   "role": "assistant",
+   "content": [
+    {
+     "type": "tool_use",
+     "id": "toolu_08",
+     "name": "Read",
+     "input": {
+      "file_path": "C:\\work\\demo\\src\\helpers.py"
+     }
+    }
+   ]
+  },
+  {
+   "role": "user",
+   "content": [
+    {
+     "type": "tool_result",
+     "tool_use_id": "toolu_08",
+     "content": "1\tHELPER_1 = 1 * 7  # synthetic helper constant\n2\tHELPER_2 = 2 * 7  # synthetic helper constant\n3\tHELPER_3 = 3 * 7  # synthetic helper constant\n4\tHELPER_4 = 4 * 7  # synthetic helper constant\n5\tHELPER_5 = 5 * 7  # synthetic helper constant\n6\tHELPER_6 = 6 * 7  # synthetic helper constant\n7\tHELPER_7 = 7 * 7  # synthetic helper constant\n8\tHELPER_8 = 8 * 7  # synthetic helper constant\n9\tHELPER_9 = 9 * 7  # synthetic helper constant\n10\tHELPER_10 = 10 * 7  # synthetic helper constant\n11\tHELPER_11 = 11 * 7  # synthetic helper constant\n12\tHELPER_12 = 12 * 7  # synthetic helper constant\n13\tHELPER_13 = 13 * 7  # synthetic helper constant\n14\tHELPER_14 = 14 * 7  # synthetic helper constant\n15\tHELPER_15 = 15 * 7  # synthetic helper constant\n16\tHELPER_16 = 16 * 7  # synthetic helper constant\n17\tHELPER_17 = 17 * 7  # synthetic helper constant\n18\tHELPER_18 = 18 * 7  # synthetic helper constant\n19\tHELPER_19 = 19 * 7  # synthetic helper constant\n20\tHELPER_20 = 20 * 7  # synthetic helper constant\n21\tHELPER_21 = 21 * 7  # synthetic helper constant\n22\tHELPER_22 = 22 * 7  # synthetic helper constant\n23\tHELPER_23 = 23 * 7  # synthetic helper constant\n24\tHELPER_24 = 24 * 7  # synthetic helper constant\n25\tHELPER_25 = 25 * 7  # synthetic helper constant\n26\tHELPER_26 = 26 * 7  # synthetic helper constant\n27\tHELPER_27 = 27 * 7  # synthetic helper constant\n28\tHELPER_28 = 28 * 7  # synthetic helper constant\n29\tHELPER_29 = 29 * 7  # synthetic helper constant\n30\tHELPER_30 = 30 * 7  # synthetic helper constant"
+    }
+   ]
+  },
+  {
+   "role": "assistant",
+   "content": [
+    {
+     "type": "tool_use",
+     "id": "toolu_09",
+     "name": "mcp__demo__list_items",
+     "input": {}
+    }
+   ]
+  },
+  {
+   "role": "user",
+   "content": [
+    {
+     "type": "tool_result",
+     "tool_use_id": "toolu_09",
+     "content": [
+      {
+       "type": "text",
+       "text": "{\n  \"items\": [\n    {\n      \"id\": 0,\n      \"name\": \"item-0\",\n      \"tags\": [\n        \"alpha\",\n        \"beta\"\n      ]\n    },\n    {\n      \"id\": 1,\n      \"name\": \"item-1\",\n      \"tags\": [\n        \"alpha\",\n        \"beta\"\n      ]\n    },\n    {\n      \"id\": 2,\n      \"name\": \"item-2\",\n      \"tags\": [\n        \"alpha\",\n        \"beta\"\n      ]\n    },\n    {\n      \"id\": 3,\n      \"name\": \"item-3\",\n      \"tags\": [\n        \"alpha\",\n        \"beta\"\n      ]\n    },\n    {\n      \"id\": 4,\n      \"name\": \"item-4\",\n      \"tags\": [\n        \"alpha\",\n        \"beta\"\n      ]\n    },\n    {\n      \"id\": 5,\n      \"name\": \"item-5\",\n      \"tags\": [\n        \"alpha\",\n        \"beta\"\n      ]\n    },\n    {\n      \"id\": 6,\n      \"name\": \"item-6\",\n      \"tags\": [\n        \"alpha\",\n        \"beta\"\n      ]\n    },\n    {\n      \"id\": 7,\n      \"name\": \"item-7\",\n      \"tags\": [\n        \"alpha\",\n        \"beta\"\n      ]\n    },\n    {\n      \"id\": 8,\n      \"name\": \"item-8\",\n      \"tags\": [\n        \"alpha\",\n        \"beta\"\n      ]\n    },\n    {\n      \"id\": 9,\n      \"name\": \"item-9\",\n      \"tags\": [\n        \"alpha\",\n        \"beta\"\n      ]\n    },\n    {\n      \"id\": 10,\n      \"name\": \"item-10\",\n      \"tags\": [\n        \"alpha\",\n        \"beta\"\n      ]\n    },\n    {\n      \"id\": 11,\n      \"name\": \"item-11\",\n      \"tags\": [\n        \"alpha\",\n        \"beta\"\n      ]\n    }\n  ]\n}"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "role": "user",
+   "content": "What should change next?"
+  }
+ ]
+}

@@ -193,7 +193,7 @@ Evidence codes:
 | PR-014 | shell-command classification defined in the spec; Codex Windows/Unix shapes (MD-13) | AC-PR-10 | `test_shell_command_classification_rules` |
 | PR-030 | lossless by reference, prefix-stable; default only after evaluation (CC-020) | AC-PR-20 | `test_reread_on_by_default_and_declared`, `test_reread_by_reference_on_by_default`, `test_registry_default_enabled_requires_eval_record` |
 | PR-031 | E10(e): a re-read by reference keeps edit anchors exact; 12.7 % of `Read` volume rebuildable | AC-PR-20, AC-PR-21 | `test_reread_notes_after_edit`, `test_reread_source_write`, `test_reread_by_reference_end_to_end` |
-| PR-032 | only the standard numbering can be decoded | AC-PR-22 | `test_reread_not_applicable_reasons` |
+| PR-032 | only a known numbering can be decoded; Claude Code's `Read` numbering (S8h SCR-001: dogfood, 0 of 1,627 applicable) | AC-PR-22 | `test_reread_not_applicable_reasons`, `test_reread_applies_to_claude_code_numbering`, `test_reread_mixed_numbering_unchanged`, `test_reread_from_write_keeps_its_numbering_recoverable`, `prop_reread_by_reference_decodes_whole_request` (both styles), `test_compressor_acts_on_real_agent_formats[reread_by_reference]` |
 | PR-033 | notes never point to notes (as for duplicates) | AC-PR-23 | `test_reread_never_chains_notes` |
 | PR-034 | lossless proven by decode; sources intact (CC-019) | AC-PR-24 | `prop_reread_by_reference_decodes_whole_request`, `test_reread_source_integrity_enforced` |
 | PR-035 | bounded cost on large files | AC-PR-26 | `test_reread_linear_time`, `test_reread_not_applicable_reasons` (too_large) |
@@ -291,6 +291,7 @@ Evidence codes:
 | TC-018 | S6 P4, P5: dated, sourced prices; the user's own prices | AC-TC-14 | `test_user_price_book_overrides_shipped`, `test_user_price_book_used_at_startup`, `test_invalid_user_price_book_stops_startup`, `test_doctor_reports_price_books`, `test_doctor_fails_on_invalid_user_price_book` |
 | TC-019 | S6 P3: a subscription is not billed per token | AC-TC-15 | `test_oauth_cost_basis_api_equivalent` |
 | TC-020 | S6 P8: cache rewrites Tokli causes are not deducted | AC-TC-16 | `test_cost_caveats_hand_computed`, `test_summary_cost_block_without_price_book` |
+| TC-021 | S8h P3: a compressor that never applies is visible the same day | AC-TC-17 | `test_not_applying_flag_hand_computed`, `test_health_reports_applicability`, `test_ui_flags_compressor_not_applying` |
 | TC-016 | which compressor saves, at what latency (TOKLI_TELEMETRY_AND_COST §3); ADR 0007 | AC-TC-12 | `test_compressor_aggregates_hand_computed`, `test_compressor_rates_without_applicable_are_null`, `test_latency_without_benefit_flag`, `test_stats_record_tokens_in_of_accepted_calls` |
 
 ## Observability (SPEC 014)
@@ -307,7 +308,7 @@ Evidence codes:
 | OB-008 | Brief§15 | AC-OB-4 | `test_default_logging_contains_no_prompt_text` |
 | OB-009 | Brief§15 explicit, visible debug | AC-OB-5 | `test_debug_content_requires_both_switches`, `test_debug_content_banner_visible`, `test_debug_content_ttl_and_cap` |
 | OB-010 | ops | AC-OB-1 | `test_request_summary_log_line` |
-| OB-011 | degraded visibility; S2 review A8 | AC-TC-6 | `test_health_degraded_conditions`, `test_health_endpoint`, `test_outlier_window`, `test_health_degraded_on_calibration_outliers` |
+| OB-011 | degraded visibility; S2 review A8 | AC-TC-6 | `test_health_degraded_conditions`, `test_health_endpoint`, `test_outlier_window`, `test_health_degraded_on_calibration_outliers`, `test_health_reports_applicability` (S8h) |
 | OB-012 | E1 needs the header names Claude Code sends; S1 review P6; S1 Gate 2 decision 3 | AC-OB-4, AC-OB-6 | `test_trace_records_header_names_only`, `test_header_names_persisted`, `test_header_names_persisted_end_to_end` |
 | OB-013 | logs outlive the console; S1 Gate 2 decision 4 | AC-OB-7 | `test_log_file_defaults`, `test_log_file_written_when_enabled`, `test_log_file_rotates`, `test_log_file_rotation_failure_does_not_stop_tokli`, `test_log_file_rotation_with_file_held_open`, `test_log_file_open_failure_does_not_stop_tokli`, `test_log_file_contains_no_credentials_or_content`, `test_serve_log_file_enabled`, `test_serve_log_file_off_by_default` |
 
@@ -345,6 +346,7 @@ Evidence codes:
 | UI-011 | S3 review M3, P8; Windows file-type registry | AC-UI-5 | `test_dashboard_served_at_tokli_root`, `test_ui_assets_served_with_explicit_content_types`, `test_serve_prints_dashboard_address` |
 | UI-012 | the verbatim opt-in is the user's informed choice (S8a SCR-001, E5b-lite) | — | `test_ui_verbatim_opt_in_toggle` |
 | UI-010 | honest wording (S4 SCR-001) | — | `test_ui_policy_explanations_text`, `test_ui_settings_primary_controls_and_disclosures`, `test_ui_help_reveals_contextual_field_descriptions` |
+| UI-014 | S8h P3 | — | `test_ui_flags_compressor_not_applying` |
 | UI-013 | S6: money with its range, method and basis | — | `test_ui_cost_card_shows_estimate_range_and_method`, `test_ui_compressor_money_column`, `test_ui_compressor_summary_and_full_details`, `test_ui_recent_request_money_is_compact_with_descriptions_in_help` |
 
 ## Configuration (SPEC 017)

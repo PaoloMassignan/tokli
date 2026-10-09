@@ -58,6 +58,7 @@ STATS_COLUMNS = (
     "marginal_saved",
     "ms_total",
     "tokens_in_accepted",
+    "skip_reasons",  # JSON; for the not_applying flag (TC-021)
     "saved_cache_read",  # schema v4 (TC-017)
     "saved_cache_write",
     "saved_input",

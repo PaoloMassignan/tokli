@@ -519,3 +519,57 @@ def test_filters_default_to_last_seven_days() -> None:
     parsed = parse_filters({}, now=now)
     assert parsed.end == now and (now - parsed.start).days == 7
     assert parsed.tz.key == "UTC"
+
+
+def _flag_traffic(tmp_path: Path, rows: list[CompressorStatsRecord]) -> dict[str, Any]:
+    record = replace(BASE, request_id="01FLAG00000000000000000000")
+    write(tmp_path / "t.db", [(record, rows)])
+    result = MetricsQuery(tmp_path / "t.db").compressors(filters())
+    return {c["compressor_id"]: c["not_applying"] for c in result["compressors"]}
+
+
+def test_not_applying_flag_hand_computed(tmp_path: Path) -> None:
+    """AC-TC-17 (TC-021, S8h P3): considered 200 times and never applicable is flagged with its
+    main skip reason; applicable once is not; a format reason above 50 % is flagged."""
+    rid = "01FLAG00000000000000000000"
+    flags = _flag_traffic(
+        tmp_path,
+        [
+            stats(
+                rid,
+                "never",
+                considered=200,
+                applicable=0,
+                accepted=0,
+                skip_reasons={"not_applicable(no_proposal)": 150, "too_small": 50},
+            ),
+            stats(
+                rid,
+                "once",
+                considered=200,
+                applicable=1,
+                accepted=1,
+                skip_reasons={"too_small": 199},
+            ),
+            stats(
+                rid,
+                "format",
+                considered=10,
+                applicable=4,
+                accepted=4,
+                skip_reasons={"not_applicable(nonstandard_numbering)": 6},
+            ),
+            stats(
+                rid,
+                "few",
+                considered=199,
+                applicable=0,
+                accepted=0,
+                skip_reasons={"too_small": 199},
+            ),
+        ],
+    )
+    assert flags["never"] == {"flag": True, "reason": "not_applicable(no_proposal)"}
+    assert flags["once"] == {"flag": False, "reason": None}
+    assert flags["format"] == {"flag": True, "reason": "not_applicable(nonstandard_numbering)"}
+    assert flags["few"] == {"flag": False, "reason": None}  # below 200 considered, no format share

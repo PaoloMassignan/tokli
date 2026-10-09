@@ -361,7 +361,12 @@ def test_health_endpoint(tokli: Start, upstream: FakeUpstream) -> None:
     health = httpx.get(t.url + "/tokli/health").json()
     assert health["status"] == "ok"
     assert health["version"] == "test"
-    assert health["checks"] == {"telemetry": "ok", "compressors": "ok", "calibration": "ok"}
+    assert health["checks"] == {
+        "telemetry": "ok",
+        "compressors": "ok",
+        "calibration": "ok",
+        "applicability": "ok",  # informational since S8h (OB-011)
+    }
     assert upstream.received == []
 
 

@@ -147,7 +147,7 @@ def test_compressor_stats_only_for_considered(tokli: Start) -> None:
     t = tokli(
         "compressors.json_minify.enabled=false",
         "compressors.duplicate_tool_results.enabled=false",
-        "compressors.reread_by_reference.enabled=false",  # on by default since S8e
+        "compressors.reread_by_reference.enabled=false",  # on by default (S8e, S8h v2)
     )
     send(t)
     assert db_rows(t, "compressor_stats") == []
@@ -156,7 +156,7 @@ def test_compressor_stats_only_for_considered(tokli: Start) -> None:
     assert {r["compressor_id"] for r in db_rows(t2, "compressor_stats")} == {
         "json_minify",
         "duplicate_tool_results",
-        "reread_by_reference",  # on by default since S8e
+        "reread_by_reference",  # on by default (S8e, S8h v2)
     }
 
 
@@ -339,3 +339,49 @@ def test_telemetry_db_created_in_data_dir(tokli: Start) -> None:
     t = tokli()
     send(t)
     assert (t.services.config.dirs.data_dir / "tokli.db").is_file()
+
+
+def test_health_reports_applicability(tokli: Start, upstream: FakeUpstream) -> None:
+    """OB-011 after S8h P3: a compressor that does not apply to the traffic is named in the
+    informational `applicability` check, and the status stays `ok`. Here every MCP result is
+    prose, so `json_minify` is skipped with `not_json` (a format reason) on 2 of the 3 segments
+    it considers per request (the third is the short user text)."""
+    t = tokli()
+    assert httpx.get(t.url + "/tokli/health").json()["checks"]["applicability"] == "ok"
+    prose = "A synthetic paragraph of plain prose from an MCP tool, not JSON at all. " * 6
+    for n in range(3):
+        body = {
+            "model": "claude-test",
+            "max_tokens": 10,
+            "messages": [
+                {"role": "user", "content": "start"},
+                {
+                    "role": "assistant",
+                    "content": [
+                        {
+                            "type": "tool_use",
+                            "id": f"t{n}{k}",
+                            "name": "mcp__demo__notes",
+                            "input": {},
+                        }
+                        for k in "ab"
+                    ],
+                },
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "tool_result", "tool_use_id": f"t{n}{k}", "content": prose + k}
+                        for k in "ab"
+                    ],
+                },
+            ],
+        }
+        response = httpx.post(
+            t.url + "/anthropic/v1/messages", content=json.dumps(body), headers=HEADERS, timeout=10
+        )
+        t.wait_trace(response.headers["x-tokli-request-id"])
+    assert t.services.store is not None
+    t.services.store.flush()
+    health = httpx.get(t.url + "/tokli/health").json()
+    assert health["checks"]["applicability"] == "not_applying: json_minify"
+    assert health["status"] == "ok"

@@ -88,7 +88,14 @@ class CompressionSection(BaseModel):
     model_config = _STRICT
 
     segment_kinds: tuple[SegmentKindName, ...] = ("TOOL_RESULT", "USER_TEXT")
-    verbatim_tools: tuple[str, ...] = ("Read", "Bash", "shell", "shell_command", "container.exec")
+    verbatim_tools: tuple[str, ...] = (
+        "Read",
+        "Bash",
+        "PowerShell",  # S8h SCR-002: Claude Code on Windows
+        "shell",
+        "shell_command",
+        "container.exec",
+    )
     min_segment_tokens: int = Field(default=64, ge=0)
     min_gain_tokens: int = Field(default=4, ge=0)
     min_gain_ratio: float = Field(default=0.01, ge=0, le=1)
@@ -135,6 +142,7 @@ class CompressorsSection(BaseModel):
     # SELECTIVE, never on by default (CC-002); SPEC 019 PR-020 (S8c).
     edit_args_on_resume: CompressorToggle = CompressorToggle(enabled=False)
     # On by default since its smoke record (2026-10-04) says no_measurable_damage (CC-020).
+    # On since its version 2 smoke record (2026-10-09; CC-020; S8h).
     reread_by_reference: CompressorToggle = CompressorToggle(enabled=True)
 
 

@@ -8,6 +8,7 @@ import json
 import time
 from typing import Any
 
+import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
@@ -23,7 +24,10 @@ KINDS = frozenset({SegmentKind.TOOL_RESULT, SegmentKind.USER_TEXT})
 ARG_KINDS = KINDS | {SegmentKind.TOOL_CALL_ARGS}
 
 
-def numbered(lines: list[str], first: int = 1) -> str:
+def numbered(lines: list[str], first: int = 1, style: str = "padded6") -> str:
+    """`padded6` is `cat -n`; `plain` is what Claude Code's `Read` really sends (S8h)."""
+    if style == "plain":
+        return "\n".join(f"{n}\t{line}" for n, line in enumerate(lines, start=first))
     return "\n".join(f"{n:>6}\t{line}" for n, line in enumerate(lines, start=first))
 
 
@@ -45,13 +49,18 @@ def result(call_id: str, text: str) -> dict[str, Any]:
     }
 
 
-def conversation(*steps: tuple[str, Any], path: str = "src/mod.py") -> dict[str, Any]:
+def conversation(
+    *steps: tuple[str, Any], path: str = "src/mod.py", style: str = "padded6"
+) -> dict[str, Any]:
     """Steps: ("read", lines) · ("write", lines) · ("edit", None)."""
     messages: list[dict[str, Any]] = [{"role": "user", "content": "Start the synthetic task."}]
     for n, (kind, payload) in enumerate(steps):
         cid = f"toolu_{kind[0]}{n}"
         if kind == "read":
-            messages += [call(cid, "Read", {"file_path": path}), result(cid, numbered(payload))]
+            messages += [
+                call(cid, "Read", {"file_path": path}),
+                result(cid, numbered(payload, style=style)),
+            ]
         elif kind == "write":
             messages += [
                 call(cid, "Write", {"file_path": path, "content": "\n".join(payload) + "\n"}),
@@ -311,15 +320,74 @@ def prop_history_stays_stable_with_both_reference_compressors(steps: list[str], 
         previous = forwarded
 
 
+def test_reread_applies_to_claude_code_numbering() -> None:
+    """Regression (S8h SCR-001). Root cause: PR-032 accepted only the `cat -n` prefix
+    `"{n:>6}\t"`, but Claude Code's `Read` numbers lines as `"{n}\t"` with no padding, so every
+    real re-read was rejected as `nonstandard_numbering` and the compressor never acted on real
+    traffic (0 applicable of 1,627 considered on the human's dogfood)."""
+    old = module(30)
+    new = [*old[:10], "an inserted line", *old[10:]]
+    data = conversation(("read", old), ("edit", None), ("read", new), style="plain")
+    _, outcome, forwarded = run(data)
+    reread = results(forwarded)[2]
+    assert reread.startswith("[tokli: lines 1-10 unchanged")
+    assert "\n11\tan inserted line\n" in "\n" + reread + "\n"  # kept in the result's own style
+    assert not any(line.startswith("    11\t") for line in reread.split("\n"))
+    assert outcome.reference_stubs == 1
+
+
+def test_reread_mixed_numbering_unchanged() -> None:
+    """PR-032 (S8h): a result mixing the two styles is not changed."""
+    old = module(12)
+    mixed = numbered(old[:6], style="plain") + "\n" + numbered(old[6:], first=7)
+    data = conversation(("read", old), ("edit", None), ("read", old), style="plain")
+    data["messages"][6]["content"][0]["content"] = mixed
+    _, outcome, forwarded = run(data)
+    assert results(forwarded)[2] == mixed
+    reasons = [i.reason for i in outcome.invocations if i.compressor_id == "reread_by_reference"]
+    assert "not_applicable(nonstandard_numbering)" in reasons
+
+
+@pytest.mark.parametrize("style", ["padded6", "plain"])
+def test_reread_from_write_keeps_its_numbering_recoverable(style: str) -> None:
+    """PR-032 (S8h): a `Write` source carries no numbering style. When every line of the re-read
+    would become a note, the first numbered line stays verbatim, so the result's own style is
+    recoverable and decoding rebuilds it exactly."""
+    lines = module(20)
+    data = conversation(("write", lines), ("read", lines), style=style, path="src/new.py")
+    request, outcome, forwarded = run(data, kinds=ARG_KINDS)
+    reread = results(forwarded)[1]
+    first = numbered(lines[:1], style=style)
+    assert reread.startswith(first + "\n[tokli: lines 2-20 unchanged")
+    texts = {s.id: s.text for s in request.segments}
+    for patch in outcome.patches:
+        texts[patch.segment_id] = patch.new_text
+    refs = [
+        SegmentRef(
+            s.id,
+            SegmentView(s.kind, s.role, s.tool_name, s.is_error, ()),
+            s.tool_call_id,
+            s.whole_result,
+        )
+        for s in request.segments
+        if s.mutable
+    ]
+    decoded = RereadByReference().decode_request(texts, refs)
+    original = {s.id: s.text for s in request.segments}
+    assert all(decoded[sid] == original[sid] for sid in original if sid in decoded)
+
+
 def test_reread_on_by_default_and_declared() -> None:
     from tokli.config.schema import TokliSettings
 
-    assert (SPEC.kind, SPEC.equivalence, SPEC.prefix_stable, SPEC.default_enabled) == (
+    assert (SPEC.kind, SPEC.equivalence, SPEC.prefix_stable, SPEC.version) == (
         "LOSSLESS",
         "reference",
         True,
-        True,  # on by default after its smoke record (S8e P3)
+        "2",  # S8h SCR-001: Claude Code's numbering changes its output
     )
+    # On by default with its version 2 smoke record (2026-10-09; CC-020; S8h).
+    assert SPEC.default_enabled is True
     assert TokliSettings().compressors.reread_by_reference.enabled is True
 
 
@@ -330,13 +398,19 @@ EDIT = st.tuples(
 )
 
 
-@settings(max_examples=120, deadline=None)
-@given(st.lists(EDIT, min_size=1, max_size=4), st.booleans(), st.integers(5, 40))
+@settings(max_examples=160, deadline=None)
+@given(
+    st.lists(EDIT, min_size=0, max_size=4),
+    st.booleans(),
+    st.integers(5, 40),
+    st.sampled_from(["padded6", "plain"]),
+)
 def prop_reread_by_reference_decodes_whole_request(
-    edits: list[tuple[str, int, int]], start_with_write: bool, size: int
+    edits: list[tuple[str, int, int]], start_with_write: bool, size: int, style: str
 ) -> None:
-    """Whatever the edits between reads, replacing every note with the source lines it names
-    rebuilds each original result exactly (and a `Write` source too)."""
+    """Whatever the edits between reads, and in both numbering styles (S8h), replacing every
+    note with the source lines it names rebuilds each original result exactly (and a `Write`
+    source too)."""
     lines = [f"v{n % 7} common line {n % 5}" for n in range(size)]
     steps: list[tuple[str, Any]] = [("write" if start_with_write else "read", list(lines))]
     for kind, at, value in edits:
@@ -348,7 +422,8 @@ def prop_reread_by_reference_decodes_whole_request(
         else:
             lines[at] = f"replaced {value}"
         steps += [("edit", None), ("read", list(lines))]
-    data = conversation(*steps)
+    steps.append(("read", list(lines)))  # an unchanged re-read: every line can become a note
+    data = conversation(*steps, style=style)
     request, outcome, _ = run(data, kinds=ARG_KINDS)
     texts = {s.id: s.text for s in request.segments}
     for patch in outcome.patches:

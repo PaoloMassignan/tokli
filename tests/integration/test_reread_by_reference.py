@@ -59,11 +59,10 @@ def test_reread_by_reference_end_to_end(tokli: Start, upstream: FakeUpstream) ->
 
 
 def test_reread_by_reference_on_by_default(tokli: Start, upstream: FakeUpstream) -> None:
-    """On by default since its smoke record (S8e P3); switched off, the request is unchanged."""
-    t = tokli()
+    """On by default with its version 2 smoke record (S8h; S8e P3 for version 1); switched off,
+    the request is unchanged."""
     _, data = edited()
-    send(t, data)
+    send(tokli(), data)
     assert results(json.loads(upstream.received[-1].body))[2].count("[tokli: lines ") == 2
-    off = tokli("compressors.reread_by_reference.enabled=false")
-    send(off, data)
+    send(tokli("compressors.reread_by_reference.enabled=false"), data)
     assert results(json.loads(upstream.received[-1].body)) == results(data)

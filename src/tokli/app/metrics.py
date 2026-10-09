@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import bisect
 import itertools
+import json
 import math
 import re
 from collections import defaultdict
@@ -36,6 +37,16 @@ _RANK = {"exact": 0, "calibrated": 1, "estimate": 2}
 _ULID = re.compile(r"^[0-9A-HJKMNP-TV-Z]{26}$")
 # Flag "latency without benefit" (TOKLI_TELEMETRY_AND_COST §3, TC-016).
 FLAG_ZERO_BENEFIT, FLAG_AVG_MS, FLAG_MIN_APPLICABLE = 0.9, 1.0, 100
+# Flag "not applying" (TC-021, S8h P3; POLICY, provisional).
+NOT_APPLYING_MIN_CONSIDERED, FORMAT_REASON_SHARE = 200, 0.5
+FORMAT_REASONS = frozenset(
+    {
+        "not_applicable(nonstandard_numbering)",
+        "not_applicable(not_json)",
+        "not_applicable(too_few_grep_lines)",
+        "not_applicable(too_few_leveled_lines)",
+    }
+)
 
 Figure = tuple[int, str]  # (value, method)
 
@@ -534,6 +545,7 @@ class MetricsQuery:
                 else {"value": None, "reason": "no_latency_recorded"}
             ),
             "latency_without_benefit": flag,
+            "not_applying": _not_applying(pairs, considered, applicable),
         }
 
     def requests(self, limit: int, cursor: str | None) -> dict[str, Any]:
@@ -576,6 +588,29 @@ class MetricsQuery:
 _NO_FILTER = Filters(
     start=datetime.min.replace(tzinfo=UTC), end=datetime.max.replace(tzinfo=UTC), tz=ZoneInfo("UTC")
 )
+
+
+def _not_applying(
+    pairs: list[tuple[dict[str, Any], dict[str, Any]]], considered: int, applicable: int
+) -> dict[str, Any]:
+    """TC-021: a compressor that does not apply to this traffic, with its main skip reason."""
+    reasons: dict[str, int] = defaultdict(int)
+    for _, stat in pairs:
+        raw = stat.get("skip_reasons")
+        for reason, n in (json.loads(raw) if isinstance(raw, str) else raw or {}).items():
+            reasons[reason] += int(n)
+    main = max(reasons, key=lambda r: (reasons[r], r)) if reasons else None
+    format_share = (
+        sum(n for r, n in reasons.items() if r in FORMAT_REASONS) / considered if considered else 0
+    )
+    flagged = (considered >= NOT_APPLYING_MIN_CONSIDERED and applicable == 0) or (
+        format_share > FORMAT_REASON_SHARE
+    )
+    if not flagged:
+        return {"flag": False, "reason": None}
+    if format_share > FORMAT_REASON_SHARE:
+        main = max((r for r in reasons if r in FORMAT_REASONS), key=lambda r: (reasons[r], r))
+    return {"flag": True, "reason": main}
 
 
 def _matches(stat: Mapping[str, Any], filters: Filters) -> bool:

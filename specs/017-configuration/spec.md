@@ -60,7 +60,7 @@ defaults.
 | `tls.ca_bundle` | `null` |
 | `limits.max_transform_bytes` | `33554432` |
 | `compression.segment_kinds` | `["TOOL_RESULT", "USER_TEXT"]` |
-| `compression.verbatim_tools` | `["Read", "Bash", "shell", "shell_command", "container.exec"]` |
+| `compression.verbatim_tools` | `["Read", "Bash", "PowerShell", "shell", "shell_command", "container.exec"]` (`PowerShell` since S8h SCR-002) |
 | `compression.min_segment_tokens` | `64` |
 | `compression.min_gain_tokens` / `min_gain_ratio` | `4` / `0.01` |
 | `compression.request_budget_ms` / `per_call_timeout_ms` | `50` / `200` |
@@ -92,7 +92,7 @@ UI-editable (CF-009): `compressors.<id>.enabled`, `telemetry.retention_days`.
 
 | Key | Default |
 |---|---|
-| `compressors.reread_by_reference.enabled` | `true` (smoke record `no_measurable_damage` on `claude-opus-5-5`, 2026-10-04; S8e review P3; CC-020) |
+| `compressors.reread_by_reference.enabled` | `true` (version 2 smoke record `no_measurable_damage` on `claude-opus-5-5`, 2026-10-09, in Claude Code's numbering; S8h SCR-001; CC-020) |
 | `pruning.reread_tools` | `["Read"]` |
 | `pruning.reread_min_run_lines` | `5` (S8e review P4) |
 | `pruning.reread_max_lines` | `20000` (ADR 0013) |

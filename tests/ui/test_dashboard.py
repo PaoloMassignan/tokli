@@ -349,7 +349,10 @@ def test_ui_verbatim_opt_in_toggle(fresh: Tokli) -> None:
         toggle = card.locator('input[data-toggle="verbatim"]')
         assert not toggle.is_checked()
         text = card.inner_text()
-        assert "Also on Read, Bash, shell, shell_command, container.exec" in text
+        from tokli.config.schema import TokliSettings
+
+        effective = ", ".join(TokliSettings().compression.verbatim_tools)  # UI-012: effective list
+        assert f"Also on {effective}" in text
         assert (
             "These tools' output is often copied back exactly by the agent (for example as an "
             "edit anchor). Changing it can make the agent's next tool call fail." in text
@@ -578,3 +581,75 @@ def test_ui_screenshots(tokli: Tokli) -> None:
                 context.close()
         browser.close()
     assert len(list(output.glob("*.png"))) == 16
+
+
+@pytest.fixture
+def prose_only(tmp_path: Path) -> Iterator[Tokli]:
+    """A Tokli whose only traffic is the test's own."""
+    upstream = FakeUpstream()
+    usage_upstream(upstream)
+    with serve(upstream.app()) as upstream_url:
+        upstream.url = upstream_url
+        with run_tokli(make_config(tmp_path, upstream_url)) as t:
+            yield t
+
+
+def test_ui_flags_compressor_not_applying(prose_only: Tokli) -> None:
+    """UI-014 (S8h P3): a compressor that does not apply to the traffic is shown as such, with
+    its main skip reason in plain words."""
+    fresh = prose_only
+    prose = "A synthetic paragraph of plain prose from an MCP tool, not JSON at all. " * 6
+    for n in range(3):
+        body = {
+            "model": "claude-test",
+            "max_tokens": 10,
+            "messages": [
+                {"role": "user", "content": "start"},
+                {
+                    "role": "assistant",
+                    "content": [
+                        {
+                            "type": "tool_use",
+                            "id": f"u{n}{k}",
+                            "name": "mcp__demo__notes",
+                            "input": {},
+                        }
+                        for k in "ab"
+                    ],
+                },
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "tool_result", "tool_use_id": f"u{n}{k}", "content": prose + k}
+                        for k in "ab"
+                    ],
+                },
+            ],
+        }
+        response = httpx.post(
+            fresh.url + "/anthropic/v1/messages",
+            content=json.dumps(body),
+            headers={"x-api-key": "sk-ant-api03-TOKLI-CANARY", "anthropic-version": "2023-06-01"},
+            timeout=10,
+        )
+        fresh.wait_trace(response.headers["x-tokli-request-id"])
+    assert fresh.services.store is not None
+    fresh.services.store.flush()
+    flagged = [
+        c
+        for c in httpx.get(fresh.url + "/tokli/api/metrics/compressors", timeout=10).json()[
+            "compressors"
+        ]
+        if c["not_applying"]["flag"]
+    ]
+    assert flagged, "the traffic above should flag at least one compressor"
+    with sync_playwright() as p:
+        browser = p.chromium.launch()
+        page = browser.new_page()
+        page.goto(fresh.url + "/tokli/")
+        page.wait_for_selector("#cards .figure")
+        show(page, "compressors")
+        text = page.locator("#compressors-table").inner_text()
+        browser.close()
+    assert "does not apply to your traffic" in text
+    assert "results are not JSON" in text

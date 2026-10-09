@@ -218,6 +218,12 @@ attention to it. This is exactly what the evaluation measures.
 
 ## 4a. `reread_by_reference` (S8e)
 
+**Claude Code's numbering (S8h).** Claude Code's `Read` puts the line number, then a tab, before
+each line, with no padding (`"1\t…"`). Version 1 read only the `cat -n` style, where the number
+is padded to six characters (`"     1\t…"`), so it never acted on real Claude Code traffic.
+Version 2 reads both, and rebuilds each result in its own style. Its smoke record (2026-10-09,
+Claude Code's numbering) shows no measurable damage, so it is on by default.
+
 **With `duplicate_tool_results` (S6 SCR-001).** When a later read is identical to an earlier
 re-read, the earlier re-read keeps its notes. The duplicate stub that would have pointed at
 it is reverted, and the later read becomes notes too. Otherwise the earlier re-read would be
@@ -688,6 +694,10 @@ when it does (`edit_content_not_needed`). Experiment E10(a) showed both parts on
   remembered with the cached results and repeated on later requests, so that timing never
   changes history already sent (which would cost a provider cache rewrite). Pruners and
   results already cached are never skipped.
+- **Does not apply to your traffic** (S8h) marks an enabled compressor that almost never acts on
+  what your agent sends, with the main reason in plain words, for example "the results are not
+  JSON". `/tokli/health` lists such compressors in its `applicability` check, for information
+  only.
 - **Money saved** (S6) prices each compressor's saving by where it sat in the provider's cache:
   - at the cache-read price when it was in the cached history;
   - at the cache-write price when it was in the part written that turn;

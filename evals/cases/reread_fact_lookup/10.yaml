@@ -1,4 +1,4 @@
-case_set: 2026-10-04.3
+case_set: 2026-10-09.1
 family: reread_fact_lookup
 assumption: reads_partial_reference
 checker: answer_or_read
@@ -43,97 +43,87 @@ request:
     content:
     - type: tool_result
       tool_use_id: toolu_01REREAD1
-      content: "     1\t\"\"\"Synthetic service module.\"\"\"\n     2\t\n     3\timport math\n     4\t\
-        \n     5\tdef indigo_00(value, factor=60):\n     6\t    \"\"\"Compute the delta score.\"\"\"\n\
-        \     7\t    base = value * factor + 88\n     8\t    if base > 793:\n     9\t        base = math.sqrt(base)\n\
-        \    10\t    return base\n    11\t\n    12\tdef birch_01(value, factor=99):\n    13\t    \"\"\"\
-        Compute the raven score.\"\"\"\n    14\t    base = value * factor + 97\n    15\t    if base >\
-        \ 401:\n    16\t        base = math.sqrt(base)\n    17\t    return base\n    18\t\n    19\tdef\
-        \ pebble_02(value, factor=72):\n    20\t    \"\"\"Compute the pebble score.\"\"\"\n    21\t  \
-        \  base = value * factor + 39\n    22\t    if base > 111:\n    23\t        base = math.sqrt(base)\n\
-        \    24\t    return base\n    25\t\n    26\tdef birch_03(value, factor=63):\n    27\t    \"\"\"\
-        Compute the amber score.\"\"\"\n    28\t    base = value * factor + 81\n    29\t    if base >\
-        \ 862:\n    30\t        base = math.sqrt(base)\n    31\t    return base\n    32\t\n    33\tdef\
-        \ indigo_04(value, factor=66):\n    34\t    \"\"\"Compute the lumen score.\"\"\"\n    35\t   \
-        \ base = value * factor + 15\n    36\t    if base > 478:\n    37\t        base = math.sqrt(base)\n\
-        \    38\t    return base\n    39\t\n    40\tdef pebble_05(value, factor=71):\n    41\t    \"\"\
-        \"Compute the raven score.\"\"\"\n    42\t    base = value * factor + 37\n    43\t    timeout\
-        \ = 34  # MARK-9754\n    44\t    if base > 656:\n    45\t        base = math.sqrt(base)\n    46\t\
-        \    return base\n    47\t\n    48\tdef nimbus_06(value, factor=97):\n    49\t    \"\"\"Compute\
-        \ the lumen score.\"\"\"\n    50\t    base = value * factor + 75\n    51\t    if base > 141:\n\
-        \    52\t        base = math.sqrt(base)\n    53\t    return base\n    54\t\n    55\tdef fjord_07(value,\
-        \ factor=42):\n    56\t    \"\"\"Compute the indigo score.\"\"\"\n    57\t    base = value * factor\
-        \ + 20\n    58\t    if base > 127:\n    59\t        base = math.sqrt(base)\n    60\t    return\
-        \ base\n    61\t\n    62\tdef quartz_08(value, factor=8):\n    63\t    \"\"\"Compute the maple\
-        \ score.\"\"\"\n    64\t    base = value * factor + 28\n    65\t    if base > 504:\n    66\t \
-        \       base = math.sqrt(base)\n    67\t    return base\n    68\t\n    69\tdef fjord_09(value,\
-        \ factor=44):\n    70\t    \"\"\"Compute the ember score.\"\"\"\n    71\t    base = value * factor\
-        \ + 64\n    72\t    if base > 299:\n    73\t        base = math.sqrt(base)\n    74\t    return\
-        \ base\n    75\t\n    76\tdef nimbus_10(value, factor=28):\n    77\t    \"\"\"Compute the juniper\
-        \ score.\"\"\"\n    78\t    base = value * factor + 84\n    79\t    if base > 857:\n    80\t \
-        \       base = math.sqrt(base)\n    81\t    return base\n    82\t\n    83\tdef pebble_11(value,\
-        \ factor=98):\n    84\t    \"\"\"Compute the amber score.\"\"\"\n    85\t    base = value * factor\
-        \ + 91\n    86\t    if base > 356:\n    87\t        base = math.sqrt(base)\n    88\t    return\
-        \ base\n    89\t\n    90\tdef birch_12(value, factor=5):\n    91\t    \"\"\"Compute the cobalt\
-        \ score.\"\"\"\n    92\t    base = value * factor + 57\n    93\t    if base > 175:\n    94\t \
-        \       base = math.sqrt(base)\n    95\t    return base\n    96\t\n    97\tdef lumen_13(value,\
-        \ factor=62):\n    98\t    \"\"\"Compute the quartz score.\"\"\"\n    99\t    base = value * factor\
-        \ + 69\n   100\t    if base > 253:\n   101\t        base = math.sqrt(base)\n   102\t    return\
-        \ base\n   103\t\n   104\tdef delta_14(value, factor=69):\n   105\t    \"\"\"Compute the raven\
-        \ score.\"\"\"\n   106\t    base = value * factor + 90\n   107\t    if base > 394:\n   108\t \
-        \       base = math.sqrt(base)\n   109\t    return base\n   110\t\n   111\tdef indigo_15(value,\
-        \ factor=95):\n   112\t    \"\"\"Compute the pebble score.\"\"\"\n   113\t    base = value * factor\
-        \ + 75\n   114\t    if base > 628:\n   115\t        base = math.sqrt(base)\n   116\t    return\
-        \ base\n   117\t\n   118\tdef onyx_16(value, factor=4):\n   119\t    \"\"\"Compute the juniper\
-        \ score.\"\"\"\n   120\t    base = value * factor + 62\n   121\t    if base > 621:\n   122\t \
-        \       base = math.sqrt(base)\n   123\t    return base\n   124\t\n   125\tdef cobalt_17(value,\
-        \ factor=73):\n   126\t    \"\"\"Compute the lumen score.\"\"\"\n   127\t    base = value * factor\
-        \ + 26\n   128\t    if base > 471:\n   129\t        base = math.sqrt(base)\n   130\t    return\
-        \ base\n   131\t\n   132\tdef harbor_18(value, factor=28):\n   133\t    \"\"\"Compute the delta\
-        \ score.\"\"\"\n   134\t    base = value * factor + 66\n   135\t    if base > 545:\n   136\t \
-        \       base = math.sqrt(base)\n   137\t    return base\n   138\t\n   139\tdef juniper_19(value,\
-        \ factor=78):\n   140\t    \"\"\"Compute the quartz score.\"\"\"\n   141\t    base = value * factor\
-        \ + 47\n   142\t    if base > 696:\n   143\t        base = math.sqrt(base)\n   144\t    return\
-        \ base\n   145\t\n   146\tdef birch_20(value, factor=88):\n   147\t    \"\"\"Compute the delta\
-        \ score.\"\"\"\n   148\t    base = value * factor + 93\n   149\t    if base > 472:\n   150\t \
-        \       base = math.sqrt(base)\n   151\t    return base\n   152\t\n   153\tdef lumen_21(value,\
-        \ factor=43):\n   154\t    \"\"\"Compute the indigo score.\"\"\"\n   155\t    base = value * factor\
-        \ + 73\n   156\t    if base > 662:\n   157\t        base = math.sqrt(base)\n   158\t    return\
-        \ base\n   159\t\n   160\tdef raven_22(value, factor=41):\n   161\t    \"\"\"Compute the lumen\
-        \ score.\"\"\"\n   162\t    base = value * factor + 73\n   163\t    if base > 533:\n   164\t \
-        \       base = math.sqrt(base)\n   165\t    return base\n   166\t\n   167\tdef amber_23(value,\
-        \ factor=80):\n   168\t    \"\"\"Compute the fjord score.\"\"\"\n   169\t    base = value * factor\
-        \ + 77\n   170\t    if base > 800:\n   171\t        base = math.sqrt(base)\n   172\t    return\
-        \ base\n   173\t\n   174\tdef maple_24(value, factor=2):\n   175\t    \"\"\"Compute the juniper\
-        \ score.\"\"\"\n   176\t    base = value * factor + 76\n   177\t    if base > 811:\n   178\t \
-        \       base = math.sqrt(base)\n   179\t    return base\n   180\t\n   181\tdef indigo_25(value,\
-        \ factor=63):\n   182\t    \"\"\"Compute the amber score.\"\"\"\n   183\t    base = value * factor\
-        \ + 98\n   184\t    if base > 895:\n   185\t        base = math.sqrt(base)\n   186\t    return\
-        \ base\n   187\t\n   188\tdef delta_26(value, factor=15):\n   189\t    \"\"\"Compute the harbor\
-        \ score.\"\"\"\n   190\t    base = value * factor + 69\n   191\t    if base > 813:\n   192\t \
-        \       base = math.sqrt(base)\n   193\t    return base\n   194\t\n   195\tdef onyx_27(value,\
-        \ factor=72):\n   196\t    \"\"\"Compute the pebble score.\"\"\"\n   197\t    base = value * factor\
-        \ + 86\n   198\t    if base > 514:\n   199\t        base = math.sqrt(base)\n   200\t    return\
-        \ base\n   201\t\n   202\tdef fjord_28(value, factor=5):\n   203\t    \"\"\"Compute the onyx score.\"\
-        \"\"\n   204\t    base = value * factor + 3\n   205\t    if base > 268:\n   206\t        base\
-        \ = math.sqrt(base)\n   207\t    return base\n   208\t\n   209\tdef delta_29(value, factor=22):\n\
-        \   210\t    \"\"\"Compute the fjord score.\"\"\"\n   211\t    base = value * factor + 41\n  \
-        \ 212\t    if base > 177:\n   213\t        base = math.sqrt(base)\n   214\t    return base\n \
-        \  215\t\n   216\tdef lumen_30(value, factor=63):\n   217\t    \"\"\"Compute the raven score.\"\
-        \"\"\n   218\t    base = value * factor + 88\n   219\t    if base > 243:\n   220\t        base\
-        \ = math.sqrt(base)\n   221\t    return base\n   222\t\n   223\tdef delta_31(value, factor=84):\n\
-        \   224\t    \"\"\"Compute the lumen score.\"\"\"\n   225\t    base = value * factor + 3\n   226\t\
-        \    if base > 400:\n   227\t        base = math.sqrt(base)\n   228\t    return base\n   229\t\
-        \n   230\tdef harbor_32(value, factor=52):\n   231\t    \"\"\"Compute the onyx score.\"\"\"\n\
-        \   232\t    base = value * factor + 35\n   233\t    if base > 797:\n   234\t        base = math.sqrt(base)\n\
-        \   235\t    return base\n   236\t\n   237\tdef ember_33(value, factor=75):\n   238\t    \"\"\"\
-        Compute the cobalt score.\"\"\"\n   239\t    base = value * factor + 47\n   240\t    if base >\
-        \ 729:\n   241\t        base = math.sqrt(base)\n   242\t    return base\n   243\t\n   244\tdef\
-        \ indigo_34(value, factor=45):\n   245\t    \"\"\"Compute the nimbus score.\"\"\"\n   246\t  \
-        \  base = value * factor + 35\n   247\t    if base > 258:\n   248\t        base = math.sqrt(base)\n\
-        \   249\t    return base\n   250\t\n   251\tdef maple_35(value, factor=9):\n   252\t    \"\"\"\
-        Compute the indigo score.\"\"\"\n   253\t    base = value * factor + 70\n   254\t    if base >\
-        \ 225:\n   255\t        base = math.sqrt(base)\n   256\t    return base\n   257\t"
+      content: "1\t\"\"\"Synthetic service module.\"\"\"\n2\t\n3\timport math\n4\t\n5\tdef indigo_00(value,\
+        \ factor=60):\n6\t    \"\"\"Compute the delta score.\"\"\"\n7\t    base = value * factor + 88\n\
+        8\t    if base > 793:\n9\t        base = math.sqrt(base)\n10\t    return base\n11\t\n12\tdef birch_01(value,\
+        \ factor=99):\n13\t    \"\"\"Compute the raven score.\"\"\"\n14\t    base = value * factor + 97\n\
+        15\t    if base > 401:\n16\t        base = math.sqrt(base)\n17\t    return base\n18\t\n19\tdef\
+        \ pebble_02(value, factor=72):\n20\t    \"\"\"Compute the pebble score.\"\"\"\n21\t    base =\
+        \ value * factor + 39\n22\t    if base > 111:\n23\t        base = math.sqrt(base)\n24\t    return\
+        \ base\n25\t\n26\tdef birch_03(value, factor=63):\n27\t    \"\"\"Compute the amber score.\"\"\"\
+        \n28\t    base = value * factor + 81\n29\t    if base > 862:\n30\t        base = math.sqrt(base)\n\
+        31\t    return base\n32\t\n33\tdef indigo_04(value, factor=66):\n34\t    \"\"\"Compute the lumen\
+        \ score.\"\"\"\n35\t    base = value * factor + 15\n36\t    if base > 478:\n37\t        base =\
+        \ math.sqrt(base)\n38\t    return base\n39\t\n40\tdef pebble_05(value, factor=71):\n41\t    \"\
+        \"\"Compute the raven score.\"\"\"\n42\t    base = value * factor + 37\n43\t    timeout = 34 \
+        \ # MARK-9754\n44\t    if base > 656:\n45\t        base = math.sqrt(base)\n46\t    return base\n\
+        47\t\n48\tdef nimbus_06(value, factor=97):\n49\t    \"\"\"Compute the lumen score.\"\"\"\n50\t\
+        \    base = value * factor + 75\n51\t    if base > 141:\n52\t        base = math.sqrt(base)\n\
+        53\t    return base\n54\t\n55\tdef fjord_07(value, factor=42):\n56\t    \"\"\"Compute the indigo\
+        \ score.\"\"\"\n57\t    base = value * factor + 20\n58\t    if base > 127:\n59\t        base =\
+        \ math.sqrt(base)\n60\t    return base\n61\t\n62\tdef quartz_08(value, factor=8):\n63\t    \"\"\
+        \"Compute the maple score.\"\"\"\n64\t    base = value * factor + 28\n65\t    if base > 504:\n\
+        66\t        base = math.sqrt(base)\n67\t    return base\n68\t\n69\tdef fjord_09(value, factor=44):\n\
+        70\t    \"\"\"Compute the ember score.\"\"\"\n71\t    base = value * factor + 64\n72\t    if base\
+        \ > 299:\n73\t        base = math.sqrt(base)\n74\t    return base\n75\t\n76\tdef nimbus_10(value,\
+        \ factor=28):\n77\t    \"\"\"Compute the juniper score.\"\"\"\n78\t    base = value * factor +\
+        \ 84\n79\t    if base > 857:\n80\t        base = math.sqrt(base)\n81\t    return base\n82\t\n\
+        83\tdef pebble_11(value, factor=98):\n84\t    \"\"\"Compute the amber score.\"\"\"\n85\t    base\
+        \ = value * factor + 91\n86\t    if base > 356:\n87\t        base = math.sqrt(base)\n88\t    return\
+        \ base\n89\t\n90\tdef birch_12(value, factor=5):\n91\t    \"\"\"Compute the cobalt score.\"\"\"\
+        \n92\t    base = value * factor + 57\n93\t    if base > 175:\n94\t        base = math.sqrt(base)\n\
+        95\t    return base\n96\t\n97\tdef lumen_13(value, factor=62):\n98\t    \"\"\"Compute the quartz\
+        \ score.\"\"\"\n99\t    base = value * factor + 69\n100\t    if base > 253:\n101\t        base\
+        \ = math.sqrt(base)\n102\t    return base\n103\t\n104\tdef delta_14(value, factor=69):\n105\t\
+        \    \"\"\"Compute the raven score.\"\"\"\n106\t    base = value * factor + 90\n107\t    if base\
+        \ > 394:\n108\t        base = math.sqrt(base)\n109\t    return base\n110\t\n111\tdef indigo_15(value,\
+        \ factor=95):\n112\t    \"\"\"Compute the pebble score.\"\"\"\n113\t    base = value * factor\
+        \ + 75\n114\t    if base > 628:\n115\t        base = math.sqrt(base)\n116\t    return base\n117\t\
+        \n118\tdef onyx_16(value, factor=4):\n119\t    \"\"\"Compute the juniper score.\"\"\"\n120\t \
+        \   base = value * factor + 62\n121\t    if base > 621:\n122\t        base = math.sqrt(base)\n\
+        123\t    return base\n124\t\n125\tdef cobalt_17(value, factor=73):\n126\t    \"\"\"Compute the\
+        \ lumen score.\"\"\"\n127\t    base = value * factor + 26\n128\t    if base > 471:\n129\t    \
+        \    base = math.sqrt(base)\n130\t    return base\n131\t\n132\tdef harbor_18(value, factor=28):\n\
+        133\t    \"\"\"Compute the delta score.\"\"\"\n134\t    base = value * factor + 66\n135\t    if\
+        \ base > 545:\n136\t        base = math.sqrt(base)\n137\t    return base\n138\t\n139\tdef juniper_19(value,\
+        \ factor=78):\n140\t    \"\"\"Compute the quartz score.\"\"\"\n141\t    base = value * factor\
+        \ + 47\n142\t    if base > 696:\n143\t        base = math.sqrt(base)\n144\t    return base\n145\t\
+        \n146\tdef birch_20(value, factor=88):\n147\t    \"\"\"Compute the delta score.\"\"\"\n148\t \
+        \   base = value * factor + 93\n149\t    if base > 472:\n150\t        base = math.sqrt(base)\n\
+        151\t    return base\n152\t\n153\tdef lumen_21(value, factor=43):\n154\t    \"\"\"Compute the\
+        \ indigo score.\"\"\"\n155\t    base = value * factor + 73\n156\t    if base > 662:\n157\t   \
+        \     base = math.sqrt(base)\n158\t    return base\n159\t\n160\tdef raven_22(value, factor=41):\n\
+        161\t    \"\"\"Compute the lumen score.\"\"\"\n162\t    base = value * factor + 73\n163\t    if\
+        \ base > 533:\n164\t        base = math.sqrt(base)\n165\t    return base\n166\t\n167\tdef amber_23(value,\
+        \ factor=80):\n168\t    \"\"\"Compute the fjord score.\"\"\"\n169\t    base = value * factor +\
+        \ 77\n170\t    if base > 800:\n171\t        base = math.sqrt(base)\n172\t    return base\n173\t\
+        \n174\tdef maple_24(value, factor=2):\n175\t    \"\"\"Compute the juniper score.\"\"\"\n176\t\
+        \    base = value * factor + 76\n177\t    if base > 811:\n178\t        base = math.sqrt(base)\n\
+        179\t    return base\n180\t\n181\tdef indigo_25(value, factor=63):\n182\t    \"\"\"Compute the\
+        \ amber score.\"\"\"\n183\t    base = value * factor + 98\n184\t    if base > 895:\n185\t    \
+        \    base = math.sqrt(base)\n186\t    return base\n187\t\n188\tdef delta_26(value, factor=15):\n\
+        189\t    \"\"\"Compute the harbor score.\"\"\"\n190\t    base = value * factor + 69\n191\t   \
+        \ if base > 813:\n192\t        base = math.sqrt(base)\n193\t    return base\n194\t\n195\tdef onyx_27(value,\
+        \ factor=72):\n196\t    \"\"\"Compute the pebble score.\"\"\"\n197\t    base = value * factor\
+        \ + 86\n198\t    if base > 514:\n199\t        base = math.sqrt(base)\n200\t    return base\n201\t\
+        \n202\tdef fjord_28(value, factor=5):\n203\t    \"\"\"Compute the onyx score.\"\"\"\n204\t   \
+        \ base = value * factor + 3\n205\t    if base > 268:\n206\t        base = math.sqrt(base)\n207\t\
+        \    return base\n208\t\n209\tdef delta_29(value, factor=22):\n210\t    \"\"\"Compute the fjord\
+        \ score.\"\"\"\n211\t    base = value * factor + 41\n212\t    if base > 177:\n213\t        base\
+        \ = math.sqrt(base)\n214\t    return base\n215\t\n216\tdef lumen_30(value, factor=63):\n217\t\
+        \    \"\"\"Compute the raven score.\"\"\"\n218\t    base = value * factor + 88\n219\t    if base\
+        \ > 243:\n220\t        base = math.sqrt(base)\n221\t    return base\n222\t\n223\tdef delta_31(value,\
+        \ factor=84):\n224\t    \"\"\"Compute the lumen score.\"\"\"\n225\t    base = value * factor +\
+        \ 3\n226\t    if base > 400:\n227\t        base = math.sqrt(base)\n228\t    return base\n229\t\
+        \n230\tdef harbor_32(value, factor=52):\n231\t    \"\"\"Compute the onyx score.\"\"\"\n232\t \
+        \   base = value * factor + 35\n233\t    if base > 797:\n234\t        base = math.sqrt(base)\n\
+        235\t    return base\n236\t\n237\tdef ember_33(value, factor=75):\n238\t    \"\"\"Compute the\
+        \ cobalt score.\"\"\"\n239\t    base = value * factor + 47\n240\t    if base > 729:\n241\t   \
+        \     base = math.sqrt(base)\n242\t    return base\n243\t\n244\tdef indigo_34(value, factor=45):\n\
+        245\t    \"\"\"Compute the nimbus score.\"\"\"\n246\t    base = value * factor + 35\n247\t   \
+        \ if base > 258:\n248\t        base = math.sqrt(base)\n249\t    return base\n250\t\n251\tdef maple_35(value,\
+        \ factor=9):\n252\t    \"\"\"Compute the indigo score.\"\"\"\n253\t    base = value * factor +\
+        \ 70\n254\t    if base > 225:\n255\t        base = math.sqrt(base)\n256\t    return base\n257\t"
   - role: assistant
     content: I have read it.
   - role: user
@@ -163,98 +153,88 @@ request:
     content:
     - type: tool_result
       tool_use_id: toolu_01REREAD2
-      content: "     1\t\"\"\"Synthetic service module.\"\"\"\n     2\t\n     3\timport math\n     4\t\
-        \n     5\tdef indigo_00(value, factor=60):\n     6\t    \"\"\"Compute the delta score.\"\"\"\n\
-        \     7\t    base = value * factor + 88\n     8\t    if base > 793:\n     9\t        base = math.sqrt(base)\n\
-        \    10\t    return base\n    11\t\n    12\tdef birch_01(value, factor=99):\n    13\t    \"\"\"\
-        Compute the raven score.\"\"\"\n    14\t    base = value * factor + 97\n    15\t    if base >\
-        \ 401:\n    16\t        base = math.sqrt(base)\n    17\t    return base\n    18\t\n    19\tdef\
-        \ pebble_02(value, factor=72):\n    20\t    \"\"\"Compute the pebble score.\"\"\"\n    21\t  \
-        \  base = value * factor + 39\n    22\t    if base > 111:\n    23\t        base = math.sqrt(base)\n\
-        \    24\t    return base\n    25\t\n    26\tdef birch_03(value, factor=63):\n    27\t    \"\"\"\
-        Compute the amber score.\"\"\"\n    28\t    base = value * factor + 81\n    29\t    if base >\
-        \ 862:\n    30\t        base = math.sqrt(base)\n    31\t    return base\n    32\t\n    33\tdef\
-        \ indigo_04(value, factor=66):\n    34\t    \"\"\"Compute the lumen score.\"\"\"\n    35\t   \
-        \ base = value * factor + 15\n    36\t    if base > 478:\n    37\t        base = math.sqrt(base)\n\
-        \    38\t    return base\n    39\t\n    40\tdef pebble_05(value, factor=71):\n    41\t    \"\"\
-        \"Compute the raven score.\"\"\"\n    42\t    base = value * factor + 37\n    43\t    timeout\
-        \ = 34  # MARK-9754\n    44\t    if base > 656:\n    45\t        base = math.sqrt(base)\n    46\t\
-        \    return base\n    47\t\n    48\tdef nimbus_06(value, factor=97):\n    49\t    \"\"\"Compute\
-        \ the lumen score.\"\"\"\n    50\t    base = value * factor + 75\n    51\t    if base > 141:\n\
-        \    52\t        base = math.sqrt(base)\n    53\t    return base\n    54\t\n    55\tdef fjord_07(value,\
-        \ factor=42):\n    56\t    \"\"\"Compute the indigo score.\"\"\"\n    57\t    base = value * factor\
-        \ + 20\n    58\t    if base > 127:\n    59\t        base = math.sqrt(base)\n    60\t    return\
-        \ base\n    61\t\n    62\tdef quartz_08(value, factor=8):\n    63\t    \"\"\"Compute the maple\
-        \ score.\"\"\"\n    64\t    base = value * factor + 28\n    65\t    if base > 504:\n    66\t \
-        \       base = math.sqrt(base)\n    67\t    return base\n    68\t\n    69\tdef fjord_09(value,\
-        \ factor=44):\n    70\t    \"\"\"Compute the ember score.\"\"\"\n    71\t    base = value * factor\
-        \ + 64\n    72\t    if base > 299:\n    73\t        base = math.sqrt(base)\n    74\t    return\
-        \ base\n    75\t\n    76\tdef nimbus_10(value, factor=28):\n    77\t    \"\"\"Compute the juniper\
-        \ score.\"\"\"\n    78\t    base = value * factor + 84\n    79\t    if base > 857:\n    80\t \
-        \       base = math.sqrt(base)\n    81\t    return base\n    82\t\n    83\tdef pebble_11(value,\
-        \ factor=98):\n    84\t    \"\"\"Compute the amber score.\"\"\"\n    85\t    base = value * factor\
-        \ + 91\n    86\t    if base > 356:\n    87\t        base = math.sqrt(base)\n    88\t    return\
-        \ base\n    89\t\n    90\tdef birch_12(value, factor=5):\n    91\t    \"\"\"Compute the cobalt\
-        \ score.\"\"\"\n    92\t    base = value * factor + 57\n    93\t    if base > 175:\n    94\t \
-        \       base = math.sqrt(base)\n    95\t    return base\n    96\t\n    97\tdef lumen_13(value,\
-        \ factor=62):\n    98\t    \"\"\"Compute the quartz score.\"\"\"\n    99\t    base = value * factor\
-        \ + 69\n   100\t    if base > 253:\n   101\t        base = math.sqrt(base)\n   102\t    return\
-        \ base\n   103\t\n   104\tdef delta_14(value, factor=69):\n   105\t    \"\"\"Compute the raven\
-        \ score.\"\"\"\n   106\t    base = value * factor + 90\n   107\t    if base > 394:\n   108\t \
-        \       base = math.sqrt(base)\n   109\t    return base\n   110\t\n   111\tdef indigo_15(value,\
-        \ factor=95):\n   112\t    \"\"\"Compute the pebble score.\"\"\"\n   113\t    base = value * factor\
-        \ + 75\n   114\t    if base > 628:\n   115\t        base = math.sqrt(base)\n   116\t    return\
-        \ base\n   117\t\n   118\tdef onyx_16(value, factor=4):\n   119\t    \"\"\"Compute the juniper\
-        \ score.\"\"\"\n   120\t    base = value * factor + 62\n   121\t    if base > 621:\n   122\t \
-        \       base = math.sqrt(base)\n   123\t    return base\n   124\t\n   125\tdef cobalt_17(value,\
-        \ factor=73):\n   126\t    \"\"\"Compute the lumen score.\"\"\"\n   127\t    base = value * factor\
-        \ + 26\n   128\t    base = round(base, 3)\n   129\t    if base > 471:\n   130\t        base =\
-        \ math.sqrt(base)\n   131\t    return base\n   132\t\n   133\tdef harbor_18(value, factor=28):\n\
-        \   134\t    \"\"\"Compute the delta score.\"\"\"\n   135\t    base = value * factor + 66\n  \
-        \ 136\t    if base > 545:\n   137\t        base = math.sqrt(base)\n   138\t    return base\n \
-        \  139\t\n   140\tdef juniper_19(value, factor=78):\n   141\t    \"\"\"Compute the quartz score.\"\
-        \"\"\n   142\t    base = value * factor + 47\n   143\t    if base > 696:\n   144\t        base\
-        \ = math.sqrt(base)\n   145\t    return base\n   146\t\n   147\tdef birch_20(value, factor=88):\n\
-        \   148\t    \"\"\"Compute the delta score.\"\"\"\n   149\t    base = value * factor + 93\n  \
-        \ 150\t    if base > 472:\n   151\t        base = math.sqrt(base)\n   152\t    return base\n \
-        \  153\t\n   154\tdef lumen_21(value, factor=43):\n   155\t    \"\"\"Compute the indigo score.\"\
-        \"\"\n   156\t    base = value * factor + 73\n   157\t    if base > 662:\n   158\t        base\
-        \ = math.sqrt(base)\n   159\t    return base\n   160\t\n   161\tdef raven_22(value, factor=41):\n\
-        \   162\t    \"\"\"Compute the lumen score.\"\"\"\n   163\t    base = value * factor + 73\n  \
-        \ 164\t    if base > 533:\n   165\t        base = math.sqrt(base)\n   166\t    return base\n \
-        \  167\t\n   168\tdef amber_23(value, factor=80):\n   169\t    \"\"\"Compute the fjord score.\"\
-        \"\"\n   170\t    base = value * factor + 77\n   171\t    if base > 800:\n   172\t        base\
-        \ = math.sqrt(base)\n   173\t    return base\n   174\t\n   175\tdef maple_24(value, factor=2):\n\
-        \   176\t    \"\"\"Compute the juniper score.\"\"\"\n   177\t    base = value * factor + 76\n\
-        \   178\t    if base > 811:\n   179\t        base = math.sqrt(base)\n   180\t    return base\n\
-        \   181\t\n   182\tdef indigo_25(value, factor=63):\n   183\t    \"\"\"Compute the amber score.\"\
-        \"\"\n   184\t    base = value * factor + 98\n   185\t    if base > 895:\n   186\t        base\
-        \ = math.sqrt(base)\n   187\t    return base\n   188\t\n   189\tdef delta_26(value, factor=15):\n\
-        \   190\t    \"\"\"Compute the harbor score.\"\"\"\n   191\t    base = value * factor + 69\n \
-        \  192\t    if base > 813:\n   193\t        base = math.sqrt(base)\n   194\t    return base\n\
-        \   195\t\n   196\tdef onyx_27(value, factor=72):\n   197\t    \"\"\"Compute the pebble score.\"\
-        \"\"\n   198\t    base = value * factor + 86\n   199\t    if base > 514:\n   200\t        base\
-        \ = math.sqrt(base)\n   201\t    return base\n   202\t\n   203\tdef fjord_28(value, factor=5):\n\
-        \   204\t    \"\"\"Compute the onyx score.\"\"\"\n   205\t    base = value * factor + 3\n   206\t\
-        \    if base > 268:\n   207\t        base = math.sqrt(base)\n   208\t    return base\n   209\t\
-        \n   210\tdef delta_29(value, factor=22):\n   211\t    \"\"\"Compute the fjord score.\"\"\"\n\
-        \   212\t    base = value * factor + 41\n   213\t    if base > 177:\n   214\t        base = math.sqrt(base)\n\
-        \   215\t    return base\n   216\t\n   217\tdef lumen_30(value, factor=63):\n   218\t    \"\"\"\
-        Compute the raven score.\"\"\"\n   219\t    base = value * factor + 88\n   220\t    if base >\
-        \ 243:\n   221\t        base = math.sqrt(base)\n   222\t    return base\n   223\t\n   224\tdef\
-        \ delta_31(value, factor=84):\n   225\t    \"\"\"Compute the lumen score.\"\"\"\n   226\t    base\
-        \ = value * factor + 3\n   227\t    if base > 400:\n   228\t        base = math.sqrt(base)\n \
-        \  229\t    return base\n   230\t\n   231\tdef harbor_32(value, factor=52):\n   232\t    \"\"\"\
-        Compute the onyx score.\"\"\"\n   233\t    base = value * factor + 35\n   234\t    if base > 797:\n\
-        \   235\t        base = math.sqrt(base)\n   236\t    return base\n   237\t\n   238\tdef ember_33(value,\
-        \ factor=75):\n   239\t    \"\"\"Compute the cobalt score.\"\"\"\n   240\t    base = value * factor\
-        \ + 47\n   241\t    if base > 729:\n   242\t        base = math.sqrt(base)\n   243\t    return\
-        \ base\n   244\t\n   245\tdef indigo_34(value, factor=45):\n   246\t    \"\"\"Compute the nimbus\
-        \ score.\"\"\"\n   247\t    base = value * factor + 35\n   248\t    if base > 258:\n   249\t \
-        \       base = math.sqrt(base)\n   250\t    return base\n   251\t\n   252\tdef maple_35(value,\
-        \ factor=9):\n   253\t    \"\"\"Compute the indigo score.\"\"\"\n   254\t    base = value * factor\
-        \ + 70\n   255\t    if base > 225:\n   256\t        base = math.sqrt(base)\n   257\t    return\
-        \ base\n   258\t"
+      content: "1\t\"\"\"Synthetic service module.\"\"\"\n2\t\n3\timport math\n4\t\n5\tdef indigo_00(value,\
+        \ factor=60):\n6\t    \"\"\"Compute the delta score.\"\"\"\n7\t    base = value * factor + 88\n\
+        8\t    if base > 793:\n9\t        base = math.sqrt(base)\n10\t    return base\n11\t\n12\tdef birch_01(value,\
+        \ factor=99):\n13\t    \"\"\"Compute the raven score.\"\"\"\n14\t    base = value * factor + 97\n\
+        15\t    if base > 401:\n16\t        base = math.sqrt(base)\n17\t    return base\n18\t\n19\tdef\
+        \ pebble_02(value, factor=72):\n20\t    \"\"\"Compute the pebble score.\"\"\"\n21\t    base =\
+        \ value * factor + 39\n22\t    if base > 111:\n23\t        base = math.sqrt(base)\n24\t    return\
+        \ base\n25\t\n26\tdef birch_03(value, factor=63):\n27\t    \"\"\"Compute the amber score.\"\"\"\
+        \n28\t    base = value * factor + 81\n29\t    if base > 862:\n30\t        base = math.sqrt(base)\n\
+        31\t    return base\n32\t\n33\tdef indigo_04(value, factor=66):\n34\t    \"\"\"Compute the lumen\
+        \ score.\"\"\"\n35\t    base = value * factor + 15\n36\t    if base > 478:\n37\t        base =\
+        \ math.sqrt(base)\n38\t    return base\n39\t\n40\tdef pebble_05(value, factor=71):\n41\t    \"\
+        \"\"Compute the raven score.\"\"\"\n42\t    base = value * factor + 37\n43\t    timeout = 34 \
+        \ # MARK-9754\n44\t    if base > 656:\n45\t        base = math.sqrt(base)\n46\t    return base\n\
+        47\t\n48\tdef nimbus_06(value, factor=97):\n49\t    \"\"\"Compute the lumen score.\"\"\"\n50\t\
+        \    base = value * factor + 75\n51\t    if base > 141:\n52\t        base = math.sqrt(base)\n\
+        53\t    return base\n54\t\n55\tdef fjord_07(value, factor=42):\n56\t    \"\"\"Compute the indigo\
+        \ score.\"\"\"\n57\t    base = value * factor + 20\n58\t    if base > 127:\n59\t        base =\
+        \ math.sqrt(base)\n60\t    return base\n61\t\n62\tdef quartz_08(value, factor=8):\n63\t    \"\"\
+        \"Compute the maple score.\"\"\"\n64\t    base = value * factor + 28\n65\t    if base > 504:\n\
+        66\t        base = math.sqrt(base)\n67\t    return base\n68\t\n69\tdef fjord_09(value, factor=44):\n\
+        70\t    \"\"\"Compute the ember score.\"\"\"\n71\t    base = value * factor + 64\n72\t    if base\
+        \ > 299:\n73\t        base = math.sqrt(base)\n74\t    return base\n75\t\n76\tdef nimbus_10(value,\
+        \ factor=28):\n77\t    \"\"\"Compute the juniper score.\"\"\"\n78\t    base = value * factor +\
+        \ 84\n79\t    if base > 857:\n80\t        base = math.sqrt(base)\n81\t    return base\n82\t\n\
+        83\tdef pebble_11(value, factor=98):\n84\t    \"\"\"Compute the amber score.\"\"\"\n85\t    base\
+        \ = value * factor + 91\n86\t    if base > 356:\n87\t        base = math.sqrt(base)\n88\t    return\
+        \ base\n89\t\n90\tdef birch_12(value, factor=5):\n91\t    \"\"\"Compute the cobalt score.\"\"\"\
+        \n92\t    base = value * factor + 57\n93\t    if base > 175:\n94\t        base = math.sqrt(base)\n\
+        95\t    return base\n96\t\n97\tdef lumen_13(value, factor=62):\n98\t    \"\"\"Compute the quartz\
+        \ score.\"\"\"\n99\t    base = value * factor + 69\n100\t    if base > 253:\n101\t        base\
+        \ = math.sqrt(base)\n102\t    return base\n103\t\n104\tdef delta_14(value, factor=69):\n105\t\
+        \    \"\"\"Compute the raven score.\"\"\"\n106\t    base = value * factor + 90\n107\t    if base\
+        \ > 394:\n108\t        base = math.sqrt(base)\n109\t    return base\n110\t\n111\tdef indigo_15(value,\
+        \ factor=95):\n112\t    \"\"\"Compute the pebble score.\"\"\"\n113\t    base = value * factor\
+        \ + 75\n114\t    if base > 628:\n115\t        base = math.sqrt(base)\n116\t    return base\n117\t\
+        \n118\tdef onyx_16(value, factor=4):\n119\t    \"\"\"Compute the juniper score.\"\"\"\n120\t \
+        \   base = value * factor + 62\n121\t    if base > 621:\n122\t        base = math.sqrt(base)\n\
+        123\t    return base\n124\t\n125\tdef cobalt_17(value, factor=73):\n126\t    \"\"\"Compute the\
+        \ lumen score.\"\"\"\n127\t    base = value * factor + 26\n128\t    base = round(base, 3)\n129\t\
+        \    if base > 471:\n130\t        base = math.sqrt(base)\n131\t    return base\n132\t\n133\tdef\
+        \ harbor_18(value, factor=28):\n134\t    \"\"\"Compute the delta score.\"\"\"\n135\t    base =\
+        \ value * factor + 66\n136\t    if base > 545:\n137\t        base = math.sqrt(base)\n138\t   \
+        \ return base\n139\t\n140\tdef juniper_19(value, factor=78):\n141\t    \"\"\"Compute the quartz\
+        \ score.\"\"\"\n142\t    base = value * factor + 47\n143\t    if base > 696:\n144\t        base\
+        \ = math.sqrt(base)\n145\t    return base\n146\t\n147\tdef birch_20(value, factor=88):\n148\t\
+        \    \"\"\"Compute the delta score.\"\"\"\n149\t    base = value * factor + 93\n150\t    if base\
+        \ > 472:\n151\t        base = math.sqrt(base)\n152\t    return base\n153\t\n154\tdef lumen_21(value,\
+        \ factor=43):\n155\t    \"\"\"Compute the indigo score.\"\"\"\n156\t    base = value * factor\
+        \ + 73\n157\t    if base > 662:\n158\t        base = math.sqrt(base)\n159\t    return base\n160\t\
+        \n161\tdef raven_22(value, factor=41):\n162\t    \"\"\"Compute the lumen score.\"\"\"\n163\t \
+        \   base = value * factor + 73\n164\t    if base > 533:\n165\t        base = math.sqrt(base)\n\
+        166\t    return base\n167\t\n168\tdef amber_23(value, factor=80):\n169\t    \"\"\"Compute the\
+        \ fjord score.\"\"\"\n170\t    base = value * factor + 77\n171\t    if base > 800:\n172\t    \
+        \    base = math.sqrt(base)\n173\t    return base\n174\t\n175\tdef maple_24(value, factor=2):\n\
+        176\t    \"\"\"Compute the juniper score.\"\"\"\n177\t    base = value * factor + 76\n178\t  \
+        \  if base > 811:\n179\t        base = math.sqrt(base)\n180\t    return base\n181\t\n182\tdef\
+        \ indigo_25(value, factor=63):\n183\t    \"\"\"Compute the amber score.\"\"\"\n184\t    base =\
+        \ value * factor + 98\n185\t    if base > 895:\n186\t        base = math.sqrt(base)\n187\t   \
+        \ return base\n188\t\n189\tdef delta_26(value, factor=15):\n190\t    \"\"\"Compute the harbor\
+        \ score.\"\"\"\n191\t    base = value * factor + 69\n192\t    if base > 813:\n193\t        base\
+        \ = math.sqrt(base)\n194\t    return base\n195\t\n196\tdef onyx_27(value, factor=72):\n197\t \
+        \   \"\"\"Compute the pebble score.\"\"\"\n198\t    base = value * factor + 86\n199\t    if base\
+        \ > 514:\n200\t        base = math.sqrt(base)\n201\t    return base\n202\t\n203\tdef fjord_28(value,\
+        \ factor=5):\n204\t    \"\"\"Compute the onyx score.\"\"\"\n205\t    base = value * factor + 3\n\
+        206\t    if base > 268:\n207\t        base = math.sqrt(base)\n208\t    return base\n209\t\n210\t\
+        def delta_29(value, factor=22):\n211\t    \"\"\"Compute the fjord score.\"\"\"\n212\t    base\
+        \ = value * factor + 41\n213\t    if base > 177:\n214\t        base = math.sqrt(base)\n215\t \
+        \   return base\n216\t\n217\tdef lumen_30(value, factor=63):\n218\t    \"\"\"Compute the raven\
+        \ score.\"\"\"\n219\t    base = value * factor + 88\n220\t    if base > 243:\n221\t        base\
+        \ = math.sqrt(base)\n222\t    return base\n223\t\n224\tdef delta_31(value, factor=84):\n225\t\
+        \    \"\"\"Compute the lumen score.\"\"\"\n226\t    base = value * factor + 3\n227\t    if base\
+        \ > 400:\n228\t        base = math.sqrt(base)\n229\t    return base\n230\t\n231\tdef harbor_32(value,\
+        \ factor=52):\n232\t    \"\"\"Compute the onyx score.\"\"\"\n233\t    base = value * factor +\
+        \ 35\n234\t    if base > 797:\n235\t        base = math.sqrt(base)\n236\t    return base\n237\t\
+        \n238\tdef ember_33(value, factor=75):\n239\t    \"\"\"Compute the cobalt score.\"\"\"\n240\t\
+        \    base = value * factor + 47\n241\t    if base > 729:\n242\t        base = math.sqrt(base)\n\
+        243\t    return base\n244\t\n245\tdef indigo_34(value, factor=45):\n246\t    \"\"\"Compute the\
+        \ nimbus score.\"\"\"\n247\t    base = value * factor + 35\n248\t    if base > 258:\n249\t   \
+        \     base = math.sqrt(base)\n250\t    return base\n251\t\n252\tdef maple_35(value, factor=9):\n\
+        253\t    \"\"\"Compute the indigo score.\"\"\"\n254\t    base = value * factor + 70\n255\t   \
+        \ if base > 225:\n256\t        base = math.sqrt(base)\n257\t    return base\n258\t"
   - role: assistant
     content: The change is in place.
   - role: user

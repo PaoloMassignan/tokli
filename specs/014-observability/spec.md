@@ -20,7 +20,7 @@ Approved for S2 (2026-10-02): OB-011 (calibration outliers), OB-012 (persisted),
 | OB-010 | THE SYSTEM SHALL emit one INFO summary log line per request (JSON by default) containing request_id, provider, model, outcome, reason, tokens (with methods), status and overhead. |
 | OB-012 | THE trace and the persisted `RequestRecord` (`header_names`) SHALL record the **names** of the client's request headers (lower-cased, sorted) and SHALL NOT record any header value. |
 | OB-013 | WHERE `observability.log_file` is true, THE SYSTEM SHALL also write log lines as JSON to `<data dir>/logs/tokli.log`, UTF-8 with LF line endings, rotating at 10 MB and keeping 5 files. IF writing or rotating the file fails, THEN THE SYSTEM SHALL keep serving and keep logging to stderr. |
-| OB-011 | THE `GET /tokli/health` endpoint SHALL report `degraded` with named checks when a sink fails, an enabled compressor is unavailable, or calibration outliers exceed 20 % of the last 100 requests for which `k` was computed (with fewer than 20 such requests the check is `ok`). |
+| OB-011 | THE `GET /tokli/health` endpoint SHALL report `degraded` with named checks when a sink fails, an enabled compressor is unavailable, or calibration outliers exceed 20 % of the last 100 requests for which `k` was computed (with fewer than 20 such requests the check is `ok`). It SHALL also report the informational check `applicability`, `ok` or `not_applying: <ids>` (TC-021, over the last 7 days), which never makes the status `degraded`. (S8h P3.) |
 
 ## Acceptance criteria
 - AC-OB-1: a single request produces log lines, a trace and DB rows sharing one request_id, and the client sees it in the header.

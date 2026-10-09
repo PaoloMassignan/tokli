@@ -24,7 +24,7 @@ Every compressor here is a registry entry satisfying SPEC 009. Common engine-lev
 | `superseded_tool_results` | SELECTIVE | none | request | **no** | supersession stub | switched off | no | S8a-3 |
 | `diff_context_trim` | SELECTIVE | none | segment | yes | omission note | switched off | no | S8a-2 |
 | `log_filter` | SELECTIVE | none | segment | yes | omission note | switched off | no | S8a-1 |
-| `reread_by_reference` | LOSSLESS | reference | request | yes | line-range notes | kept on | **yes**: smoke record `no_measurable_damage` on `claude-opus-5-5` (2026-10-04; CC-020) | S8e (SPEC 019) |
+| `reread_by_reference` | LOSSLESS | reference | request | yes | line-range notes | kept on | **yes**: version 2 smoke record `no_measurable_damage` on `claude-opus-5-5` (2026-10-09; S8h; CC-020) | S8e, S8h (SPEC 019) |
 | `edit_args_on_resume` | SELECTIVE | none | request | **no** (prunes only when the cache is rewritten anyway) | edit-omitted stub | switched off | no | S8c (SPEC 019) |
 
 ### Assumption ids (behavioural; each is an evaluation case family in SPEC 012)
@@ -43,8 +43,8 @@ Every compressor here is a registry entry satisfying SPEC 009. Common engine-lev
 | `reads_partial_reference` | The model reads a re-read file as its changed lines plus the earlier lines that the notes name. | `reread_by_reference` (S8e) |
 | `edit_content_not_needed` | Hours after writing or editing a file, the agent does not need the exact text it wrote; when it needs the file it reads it again. | `edit_args_on_resume` (S8c) |
 
-Default `compression.verbatim_tools` (HEURISTIC, config data): `["Read", "Bash", "shell",
-"shell_command", "container.exec"]`. These are tool results that agents are likely to quote back
+Default `compression.verbatim_tools` (HEURISTIC, config data): `["Read", "Bash", "PowerShell",
+"shell", "shell_command", "container.exec"]` (`PowerShell` since S8h SCR-002). These are tool results that agents are likely to quote back
 verbatim (file contents, command output reused in edits). E8 revises the list. A compressor that
 declares the option `apply_to_verbatim_tools` can be applied to these tools too, when the user
 sets the option (default false; CC-021 after S8a SCR-001). In S8a-1 `search_group` and

@@ -43,7 +43,8 @@
           "avg_ms",
           "tokens_saved_per_ms",
           "latency_without_benefit",
-          "money_saved"
+          "money_saved",
+          "not_applying"
         ],
         "properties": {
           "compressor_id": {
@@ -102,6 +103,25 @@
           },
           "money_saved": {
             "$ref": "definitions.schema.json#/$defs/money_figure"
+          },
+          "not_applying": {
+            "type": "object",
+            "required": [
+              "flag",
+              "reason"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "flag": {
+                "type": "boolean"
+              },
+              "reason": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
           }
         }
       }

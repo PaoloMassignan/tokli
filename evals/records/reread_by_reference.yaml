@@ -1,11 +1,11 @@
 # Evaluation record (SPEC 012, QE-016), written by `tokli eval smoke`.
 compressor: reread_by_reference
-version: '1'
+version: '2'
 tier: smoke
 assumptions_covered:
 - quotes_from_reference_target
 - reads_partial_reference
 verdict: no_measurable_damage
 model: claude-opus-5-5
-date: '2026-10-04'
-report: results/2026-10-04-reread_by_reference-claude-opus-5-5/report.md
+date: '2026-10-09'
+report: results/2026-10-09-reread_by_reference-claude-opus-5-5/report.md

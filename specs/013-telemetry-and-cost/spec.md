@@ -5,6 +5,7 @@ Approved for S1 (2026-09-30): TC-001, TC-002, TC-003, TC-010, TC-011, TC-012, TC
 Approved for S2 (2026-10-02): TC-001 usage, calibration and whole-request estimate fields; TC-012 schema v2.
 Approved for S3 (2026-10-03): TC-013, TC-015, TC-016.
 Approved for S4 (2026-10-03): TC-014 `reference_stubs` filled.
+Approved for S8h (2026-10-09): TC-021, AC-TC-17.
 Approved for S6 (2026-10-04): TC-004…TC-009, TC-017…TC-020; AC-TC-3…AC-TC-5, AC-TC-13…AC-TC-16; schema v4 (ADR 0014).
 
 ## Purpose
@@ -31,6 +32,7 @@ at what latency, and roughly how much money", without storing content.
 | TC-014 | THE `RequestRecord` SHALL carry `history_rewritten` (PR-009) and the count of reference stubs forwarded (`reference_stubs`). |
 | TC-015 | THE metrics API SHALL compute token totals over requests of transformable endpoints only (verbatim routes count in request totals by outcome, never in token figures), from per-request best figures: forwarded = provider input total (input + cache read + cache writes) when usage exists, else the whole-request estimate; saving = calibrated when an in-range `k` exists, else the estimate; original = forwarded + saving; saving % = saving / original. A total SHALL be labelled `exact` or `calibrated` only when every contributing figure has that method; otherwise it SHALL be labelled `estimate` and carry `calibrated_share` (or `exact_share`), the share of the total with the stronger method. |
 | TC-016 | THE per-compressor aggregates SHALL follow TOKLI_TELEMETRY_AND_COST §3: zero-benefit rate = (applicable − accepted) / applicable; failure rate = failed / applicable; share = marginal saved / total saved; average saving % per accepted call; tokens saved per ms = marginal saved / `ms_total`. A rate whose denominator is 0 SHALL be `{value: null, reason}`. A compressor with ≥ 90 % zero-benefit, ≥ 1 ms average latency and ≥ 100 applicable invocations SHALL carry the flag `latency_without_benefit`. |
+| TC-021 | THE per-compressor aggregates SHALL carry the flag `not_applying` with its main skip reason WHEN an enabled compressor was considered at least 200 times in the range and was applicable in none of them, OR WHEN a format reason (`nonstandard_numbering`, `not_json`, `too_few_grep_lines`, `too_few_leveled_lines`) accounts for more than 50 % of its considered invocations. The thresholds are POLICY, provisional. (S8h P3.) |
 | TC-017 | WHEN a compressed request completes with provider usage, a whole-request estimate and an in-range `k`, THE SYSTEM SHALL record its estimated saving split into the three usage regions (`saved_cache_read`, `saved_cache_write`, `saved_input`, estimate units), for the request and for each compressor stats row. Each changed segment SHALL be placed at its offset in the forwarded request in provider order (tool definitions, system, messages), and the region sizes SHALL be the usage categories divided by `k`, in the order cache read, cache write, uncached input. A segment that straddles a boundary SHALL be split in proportion to its forwarded length on each side. The three parts SHALL sum exactly to the saving they split. Otherwise the split SHALL be null. (S6, P1, P2.) |
 | TC-018 | THE SYSTEM SHALL ship a price book with dated, sourced entries for the Anthropic models, AND SHALL read an optional user price book at `<data>/price-book.yaml` in the same format, whose entries take precedence over the shipped ones. An invalid user price book SHALL be a startup error naming the file and the problem. THE doctor SHALL report the shipped price-book version and whether a user price book is active, with its version. (S6, P4, P5.) |
 | TC-019 | WHEN a request's credential is OAuth (a subscription), THE money figures that include it SHALL carry `basis: "api_equivalent"`, and THE dashboard SHALL label them "value at API prices"; otherwise `basis: "billed"`, labelled "estimated money saved". (S6, P3.) |
@@ -51,6 +53,7 @@ at what latency, and roughly how much money", without storing content.
 - AC-TC-14 (TC-018): a user price book with another price for a model changes that model's cost and no other; an invalid user price book stops startup with the file and the problem; the doctor names both versions.
 - AC-TC-15 (TC-019): a range with one OAuth request gives `basis: "api_equivalent"`; a range of API-key requests gives `billed`.
 - AC-TC-16 (TC-020): for hand-built records the caveat counts are hand-computed.
+- AC-TC-17 (TC-021): for hand-built stats rows, a compressor considered 200 times and applicable 0 times carries `not_applying` with its main skip reason; one applicable once does not; one whose `nonstandard_numbering` share is 60 % carries it.
 - AC-TC-6: a read-only DB file → the request succeeds, health is `degraded`, and one warning is logged.
 
 ## Test scenarios

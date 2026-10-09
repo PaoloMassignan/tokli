@@ -1,6 +1,6 @@
 Tokli doctor (normalized)
 
-Configuration  hash e31fb4def846f90c
+Configuration  hash 0c0a3b7aa2b19945
   server.host = "127.0.0.1"  [default]
   server.port = 8787  [default]
   server.allow_remote = false  [default]
@@ -11,7 +11,7 @@ Configuration  hash e31fb4def846f90c
   limits.max_transform_bytes = 33554432  [default]
   limits.usage_parser_buffer = 1048576  [default]
   compression.segment_kinds = ["TOOL_RESULT", "USER_TEXT"]  [default]
-  compression.verbatim_tools = ["Read", "Bash", "shell", "shell_command", "container.exec"]  [default]
+  compression.verbatim_tools = ["Read", "Bash", "PowerShell", "shell", "shell_command", "container.exec"]  [default]
   compression.min_segment_tokens = 64  [default]
   compression.min_gain_tokens = 4  [default]
   compression.min_gain_ratio = 0.01  [default]
@@ -56,7 +56,7 @@ Compressors
   search_group  v2  LOSSLESS  disabled  available
   log_filter  v1  SELECTIVE  disabled  available
   edit_args_on_resume  v1  SELECTIVE  disabled  available
-  reread_by_reference  v1  LOSSLESS  enabled  available
+  reread_by_reference  v2  LOSSLESS  enabled  available
 
 Tokenizers
   o200k_base  missing  tiktoken:o200k_base@446a9538cb6c

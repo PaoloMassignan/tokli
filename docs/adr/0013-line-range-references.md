@@ -72,3 +72,21 @@ the request decodes, and what must stay intact.
 - **Portability:** `"\n"` separated lines; a trailing `"\r"` is part of the content and must
   match.
 - **Migration:** none (new keys, new compressor, off by default).
+
+## Amendment 2026-10-09 (S8h SCR-001)
+
+**Numbered results** now come in two styles:
+- `"{n:>6}\t"` (`cat -n`);
+- `"{n}\t"`, the numbering Claude Code's `Read` really sends. The human's sessions showed only
+  this style.
+
+**Rules:**
+- The style is part of the parsed block. Kept lines, and lines rebuilt by decoding, use the
+  result's own style.
+- When the style cannot be recovered from the replaced result and its source (a `Write` source
+  with every line noted), the result is not replaced (`ambiguous_numbering`).
+- The pruner checks its own decode before proposing.
+- `reread_by_reference` goes to version 2.
+
+**Lesson recorded in S8h:** the format had been assumed from `cat -n` and never checked against
+real traffic. S8h adds format fixtures, a `not_applying` flag and a real-traffic replay.

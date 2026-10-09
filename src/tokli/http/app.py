@@ -118,6 +118,18 @@ def create_app(services: Services, listen: str | None = None) -> ASGIApp:
         else None
     )
 
+    def applicability() -> str:
+        """Compressors that do not apply to the last 7 days of traffic (TC-021); never makes
+        the status `degraded`."""
+        if metrics is None:
+            return "unavailable"
+        try:
+            rows = metrics.compressors(parse_filters({}))["compressors"]
+        except Exception:  # a failing query never breaks health (API-011)
+            return "unavailable"
+        flagged = sorted(c["compressor_id"] for c in rows if c["not_applying"]["flag"])
+        return "ok" if not flagged else "not_applying: " + ", ".join(flagged)
+
     async def health(request: Request) -> Response:
         services = runtime.current()
         store = services.store
@@ -140,6 +152,7 @@ def create_app(services: Services, listen: str | None = None) -> ASGIApp:
                     "telemetry": telemetry,
                     "compressors": compressors,
                     "calibration": calibration,
+                    "applicability": applicability(),  # informational (OB-011, TC-021)
                 },
             }
         )
