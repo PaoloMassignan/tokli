@@ -25,7 +25,7 @@ disagree, `CLAUDE.md` wins; ask the human.
 
 ## 3. Setting up and running the checks
 
-Python 3.11–3.13. No network access is needed by the test suite.
+Python 3.11–3.14. No network access is needed by the test suite.
 
 ```sh
 python -m venv .venv
@@ -41,7 +41,7 @@ lint-imports                             # architecture contracts (TOKLI_ARCHITE
 ```
 
 - On Windows PowerShell, set the variable with `$env:RUN_BROWSER_TESTS = "1"`.
-- **CI** runs the suite on Windows, Linux and macOS × Python 3.11–3.13
+- **CI** runs the suite on Windows, Linux and macOS × Python 3.11–3.14
   (`.github/workflows/`). Code that only works on one OS is a defect.
 
 ## 4. Hard rules (summary of `CLAUDE.md`; read the full text)

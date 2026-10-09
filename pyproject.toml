@@ -4,10 +4,10 @@ build-backend = "hatchling.build"
 
 [project]
 name = "tokli"
-version = "0.1.0"
+version = "0.1.1"
 description = "Local transparent proxy that reduces and measures the tokens coding agents send to LLM providers"
 readme = "README.md"
-requires-python = ">=3.11,<3.14"
+requires-python = ">=3.11,<3.15"
 license = "Apache-2.0"
 license-files = ["LICENSE", "NOTICE"]
 authors = [{ name = "Paolo Massignan" }]
@@ -16,6 +16,7 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Operating System :: Microsoft :: Windows",
     "Operating System :: MacOS",
     "Operating System :: POSIX :: Linux",

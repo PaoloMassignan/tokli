@@ -259,6 +259,15 @@ slice on 2026-10-04.
   - Gate 2 after the human verification in `slices/S6.5/HUMAN_REVIEW.md`, on screenshots and
     on the live dashboard.
 
+## S6.6 — CPython 3.14
+
+- **Requested** by the human on 2026-10-09 (S6.6 SCR-001, PT-004).
+- **Contents:**
+  - CPython 3.14 joins the supported set and the CI matrix (12 jobs);
+  - a typing fix that newer mypy/pydantic releases need on every version;
+  - release v0.1.1.
+- **Accepted 2026-10-09** (`slices/S6.6/COMPLETION_REPORT.md`).
+
 ## S7 — OpenAI Chat Completions
 
 - Adapter `openai_chat` (OC-*): `role:"tool"` + user text; usage only when the client asked.

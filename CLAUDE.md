@@ -194,7 +194,7 @@ Gate 2 record: date · the human's acceptance words
   (`TOKLI_TEST_STRATEGY.md §2`). Fixtures are synthetic and contain no real prompts, keys,
   usernames or developer paths.
 - **Privacy:** never print, log or commit credentials or prompt content. Canary strings in fixtures.
-- **Portability:** Windows, Linux and macOS × CPython 3.11–3.13. No CWD-relative reads, no
+- **Portability:** Windows, Linux and macOS × CPython 3.11–3.14. No CWD-relative reads, no
   import-time I/O, explicit encodings (UTF-8), `pathlib`, CRLF-aware text handling. The development
   machine is Windows, so never assume a POSIX shell in code or tests.
 - **Honesty:** report test results as they are. A skipped step is reported as skipped. Never

@@ -37,6 +37,6 @@ change (CLAUDE.md §6), and it is the first time an existing database must be mi
   checks that every earlier row and column survives; `test_header_names_persisted` checks that
   names, and no values, reach the database.
 - Portability: `ALTER TABLE … ADD COLUMN` behaves the same on every supported OS and SQLite
-  version shipped with CPython 3.11–3.13.
+  version shipped with CPython 3.11–3.14.
 - An S1 build refuses a database that an S2 build has migrated (newer version). Going back needs a
   different `--data-dir`.

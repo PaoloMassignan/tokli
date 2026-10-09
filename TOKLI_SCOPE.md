@@ -15,7 +15,7 @@
 | Cost | Versioned price book; estimated saving with method and bounds; "unavailable" when pricing is unknown. |
 | Observability | Request IDs, stage timings, decision records, structured logs, no content by default. |
 | UI | Local dashboard: savings, per-compressor table, breakdowns, recent-request diagnostics (metadata), compressor toggles, diagnostics page. |
-| Ops | `tokli serve`, `tokli doctor`, `tokli config show`. Windows, Linux, macOS; Python 3.11–3.13. |
+| Ops | `tokli serve`, `tokli doctor`, `tokli config show`. Windows, Linux, macOS; Python 3.11–3.14. |
 
 ## Explicit non-goals (v1)
 

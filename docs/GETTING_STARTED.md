@@ -12,17 +12,17 @@ in tokens and in money.
 
 ## 1. Install
 
-You need **Python 3.11, 3.12 or 3.13**; newer versions are not supported yet. On Windows the
-`py` launcher picks the version.
+You need **Python 3.11, 3.12, 3.13 or 3.14**; newer versions are not supported yet. On Windows
+the `py` launcher picks the version (the examples use 3.12; any supported version works).
 
 ```sh
 # Windows
 py -3.12 -m pip install --user pipx
-py -3.12 -m pipx install "git+https://github.com/PaoloMassignan/tokli@v0.1.0"
+py -3.12 -m pipx install "git+https://github.com/PaoloMassignan/tokli@v0.1.1"
 
 # macOS / Linux
 python3.12 -m pip install --user pipx
-python3.12 -m pipx install "git+https://github.com/PaoloMassignan/tokli@v0.1.0"
+python3.12 -m pipx install "git+https://github.com/PaoloMassignan/tokli@v0.1.1"
 ```
 
 If `tokli` is not found afterwards, run `py -3.12 -m pipx ensurepath` (or `python3.12 -m pipx

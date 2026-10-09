@@ -50,7 +50,7 @@ Spec map: 000 scope · 001 canonical model · 002 transparent proxy · 003 Anthr
 
 ## Setting up
 
-Requires CPython 3.11, 3.12 or 3.13.
+Requires CPython 3.11, 3.12, 3.13 or 3.14.
 
 ```bash
 python -m venv .venv && . .venv/bin/activate      # Windows: .venv\Scripts\activate

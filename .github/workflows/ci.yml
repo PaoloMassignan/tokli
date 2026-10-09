@@ -16,7 +16,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python: ["3.11", "3.12", "3.13"]
+        python: ["3.11", "3.12", "3.13", "3.14"]
     defaults:
       run:
         shell: bash
@@ -103,7 +103,7 @@ jobs:
             metrics-${{ runner.os }}.json
 
   identical-across-jobs:
-    name: Doctor snapshot and rendered corpus identical in all 9 jobs
+    name: Doctor snapshot and rendered corpus identical in all 12 jobs
     needs: test
     runs-on: ubuntu-latest
     steps:
@@ -115,10 +115,10 @@ jobs:
         run: |
           set -euo pipefail
           count=$(ls -d snapshots/*/ | wc -l)
-          test "$count" -eq 9 || { echo "expected 9 snapshots, got $count"; exit 1; }
+          test "$count" -eq 12 || { echo "expected 12 snapshots, got $count"; exit 1; }
           first=$(ls -d snapshots/*/ | head -1)
           for dir in snapshots/*/; do
             diff -u "$first/doctor-normalized.txt" "$dir/doctor-normalized.txt"
             diff -u "$first/corpus-hashes.txt" "$dir/corpus-hashes.txt"
           done
-          echo "doctor snapshots and rendered corpus hashes are identical in all 9 jobs"
+          echo "doctor snapshots and rendered corpus hashes are identical in all 12 jobs"

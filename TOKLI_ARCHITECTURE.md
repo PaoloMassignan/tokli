@@ -274,7 +274,7 @@ will replace guesswork with measurements.
 
 | Choice | Reason | Alternative rejected |
 |---|---|---|
-| Python 3.11–3.13 | tiktoken and a mature streaming HTTP ecosystem; team familiarity. Algorithms are implemented from the specs (`CLAUDE.md §8`). | Rust/Go: rewrite cost with no evidence of a latency problem (per-segment compression in Python measured well under 10 ms; the high E5a latency came from processing whole conversations). Overhead is measured from S1, so this can be revisited with data. |
+| Python 3.11–3.14 (3.14 since S6.6 SCR-001) | tiktoken and a mature streaming HTTP ecosystem; team familiarity. Algorithms are implemented from the specs (`CLAUDE.md §8`). | Rust/Go: rewrite cost with no evidence of a latency problem (per-segment compression in Python measured well under 10 ms; the high E5a latency came from processing whole conversations). Overhead is measured from S1, so this can be revisited with data. |
 | Starlette + uvicorn (FastAPI optional) | Streaming responses, small surface | aiohttp: fine, less familiar |
 | httpx | Proven streaming client with explicit stream lifecycle | — |
 | SQLite (stdlib) | Local, zero-ops, WAL | DuckDB: extra native dependency |

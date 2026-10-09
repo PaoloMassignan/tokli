@@ -21,11 +21,11 @@ after the cache.
 
 ## Quick start
 
-You need Python 3.11, 3.12 or 3.13, and Claude Code (with an API key or a Pro/Max subscription).
+You need Python 3.11–3.14 and Claude Code (with an API key or a Pro/Max subscription).
 
 ```sh
 py -3.12 -m pip install --user pipx                  # macOS/Linux: python3.12 -m pip …
-py -3.12 -m pipx install "git+https://github.com/PaoloMassignan/tokli@v0.1.0"
+py -3.12 -m pipx install "git+https://github.com/PaoloMassignan/tokli@v0.1.1"
 tokli setup tokenizers
 tokli serve
 ```
@@ -43,7 +43,7 @@ The full guide covers every step, the defaults, the files and troubleshooting:
 
 ## Status
 
-**Version 0.1.0.** It works with Claude Code and the Anthropic API. OpenAI and Codex support is
+**Version 0.1.1.** It works with Claude Code and the Anthropic API. OpenAI and Codex support is
 planned (`TOKLI_ROADMAP.md`). How each compressor works, with examples, is explained in
 `TOKLI_COMPRESSORS.md`.
 

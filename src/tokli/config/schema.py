@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import types
 from dataclasses import dataclass
-from typing import Literal, Union, get_args, get_origin
+from typing import Literal, TypeGuard, Union, get_args, get_origin
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -224,16 +224,16 @@ def _is_text(annotation: object) -> bool:
     return False
 
 
-def _is_model(annotation: object) -> bool:
+def _is_model(annotation: object) -> TypeGuard[type[BaseModel]]:
     return isinstance(annotation, type) and issubclass(annotation, BaseModel)
 
 
 def _walk(model: type[BaseModel], prefix: tuple[str, ...], keys: dict[str, KeyInfo]) -> None:
     for name, field in model.model_fields.items():
         path = (*prefix, name)
-        if _is_model(field.annotation):
-            assert field.annotation is not None
-            _walk(field.annotation, path, keys)
+        annotation = field.annotation
+        if _is_model(annotation):
+            _walk(annotation, path, keys)
             continue
         key = ".".join(path)
         env_var = "TOKLI_" + "__".join(part.upper() for part in path)
@@ -263,7 +263,8 @@ def is_section(path: tuple[str, ...]) -> bool:
     model: type[BaseModel] = TokliSettings
     for part in path:
         field = model.model_fields.get(part)
-        if field is None or not _is_model(field.annotation):
+        annotation = field.annotation if field is not None else None
+        if not _is_model(annotation):
             return False
-        model = field.annotation  # type: ignore[assignment]
+        model = annotation
     return True

@@ -2,6 +2,7 @@
 
 Status: **Approved for S0 (2026-09-29)**: PT-003 (setup command), PT-004, PT-005 (S0 subset), PT-007, PT-008 (invalid config, unwritable data dir, missing tokenizer), PT-010, PT-011 (MD-02, MD-04, MD-05, MD-07, MD-08, MD-16, MD-18, MD-19, MD-20, MD-27), PT-012. Other requirements: Draft. · Slices: S0 (doctor basic, server-less fresh-machine scenarios), S1 (remaining scenarios), S9 (fingerprint + UI)
 Approved for S1 (2026-09-30): PT-008 (port in use), fresh-machine scenarios for `serve`, MD-09, MD-10, MD-12, MD-22, MD-23, MD-24, MD-25.
+Changed by S6.6 SCR-001 (approved 2026-10-09): PT-004 adds CPython 3.14.
 Related: SPEC 017 (configuration), TOKLI_TEST_STRATEGY.md §2
 
 ## Purpose
@@ -15,7 +16,7 @@ installations explainable in one command.
 | PT-001 | Tokli SHALL behave equivalently on two clean supported machines given the same explicit configuration and inputs. Any environment-dependent difference SHALL either be intentionally specified or reported diagnostically. |
 | PT-002 | WHEN Tokli starts on a supported clean machine with valid explicit configuration, THE SYSTEM SHALL NOT depend on state from a developer workstation (no CWD files, no inherited provider env vars unless configured, no pre-existing caches beyond the provisioned tokenizer). |
 | PT-003 | THE SYSTEM SHALL make outbound network connections only to configured upstreams (runtime), and to tokenizer sources only during the explicit `tokli setup tokenizers` command. |
-| PT-004 | THE supported platform set SHALL be exactly the CI matrix: Windows, Linux, macOS × CPython 3.11, 3.12, 3.13. `requires-python` SHALL match. |
+| PT-004 | THE supported platform set SHALL be exactly the CI matrix: Windows, Linux, macOS × CPython 3.11, 3.12, 3.13, 3.14. `requires-python` SHALL match. (S6.6 SCR-001.) |
 | PT-005 | `tokli doctor` SHALL report: Tokli version, Python, OS/arch, config and data paths, effective config with sources (secrets masked as present/absent), listen address and port, upstream URLs, auth mode and credential-source presence per provider, registry with availability, tokenizer id + data hash, telemetry DB path/schema/size, debug-content state, degraded checks, and warnings. |
 | PT-006 | `tokli doctor --fingerprint` SHALL print a behavioural fingerprint (config hash, registry versions, tokenizer hash, golden-corpus output hash). `--explain` SHALL name the differing component and the first differing corpus case when compared with `--against <fingerprint.json>`. |
 | PT-007 | THE doctor SHALL never print credential values, prompt content or file contents. |
