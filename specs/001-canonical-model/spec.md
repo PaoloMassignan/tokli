@@ -4,6 +4,7 @@ Status: Draft · Slice: S1 (Anthropic subset), S5/S7 (OpenAI) · Related: ARCH �
 Approved for S1 (2026-09-30): CM-001…CM-012 (Anthropic). CM-013 deferred to S4.
 Approved for S4 (2026-10-03): CM-013 (Anthropic).
 Changed for S8c (approved 2026-10-04): CM-009 (selected tool-call argument strings, SPEC 019 PR-022).
+Changed by S8i SCR-001 (approved for S8i 2026-10-16): `CanonicalRequest.cache_ttl_s` in the data model.
 
 ## Purpose
 Give every stage a protocol-independent, minimal view of the request's **text values**, and
@@ -24,7 +25,8 @@ Evidence: TOKLI_EVIDENCE.md (hazards and measurements); per-requirement rational
 ## Data model
 
 ```text
-CanonicalRequest(protocol, provider, endpoint, model?, stream, segments[], original_json, original_bytes)
+CanonicalRequest(protocol, provider, endpoint, model?, stream, cache_ttl_s?, segments[], original_json, original_bytes)
+                                    # cache_ttl_s: the cache lifetime the client asked for, read-only (SPEC 003 AN-011)
 Segment(id, index, kind, role?, text, locator, mutable, attrs{tool_name?, tool_call_id?, is_error?,
         cache_breakpoint_after?}, protected: Span[])
 SegmentKind = SYSTEM | TOOL_DESCRIPTION | USER_TEXT | ASSISTANT_TEXT | TOOL_CALL_ARGS | TOOL_RESULT | OTHER_TEXT

@@ -40,6 +40,7 @@ Evidence codes:
 | CM-011 | H09 (non-ASCII escaping changes bytes and length) | AC-CM-2 | `test_patched_body_utf8_and_length` |
 | CM-012 | H33 | AC-CM-5 | `test_oversize_body_relayed_verbatim`, `test_large_body_not_rejected` |
 | CM-013 | pruners need tool history without protocol knowledge | AC-PR-1 | `test_tool_records_exposed_read_only` |
+| data model `cache_ttl_s` | the resume follows the client's cache lifetime (S8i SCR-001) | AC-AN-7 | `test_adapter_exposes_cache_ttl` |
 
 ## Proxy (SPEC 002)
 
@@ -75,6 +76,8 @@ Evidence codes:
 | AN-008 | Claude Code calls count_tokens; Q4 | AC-AN-5 | `test_anthropic_other_endpoints_verbatim` |
 | AN-009 | bounded memory; S2 review A3 | AC-AN-4 | `test_usage_parser_memory_bounded`, `test_usage_parser_ignores_large_uninteresting_events_within_bound` |
 | AN-010 | a stream cut short still has exact input usage; S2 review A4 | AC-AN-3 | `test_anthropic_usage_stream_with_error_event`, `test_stream_cut_after_message_start_is_partial`, `test_anthropic_usage_stream_with_error_event_end_to_end` |
+| AN-011 | the cache lifetime is the client's choice per request; an unknown one may be longer (S8i SCR-001) | AC-AN-7, AC-PR-18 | `test_adapter_exposes_cache_ttl` (64 combinations), `test_adapter_unrecognised_cache_marker_leaves_ttl_absent`, `test_adapter_reads_markers_inside_tool_results`, `test_resume_unknown_ttl_uses_protocol_default_and_traces` |
+| AN-012 | refusals in real use must be visible (S8j review D; ADR 0015) | AC-AN-8 | `test_anthropic_stop_reason_non_stream`, `test_anthropic_stop_reason_stream`, `prop_usage_stream_any_chunk_split` (stop reason) |
 
 ## OpenAI Chat (SPEC 004)
 
@@ -152,7 +155,7 @@ Evidence codes:
 | CC-003 | Brief§8 enabled ≠ forced | AC-CC-2 | `test_enabled_compressor_not_applied_when_not_applicable`, `test_disabled_compressor_skipped` |
 | CC-004 | Brief§10; tokenizer mismatch margin | AC-CC-3 | `test_longer_output_rejected`, `test_below_min_gain_rejected` |
 | CC-005 | Brief§10 invariant | AC-CC-3 | `prop_compression_never_increases_tokens` |
-| CC-006 | determinism; H05 | AC-CC-4 | `prop_compression_is_deterministic`, `test_segment_output_independent_of_other_segments`; S8c (conversation state): `test_resume_pruning_reapplies_stored_set_between_resumes`, `test_resume_pruning_stable_between_resumes` |
+| CC-006 | determinism; H05 | AC-CC-4 | `prop_compression_is_deterministic`, `test_segment_output_independent_of_other_segments`; S8c (conversation state): `test_resume_pruning_reapplies_stored_set_between_resumes`, `test_resume_pruning_stable_between_resumes`; S8i (resume decided by the store): `test_resume_uses_previous_request_ttl_1h`, `test_unknown_conversation_is_resume` |
 | CC-007 | reminders; future redaction markers | AC-CC-5 | `prop_protected_spans_preserved`, `test_protected_span_change_rejected`, `test_transformer_patch_breaking_protected_span_is_dropped`, `test_spans_preserved` |
 | CC-008 | H14, MD-25 | AC-CC-6 | `test_compressor_exception_is_recorded`, `test_compressor_timeout_is_recorded`, `test_late_result_discarded_as_timeout` |
 | CC-009 | deterministic chains | — | `test_terminal_stops_chain`, `test_chain_order_by_stage_then_id` |
@@ -167,7 +170,7 @@ Evidence codes:
 | CC-018 | superseding rewrites sent history (SPEC 019) | AC-PR-6 | `test_history_rewritten_flag` |
 | CC-019 | reference targets keep their content; the earlier segment's change wins (S6 SCR-001: E2 dry run) | AC-CC-10, AC-CC-16 | `test_reference_target_integrity_enforced`, `test_reread_source_integrity_enforced`, `test_reread_stays_when_a_later_read_duplicates_it`, `prop_history_stays_stable_with_both_reference_compressors` |
 | CC-020 | R01§2, §7: policy eligibility ≠ default enablement; every transformation relies on model behaviour | AC-CC-11 | `test_every_compressor_declares_assumptions`, `test_registry_default_enabled_requires_eval_record` |
-| CC-021 | the bytes stay verbatim in the target | AC-CC-12 | `test_duplicate_pruning_applies_to_verbatim_tools`; S8a SCR-001: `test_verbatim_opt_in_applies_compressor_to_verbatim_tool`, `test_verbatim_opt_in_defaults_off`, `test_verbatim_opt_in_only_for_declaring_compressors`, `test_verbatim_opt_in_does_not_cover_unresolved_tools`, `test_patch_verbatim_opt_in` |
+| CC-021 | the bytes stay verbatim in the target | AC-CC-12 | `test_duplicate_pruning_applies_to_verbatim_tools`; S8a SCR-001: `test_verbatim_opt_in_applies_compressor_to_verbatim_tool`, `test_verbatim_opt_in_defaults_off`, `test_verbatim_opt_in_only_for_declaring_compressors`, `test_verbatim_opt_in_does_not_cover_unresolved_tools`, `test_patch_verbatim_opt_in`; S8j SCR-001 (c): `test_outline_applies_to_declared_verbatim_tools`, `test_target_tools_require_selective_off_by_default` |
 | CC-022 | S1 review P1 (POLICY, provisional) | AC-CC-3 | `test_min_segment_tokens_default` |
 | CC-023 | H04; S1 review P2 | AC-CC-12 | `test_unresolved_tool_name_treated_as_verbatim` |
 | CC-024 | S1 E9 large-request overhead; S1 Gate 2 decision 2 | AC-CC-13 | `test_result_cache_hit_gives_identical_output`, `test_result_cache_also_caches_not_applicable_and_no_gain`, `test_result_cache_key_includes_view_and_config`, `test_result_cache_still_checks_invariants`, `test_result_cache_bounded`, `test_result_cache_off`, `test_failed_result_is_not_cached`, `test_result_cache_is_safe_under_concurrent_requests` (S4.5, PX-015) |
@@ -198,13 +201,24 @@ Evidence codes:
 | PR-034 | lossless proven by decode; sources intact (CC-019) | AC-PR-24 | `prop_reread_by_reference_decodes_whole_request`, `test_reread_source_integrity_enforced` |
 | PR-035 | bounded cost on large files | AC-PR-26 | `test_reread_linear_time`, `test_reread_not_applicable_reasons` (too_large) |
 | PR-036 | reminders kept; exempt from verbatim tools as a reference (CC-021) | AC-PR-25 | `test_reread_keeps_reminders_and_verbatim_tool` |
+| PR-040 | the skeleton exists by the human's decision, optional and off by default; E10(f): damage detected | AC-PR-27 | `test_outline_off_by_default_and_declared`, `test_lossless_only_switches_outline_off`, `test_outline_first_read_off_by_default_end_to_end` |
+| PR-041 | whole reads of code files only (S8j review B, C) | AC-PR-27 | `test_outline_candidates_and_reasons`, `test_outline_skips_errors_and_small_results` |
+| PR-042 | "the whole copy only when asked again": every later read is whole | AC-PR-28 | `test_outline_only_first_read_of_a_file` |
+| PR-043 | the E10(f) forms, so the measured behaviour applies (S8j review P4) | AC-PR-29 | `test_outline_python_keeps_declarations_and_head`, `test_outline_c_family`, `test_outline_note_format_and_numbering` |
+| PR-044 | reminders and numbering kept; CRLF-aware | AC-PR-29 | `test_outline_keeps_protected_spans`, `test_outline_note_format_and_numbering`, `test_outline_crlf` |
+| PR-045 | prefix stability, as PR-004 (H05) | AC-PR-30 | `test_outline_prefix_stable_across_turns`, `test_outline_first_read_end_to_end` |
+| PR-046 | attribution; never a rewrite of history | AC-PR-30 | `test_outline_prefix_stable_across_turns`, `test_outline_first_read_end_to_end` |
+| Shell file reads (Claude Code) | Claude Code reads files through the shell (S8j review A3) | AC-PR-33 | `test_claude_code_shell_read_rules` |
+| CC-019 with `outline_first_read` | later references to an outlined read are not forwarded | AC-PR-31 | `test_outline_later_references_forward_whole` |
 | PR-020 | SELECTIVE, off by default (E5b-lite; S8c review P4) | AC-PR-14 | `test_resume_pruning_off_by_default`, `test_resume_pruning_off_by_default_end_to_end` |
-| PR-021 | prune only when the cache is rewritten anyway (E5b-lite: 76 % of cache writes follow pauses over an hour) | AC-PR-11, AC-PR-13 | `test_resume_pruning_only_at_resume_and_old_calls`, `test_unknown_conversation_is_resume`, `test_conversation_key` |
+| PR-021 | prune only when the cache is rewritten anyway (E5b-lite: 76 % of cache writes follow pauses over an hour); S8i SCR-001: when the client's cache lifetime plus a margin has passed (68 % of cache writes followed such pauses) | AC-PR-11, AC-PR-13, AC-PR-17 | `test_resume_pruning_only_at_resume_and_old_calls`, `test_unknown_conversation_is_resume`, `test_unknown_conversation_view`, `test_conversation_key`, `test_conversation_key_ignores_cache_markers` (S8i SCR-003), `test_resume_uses_previous_request_ttl_1h` (SCR-002 boundary), `test_resume_uses_previous_request_ttl_5m`, `test_resume_margin_is_configurable`, `test_resume_trace_attributes` |
 | PR-022 | E10(a): the provider accepts stubbed edit arguments and the model re-reads | AC-PR-11, AC-PR-16 | `test_resume_pruning_keeps_structure_and_paths`, `test_resume_pruning_only_at_resume_and_old_calls` |
 | PR-023 | keep the cache valid between resumes (H05) | AC-PR-12 | `test_resume_pruning_reapplies_stored_set_between_resumes`, `test_resume_pruning_stable_between_resumes` |
-| PR-024 | operational state only, bounded, no disk (ADR 0012) | AC-PR-15 | `test_conversation_store_bounded_and_memory_only` |
+| PR-024 | operational state only, bounded, no disk (ADR 0012); S8i: also the last request's lifetime | AC-PR-15 | `test_conversation_store_bounded_and_memory_only`, `test_store_keeps_ttl_of_last_request_only` |
 | PR-025 | cache invalidation visible | AC-PR-11 | `test_resume_pruning_stable_between_resumes` |
 | PR-026 | tool-only messages are not human turns (S8a review A2) | AC-PR-16 | `test_human_turn_definition`, `test_resume_pruning_only_at_resume_and_old_calls` |
+| PR-027 | a request without a lifetime Tokli understands still needs one (S8i review P2) | AC-PR-17, AC-PR-18 | `test_resume_uses_previous_request_ttl_5m`, `test_resume_longest_ttl_wins`, `test_resume_without_cache_marker_uses_protocol_default`, `test_resume_unknown_ttl_uses_protocol_default_and_traces` |
+| PR-028 | the resume decision is visible (counters only; TOKLI_OBSERVABILITY §8) | AC-PR-19 | `test_resume_trace_attributes`, `test_resume_unknown_ttl_uses_protocol_default_and_traces` |
 
 ## Compressors (SPEC 010)
 
@@ -292,6 +306,7 @@ Evidence codes:
 | TC-019 | S6 P3: a subscription is not billed per token | AC-TC-15 | `test_oauth_cost_basis_api_equivalent` |
 | TC-020 | S6 P8: cache rewrites Tokli causes are not deducted | AC-TC-16 | `test_cost_caveats_hand_computed`, `test_summary_cost_block_without_price_book` |
 | TC-021 | S8h P3: a compressor that never applies is visible the same day | AC-TC-17 | `test_not_applying_flag_hand_computed`, `test_health_reports_applicability`, `test_ui_flags_compressor_not_applying` |
+| TC-022 | refusals in real use must be visible (S8j review D; ADR 0015, schema v5) | AC-TC-18 | `test_stop_reason_persisted_and_in_api`, `test_migration_v4_to_v5` |
 | TC-016 | which compressor saves, at what latency (TOKLI_TELEMETRY_AND_COST §3); ADR 0007 | AC-TC-12 | `test_compressor_aggregates_hand_computed`, `test_compressor_rates_without_applicable_are_null`, `test_latency_without_benefit_flag`, `test_stats_record_tokens_in_of_accepted_calls` |
 
 ## Observability (SPEC 014)
@@ -365,6 +380,7 @@ Evidence codes:
 | CF-010 | credential hygiene | AC-CF-5 | `test_secret_values_rejected_in_config` |
 | CF-011 | MD-05; S0 review M2, X2 | AC-CF-6 | `test_env_json_value_errors_name_variable`, `test_reserved_env_vars_only` |
 | CF-012 | S0 review M1 (YAML implicit types, duplicate keys) | AC-CF-7 | `test_duplicate_yaml_key_rejected`, `test_yaml_implicit_types_rejected`, `test_empty_config_file_is_an_empty_layer` |
+| CF-013 | a renamed key keeps working, visibly (S8i SCR-001) | AC-CF-9, AC-PR-19 | `test_renamed_key_resume_after_s`, `test_renamed_key_and_new_key_in_one_layer_refused`, `test_doctor_prints_renamed_key_warning`, `test_serve_prints_renamed_key_warning`, `test_keys_changed_in_s8i_defaults` |
 
 ## Portability & diagnostics (SPEC 018)
 
@@ -382,6 +398,13 @@ Evidence codes:
 | PT-011 | MD-01…MD-28 (SPEC 018 checklist) | AC-PT-6 | `test_no_dotenv_loading`, `test_cli_output_encodable_cp1252`, `test_daily_rollup_respects_tz_param`, `test_wheel_imports_tokli_in_clean_venv`, `test_no_module_reads_cwd_relative_paths` (+ the tests named per row), `test_machine_dependence_checklist_tests_exist`, `test_starts_offline_with_provisioned_tokenizer` |
 | PT-012 | S0 review X1, M3 (exit criterion, doctor exit code) | AC-PT-7, AC-PT-4 | `test_doctor_normalised_snapshot`, `test_doctor_makes_no_network_calls`, `test_invalid_config_fails_clearly`, `test_doctor_normalised_snapshot_provisioned`, `test_doctor_exit_codes`, `test_unwritable_data_dir_reported` |
 | PT-010 | MD-27 | AC-PT-1 | `test_fixtures_contain_no_developer_paths` |
+
+## Measurement tools (TOKLI_TEST_STRATEGY §2)
+
+| Tool | Source | Tests |
+|---|---|---|
+| `tools/replay.py` | S8h P4 | `test_replay_counts_real_shapes`, `test_replay_prints_counters_only` |
+| `tools/composition.py` | S8k P1–P4 | `test_composition_counts_parts`, `test_composition_weights_stop_at_compaction`, `test_composition_fixed_part_from_usage`, `test_composition_rewrites`, `test_composition_prints_counters_only`, `test_composition_asks_consent` |
 
 ## Hazard view: evidence → requirements
 

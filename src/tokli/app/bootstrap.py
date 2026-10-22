@@ -117,7 +117,11 @@ def bootstrap(
         enabled=parts.enabled,
         version=version,
         policy=parts.policy,
-        conversations=ConversationStore(settings.pruning.conversation_states),
+        conversations=ConversationStore(
+            settings.pruning.conversation_states,
+            ttl_defaults=settings.pruning.cache_ttl_default_s.model_dump(),
+            margin_s=settings.pruning.resume_margin_s,
+        ),
     )
 
 
@@ -149,12 +153,15 @@ def _compression(config: EffectiveConfig, selector: Selector) -> _Compression:
             duplicate_require_same_call=settings.pruning.duplicate_require_same_call,
             search_group_min_lines=settings.compressors.search_group.min_group_lines,
             log_debug_sample=settings.compressors.log_filter.debug_sample,
-            resume_after_s=settings.pruning.resume_after_s,
             resume_min_age_turns=settings.pruning.resume_min_age_turns,
             resume_min_tokens=settings.pruning.resume_min_tokens,
             reread_tools=tuple(settings.pruning.reread_tools),
             reread_min_run_lines=settings.pruning.reread_min_run_lines,
             reread_max_lines=settings.pruning.reread_max_lines,
+            outline_tools=tuple(settings.pruning.outline_tools),
+            outline_rules=dict(settings.pruning.outline_rules),
+            outline_min_tokens=settings.pruning.outline_min_tokens,
+            outline_min_run_lines=settings.pruning.outline_min_run_lines,
         ),
         EngineSettings(
             enabled=enabled,

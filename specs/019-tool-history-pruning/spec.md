@@ -5,7 +5,10 @@ Approved for S4 (2026-10-03): PR-001…PR-005, PR-009 (never set by duplicates),
 Approved for S8c (2026-10-04): `edit_args_on_resume`, PR-005 (as changed), PR-020…PR-026, AC-PR-11…AC-PR-16; ADR 0012.
 Approved for S8e (2026-10-04): `reread_by_reference`, PR-030…PR-036, AC-PR-20…AC-PR-26; ADR 0013.
 Changed by S6 SCR-001 (approved 2026-10-05): PR-012 (a later change of a target is kept and the stub reverted), AC-PR-8, AC-PR-24.
+Changed by S8i SCR-001 (approved for S8i 2026-10-16): PR-021, PR-024; new PR-027, PR-028, AC-PR-17…AC-PR-19. AC-PR-17's 1 h boundary corrected by S8i SCR-002 (approved 2026-10-16).
 Changed by S8h SCR-001 (approved 2026-10-09): PR-032 (Claude Code's `Read` numbering), AC-PR-22; `reread_by_reference` version 2, back on by default with its version 2 smoke record (`no_measurable_damage`, 2026-10-09; CC-020).
+Changed by S8i SCR-003 (approved 2026-10-22): the conversation key ignores `cache_control`.
+Approved for S8j (2026-10-22): `outline_first_read`, PR-040…PR-046, "Shell file reads (Claude Code)", AC-PR-27…AC-PR-33.
 Related: SPEC 001 (canonical model), 009 (compression core, preservation model), 010 (catalogue), 012 (evaluation), PHASE0_1_REVIEW.md
 
 ## Purpose
@@ -137,11 +140,20 @@ saving is at least `pruning.superseded_min_saving_tokens` (default 8,000).
 | PR-035 | THE pruner SHALL NOT consider a result or a source with more than `pruning.reread_max_lines` lines, and its time SHALL grow at most linearly with the lines of a typical re-read (a run-dominated alignment). |
 | PR-036 | THE `reread_by_reference` pruner SHALL keep every protected span of the result verbatim and in order, and SHALL be exempt from `verbatim_tools` under CC-021. |
 | PR-020 | THE `edit_args_on_resume` pruner SHALL be SELECTIVE, request scope, `prefix_stable: false`, off by default, and SHALL run only when enabled (CC-002). |
-| PR-021 | WHEN a request's conversation (key per ADR 0012) was last seen more than `pruning.resume_after_s` seconds ago, or is not known to Tokli, THE SYSTEM SHALL treat the request as a resume; otherwise it SHALL NOT. |
+| PR-021 | WHEN a request's conversation (key per ADR 0012) is not known to Tokli, OR was last seen more than its cache lifetime (PR-027) plus `pruning.resume_margin_s` seconds ago, THE SYSTEM SHALL treat the request as a resume; otherwise it SHALL NOT. (S8i SCR-001.) |
 | PR-022 | AT a resume, THE `edit_args_on_resume` pruner SHALL replace with the stub every argument string listed in `pruning.resume_edit_fields` for its tool, of at least `pruning.resume_min_tokens` tokens, in every tool call followed by at least `pruning.resume_min_age_turns` human turns, and SHALL keep every other key and value, the call id and the block order. |
 | PR-023 | BETWEEN two resumes of a conversation, THE pruner SHALL apply exactly the replacements decided at its last resume to the calls still present, and no others, so that the forwarded prefix is byte-identical from one request to the next. |
-| PR-024 | THE conversation store SHALL keep, per conversation key, only the time of the last request and the pruned call ids; it SHALL be bounded by `pruning.conversation_states` with least-recently-used eviction, and SHALL NOT be written to disk. |
+| PR-024 | THE conversation store SHALL keep, per conversation key, only the time of the last request, its `cache_ttl_s` (S8i SCR-001) and the pruned call ids; it SHALL be bounded by `pruning.conversation_states` with least-recently-used eviction, and SHALL NOT be written to disk. |
 | PR-025 | WHEN a resume changes an argument string, THE SYSTEM SHALL record `history_rewritten: true` (PR-009); THE per-compressor statistics SHALL count each replaced string as one accepted segment. |
+| PR-027 | THE cache lifetime of a conversation SHALL be the `cache_ttl_s` (SPEC 003 AN-011) of its previous request, or, when that is absent, the default for the request's protocol in `pruning.cache_ttl_default_s`. (S8i SCR-001.) |
+| PR-028 | THE SYSTEM SHALL record in each request's trace whether the request is a resume, the cache lifetime used, its source (`previous_request`, `protocol_default`, or `unknown_conversation`) and the seconds since the conversation's previous request (absent when unknown). (S8i SCR-001.) |
+| PR-040 | THE `outline_first_read` pruner SHALL be SELECTIVE, request scope, `prefix_stable: true`, off by default, SHALL declare the assumption `outline_suffices_until_reread`, and SHALL declare as its `target_tools` the tools in `pruning.outline_tools` (SPEC 009 CC-021 (c)). (S8j.) |
+| PR-041 | A tool result SHALL be an outline candidate only WHEN its tool is in `pruning.outline_tools`, it is a whole result and not `is_error`, it is a whole read of one file (a `Read` call with a `file_path` and without `offset` or `limit`, or a shell command that "Shell file reads (Claude Code)" classifies as a whole read), the file's extension has a rule in `pruning.outline_rules`, and its text has at least `pruning.outline_min_tokens` tokens; otherwise THE pruner SHALL report `not_applicable` with `not_file_read`, `partial_read`, `error_result`, `no_outline_rule` or `below_min_tokens`. (S8j.) |
+| PR-042 | THE pruner SHALL outline a candidate only WHEN no earlier tool record of the same request reads, writes or edits the same file, two paths matching when their normalised forms are equal or one ends with the other at a `/` boundary; otherwise it SHALL forward the result unchanged and report `not_applicable(seen_before)`, so that every later read of a file is forwarded whole. (S8j.) |
+| PR-043 | THE outline SHALL keep, verbatim and in order, the lines that its rule keeps (see "`outline_first_read`"), and SHALL replace each maximal run of at least `pruning.outline_min_run_lines` other lines with one note in the exact format of that section, indented like the run's first line; WHEN no run qualifies, THE pruner SHALL report `not_applicable(no_omission)`. (S8j.) |
+| PR-044 | THE outline SHALL keep every protected span of the result verbatim and in order, by keeping every line that holds part of one, and SHALL keep the result's own numbering on the lines it keeps. Lines SHALL be split on `\n` with any `\r` kept on its line. (S8j.) |
+| PR-045 | THE pruner's decision for a result SHALL depend only on that result and on the earlier records of the request, and THE outline SHALL be a pure function of the result's text and the configuration, so that the forwarded prefix is byte-identical from one request to the next (as PR-004). (S8j.) |
+| PR-046 | THE per-compressor statistics SHALL count each outlined result as one accepted segment, and THE pruner SHALL never set `history_rewritten`. (S8j.) |
 | PR-026 | THE pruners SHALL count human turns as defined in this spec (a user message holding human text); messages that carry only tool results SHALL NOT count. |
 
 ## `edit_args_on_resume` — SELECTIVE (S8c)
@@ -157,13 +169,22 @@ Pruning them only at those moments avoids an extra cache rewrite. Keeping the pr
 afterwards keeps the cache valid.
 
 **Conversation state** (ADR 0012).
-- **Key:** SHA-256 of the canonical JSON of `system` and the first message.
-- **What Tokli keeps per key:** the wall-clock time of the conversation's last request, and the
-  set of tool-call ids pruned at its last resume.
+- **Key:** SHA-256 of the canonical JSON of `system` and the first message, after every key
+  named `cache_control` has been removed from them at any depth (S8i SCR-003).
+- **What Tokli keeps per key:** the wall-clock time of the conversation's last request, its
+  `cache_ttl_s` (S8i SCR-001), and the set of tool-call ids pruned at its last resume.
 - **Where:** in memory only, bounded by `pruning.conversation_states` (least recently used).
 
-**Resume.** A request is a resume when its conversation was last seen more than
-`pruning.resume_after_s` ago (default 3,600), or is not known (S8c review P5).
+**Resume** (S8i SCR-001). A request is a resume when its conversation is not known (S8c review
+P5), or was last seen more than its **cache lifetime** plus `pruning.resume_margin_s` (default 60)
+ago.
+- **The cache lifetime** is the one the client asked for in the conversation's previous request:
+  the longest `ttl` of its `cache_control` markers (SPEC 003 AN-011), 300 s or 3,600 s.
+- **Without a lifetime Tokli understands,** the protocol's default in
+  `pruning.cache_ttl_default_s` applies (3,600 s for Anthropic Messages).
+- **The decision is per conversation, not per file.** The provider caches the prefix up to a
+  breakpoint, and every read refreshes all of it. A file in the history therefore expires
+  only when its whole conversation does.
 
 **Human turn.** A user message that holds human text (a string, or a text block in a message
 without `tool_result` blocks). Messages that carry only tool results are not human turns.
@@ -219,6 +240,61 @@ Claims:
 | Prefix stability; structure unchanged | PROVEN | `test_reread_prefix_stable_across_turns` |
 | The model reads the current file from the changed lines plus the referenced earlier lines (`reads_partial_reference`) | ASSUMPTION | smoke family `reread_fact_lookup` |
 | The agent copies edit anchors for unchanged lines exactly from the referenced earlier text (`quotes_from_reference_target`) | ASSUMPTION | smoke family `reread_edit_anchor` (E10(e): 20/20) |
+
+## `outline_first_read` — SELECTIVE (S8j)
+
+Rationale: TOKLI_EVIDENCE §2 (shell output at resumes; E10(f)).
+- **The strategy, chosen by the human (2026-10-22):** the first time a code file arrives in a
+  conversation, forward only its skeleton. Every later read of the same file is forwarded whole.
+- **Prefix-stable:** the decision is made when the result is first sent and never changes, so the
+  provider cache stays valid and no conversation state is needed.
+- **Evaluation: damage detected.** In E10(f) the skeleton drew more provider refusals than the
+  original on questions: 11 in 30 calls, against 5. On an edit task it drew none, and the agent
+  read the file again in 10 of 10 calls, with no wrong edit or blind write.
+- **Value on the developer's traffic is small.** Whole reads of code files are about 72k tokens a
+  week through the shell. Each one the agent reads again costs the skeleton and the whole file.
+- **The pruner exists by the human's decision,** optional and off by default (S8j review). The
+  response's `stop_reason` is recorded (SPEC 013 TC-022), so that refusals in real use are visible.
+
+**Rules** (`pruning.outline_rules` maps a file extension to a rule; lines are counted from 1 in
+the result, after any numbering prefix is set aside for matching):
+- **`python`:** keep the first 8 lines; every line matching `^\s*(@|def |class |async def )`;
+  and every non-blank line that does not start with a space or a tab.
+- **`c_family`:** keep the first 8 lines; every line matching
+  `^\s*(public|private|protected|internal|static|export|async|override|virtual|abstract|sealed|partial|func|fn|pub|impl|interface|class|struct|enum|record|namespace|type|function)\b`;
+  and every non-blank line that does not start with a space, a tab, `}` or `)`.
+
+**Note** (one line per omitted run; `<a>-<b>` are the file's line numbers, which for a whole read
+are the result's own):
+```text
+[tokli: lines <a>-<b> omitted — <action> for them]
+```
+`<action>` is `read the file again` for `Read`, and `run the command again` for a shell read.
+
+Claims:
+
+| Claim | Type | Backed by |
+|---|---|---|
+| Only the first whole read of a code file is changed; every later read of it is whole | PROVEN | `test_outline_only_first_read_of_a_file`, `test_outline_candidates_and_reasons` |
+| The kept lines, protected spans and numbering are verbatim and in order; structure unchanged | PROVEN | `test_outline_python_keeps_declarations_and_head`, `test_outline_keeps_protected_spans`, `test_outline_preserves_structure` |
+| Prefix stability | PROVEN | `test_outline_prefix_stable_across_turns` |
+| When the agent needs an omitted part, it reads the file again instead of answering or editing from the skeleton (`outline_suffices_until_reread`) | ASSUMPTION | E10(f): held in every call that was not refused; refusals are the damage measured |
+
+## Shell file reads (Claude Code)
+
+For the `Bash` and `PowerShell` tools of Claude Code (S8j). The Codex rules above are unchanged.
+1. **One leading `cd <dir> &&` is removed,** where `<dir>` is one word (quotes honoured). The
+   path below is then `<dir>/<path>` when `<path>` is relative.
+2. **The rest must be a simple command:** step 2 of the Codex rules (no `|`, `;`, `&`, `>`,
+   `<`, `` ` ``, `$(` or newline outside quotes).
+3. **Rules** (exactly one path operand; program names case-insensitive):
+
+| Program and form | Read |
+|---|---|
+| `cat <path>` · `type <path>` · `Get-Content <path>` / `Get-Content -Path <path>` | whole |
+| `cat -n <path>` · `nl <path>` | whole, numbered (`cat -n` style) |
+| `sed -n …` · `head …` · `tail …` · `Get-Content` with `-TotalCount`, `-Head` or `-Tail` | partial (`partial_read`) |
+| anything else, any other option, or more than one path operand | not a file read |
 
 ## Default tool semantics (config data, revisable)
 
@@ -278,6 +354,16 @@ superseding.
 - AC-PR-13 (PR-021): an unknown conversation is a resume (S8c review P5).
 - AC-PR-14 (PR-020): off by default; the "Lossless only" shortcut switches it off.
 - AC-PR-15 (PR-024): the store never exceeds its bound, and no file is written.
+- AC-PR-17 (PR-021, PR-027): the previous request carried `ttl: "1h"`; 3,661 s later → a resume; 3,660 s later → not. The previous request carried markers without `ttl`; 361 s later → a resume; 360 s later → not.
+- AC-PR-18 (AN-011, PR-027): a request with markers `"5m"` and `"1h"` has `cache_ttl_s` 3,600. A request with no marker, or one marker with `ttl: "24h"`, has none: the next request uses `cache_ttl_default_s.anthropic_messages` (3,600), and the second case traces `cache_ttl_unrecognised`.
+- AC-PR-19 (PR-028, SPEC 017 CF-013): the trace of a resume and of a non-resume carries the four attributes. A config file that sets `pruning.resume_after_s: 120` gives `cache_ttl_default_s.anthropic_messages = 120` and a warning; setting both keys in one file refuses to start.
+- AC-PR-27 (PR-040, PR-041): off by default; the "Lossless only" shortcut switches it off; with it on, a `Read` without `offset`/`limit`, a `cat`, a `cd src && cat` and a `Get-Content` result of a `.py` file of at least `outline_min_tokens` tokens are candidates, while a `Read` with `offset`, a `sed -n`, a `head`, an `is_error` result, a `.md` file, a short result and a piped command are not, each with its reason.
+- AC-PR-28 (PR-042): the first read of `src/a.py` is outlined; a second read of it, in any form, is forwarded whole (`seen_before`); a file written by `Write` or edited by `Edit` earlier, then read, is forwarded whole; `src/a.py` and `C:/repo/src/a.py` count as the same file.
+- AC-PR-29 (PR-043, PR-044): a synthetic Python module and a C# file give exactly the expected outlines, notes and indentation; a `Read` result keeps its `"{n}\t"` numbering and its notes give file line numbers; CRLF lines keep their `\r`; a `<system-reminder>` inside an omitted run is kept.
+- AC-PR-30 (PR-045, PR-046): request N, and request N+1 that adds a second read of the outlined file → the forwarded body of N+1 starts with the forwarded body of N, byte for byte; `history_rewritten` is false; the statistics count one accepted segment.
+- AC-PR-31 (CC-019): a later identical read of an outlined file (`duplicate_tool_results`) and a re-read after an edit (`reread_by_reference`) are forwarded whole: no stub names the outlined result, and the whole-request decode holds.
+- AC-PR-32 (SPEC 009 CC-021 (c)): the results of `Read`, `Bash` and `PowerShell` are outlined although they are verbatim tools, with no `apply_to_verbatim_tools` option.
+- AC-PR-33 ("Shell file reads (Claude Code)"): a table-driven test covers every rule row, the `cd <dir> &&` prefix, and each rejection (pipes, `;`, two paths, unknown options).
 - AC-PR-16 (PR-022, PR-026): a call followed by three human turns and many tool-only messages is not pruned; strings under `resume_min_tokens` are not pruned.
 
 ## Test scenarios
@@ -295,10 +381,20 @@ superseding.
 `test_duplicate_stub_keeps_protected_spans` · `test_multi_block_results_not_pruned` · `test_reference_stubs_counted` ·
 `test_resume_pruning_keeps_structure_and_paths` · `test_resume_pruning_stable_between_resumes` ·
 `test_resume_pruning_only_at_resume_and_old_calls` · `test_unknown_conversation_is_resume` ·
-`test_conversation_store_bounded_and_memory_only` · `test_human_turn_definition` · `test_resume_pruning_off_by_default` ·
+`test_conversation_store_bounded_and_memory_only` ·
+`test_resume_uses_previous_request_ttl_1h` · `test_resume_uses_previous_request_ttl_5m` · `test_resume_longest_ttl_wins` ·
+`test_resume_without_cache_marker_uses_protocol_default` · `test_resume_unknown_ttl_uses_protocol_default_and_traces` ·
+`test_resume_trace_attributes` · `test_human_turn_definition` · `test_resume_pruning_off_by_default` ·
 `prop_reread_by_reference_decodes_whole_request` · `test_reread_notes_after_edit` · `test_reread_source_write` ·
 `test_reread_not_applicable_reasons` · `test_reread_never_chains_notes` · `test_reread_source_integrity_enforced` ·
-`test_reread_keeps_reminders_and_verbatim_tool` · `test_reread_linear_time` · `test_reread_prefix_stable_across_turns`
+`test_reread_keeps_reminders_and_verbatim_tool` · `test_reread_linear_time` · `test_reread_prefix_stable_across_turns` ·
+`test_conversation_key_ignores_cache_markers` ·
+`test_outline_off_by_default_and_declared` · `test_lossless_only_switches_outline_off` · `test_outline_candidates_and_reasons` ·
+`test_outline_python_keeps_declarations_and_head` · `test_outline_c_family` · `test_outline_note_format_and_numbering` ·
+`test_outline_crlf` · `test_outline_keeps_protected_spans` · `test_outline_only_first_read_of_a_file` ·
+`test_outline_prefix_stable_across_turns` · `test_outline_later_references_forward_whole` ·
+`test_outline_applies_to_declared_verbatim_tools` · `test_outline_preserves_structure` ·
+`test_claude_code_shell_read_rules` · `test_outline_first_read_end_to_end`
 
 ## Open questions
 - Q14: How much of the pruning saving measured in E5a (TOKLI_EVIDENCE §2) came from Edit/Write **arguments** rather than results? It needs a per-part count. E5b records tokens by segment kind, including TOOL_CALL_ARGS (read-only).

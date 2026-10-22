@@ -84,19 +84,67 @@ def _text_blocks(
             builder.add(kind, block.get("text"), f"{base}/{j}/text", role, block=block, **attrs)
 
 
+def _without_cache_markers(node: Any) -> Any:
+    if isinstance(node, dict):
+        return {k: _without_cache_markers(v) for k, v in node.items() if k != "cache_control"}
+    if isinstance(node, list):
+        return [_without_cache_markers(v) for v in node]
+    return node
+
+
 def conversation_key(request: CanonicalRequest) -> str:
-    """SHA-256 of the canonical JSON of `system` and the first message (ADR 0012): the same for
-    every request of one conversation, different for another conversation."""
+    """SHA-256 of the canonical JSON of `system` and the first message, without any
+    `cache_control` (ADR 0012, S8i SCR-003): the same for every request of one conversation,
+    different for another conversation. Clients move their cache markers from request to
+    request, so the markers are not part of the conversation's identity."""
     body = request.original_json if isinstance(request.original_json, dict) else {}
     messages = body.get("messages")
     first = messages[0] if isinstance(messages, list) and messages else None
     canonical = json.dumps(
-        {"system": body.get("system"), "first": first},
+        _without_cache_markers({"system": body.get("system"), "first": first}),
         sort_keys=True,
         ensure_ascii=False,
         separators=(",", ":"),
     )
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+_TTL_SECONDS = {None: 300, "5m": 300, "1h": 3600}  # AN-011: the `ttl` of an ephemeral marker
+
+
+def _cache_markers(body: dict[str, Any]) -> list[object]:
+    """The `cache_control` values of the blocks in `system`, `tools` and `messages` (including
+    blocks inside a `tool_result`); tool-call inputs and schemas are opaque and not searched."""
+    blocks: list[Any] = []
+    for name in ("system", "tools"):
+        if isinstance(body.get(name), list):
+            blocks += body[name]
+    for message in body["messages"]:
+        content = message.get("content")
+        for block in content if isinstance(content, list) else ():
+            blocks.append(block)
+            if isinstance(block, dict) and block.get("type") == "tool_result":
+                inner = block.get("content")
+                blocks += inner if isinstance(inner, list) else ()
+    return [b["cache_control"] for b in blocks if isinstance(b, dict) and "cache_control" in b]
+
+
+def _cache_ttl(body: dict[str, Any]) -> tuple[int | None, bool]:
+    """``(cache_ttl_s, unrecognised)`` per AN-011: the longest lifetime among the markers; none
+    when there is no marker or any marker is one Tokli does not understand."""
+    lifetimes: list[int] = []
+    for marker in _cache_markers(body):
+        ttl = marker.get("ttl") if isinstance(marker, dict) else None
+        known = (
+            isinstance(marker, dict)
+            and marker.get("type") == "ephemeral"
+            and (ttl is None or isinstance(ttl, str))
+            and ttl in _TTL_SECONDS
+        )
+        if not known:
+            return None, True
+        lifetimes.append(_TTL_SECONDS[ttl])
+    return (max(lifetimes) if lifetimes else None), False
 
 
 def _pointer_part(key: str) -> str:
@@ -291,6 +339,7 @@ def parse(
         for index, (call_id, name, arguments, message_index) in enumerate(calls)
     )
     model = body.get("model")
+    cache_ttl_s, cache_ttl_unrecognised = _cache_ttl(body)
     return CanonicalRequest(
         protocol=PROTOCOL,
         provider=PROVIDER,
@@ -301,6 +350,8 @@ def parse(
         original_json=body,
         original_bytes=raw,
         tools=tools,
+        cache_ttl_s=cache_ttl_s,
+        cache_ttl_unrecognised=cache_ttl_unrecognised,
     )
 
 

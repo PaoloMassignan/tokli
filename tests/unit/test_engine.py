@@ -459,6 +459,7 @@ def test_verbatim_opt_in_defaults_off() -> None:
 def test_registry_lists_the_s8e_compressors() -> None:
     assert [c.spec.id for c in REGISTRY] == [
         "json_minify",
+        "outline_first_read",  # S8j
         "duplicate_tool_results",
         "search_group",
         "log_filter",

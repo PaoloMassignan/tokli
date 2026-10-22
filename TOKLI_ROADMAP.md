@@ -285,6 +285,99 @@ slice on 2026-10-04.
     by default;
   - the replay on the human's sessions shows that it applies.
 
+## S8i — The resume follows the client's cache lifetime
+
+- **Requested** by the human on 2026-10-16, after a counters-only analysis of their traffic:
+  68 % of cache writes followed a pause, nearly all longer than an hour
+  (`slices/S8i/SPEC_REVIEW.md` §0).
+- **Contents** (S8i SCR-001):
+  - the Anthropic adapter reads the longest `cache_control` lifetime of a request (AN-011);
+  - a request is a resume when its conversation is unknown, or was last seen more than the
+    previous request's lifetime plus a 60 s margin ago (PR-021, PR-027);
+  - a default per protocol when no lifetime is stated (`pruning.cache_ttl_default_s`), replacing
+    `pruning.resume_after_s` (renamed, CF-013);
+  - the resume decision in the trace (PR-028).
+- **Not in S8i:**
+  - outlines of old reads at a resume (Part B of the review, set aside by the human);
+  - shell commands that read files (to be discussed after S8i).
+- **Exit:** Tier 0 tests green on the CI matrix; the real-traffic replay is not required (no
+  compressor changes); traceability and the observability checklist done.
+- **Added before Gate 2:** S8i SCR-003, the conversation key ignores cache markers (found by the
+  timeline simulation, 2026-10-17).
+
+## S8j — A skeleton at the first read of a code file (optional)
+
+- **Requested** by the human on 2026-10-17 and redefined on 2026-10-22: when a new file is
+  read, code for now, send only its skeleton at first, and the whole copy only when it is asked
+  for again for an edit.
+- **The human's decision:** the behaviour exists, optional and off by default, although E10(f)
+  measured more refusals with a skeleton.
+- **Contents:**
+  - `outline_first_read` (SPEC 019 PR-040…PR-046). The first whole read of a code file through
+    `Read`, `Bash` or `PowerShell` is forwarded as its skeleton: declarations kept, each omitted
+    run replaced by a note. Every later read of the file is whole. It is prefix-stable;
+  - the Claude Code shell-read rules (whole reads);
+  - CC-021 (c) (S8j SCR-001);
+  - the response's `stop_reason` in telemetry (AN-012, TC-022, schema v5, ADR 0015), so that
+    refusals in real use are visible.
+- **Not in S8j:**
+  - Markdown and other non-code files;
+  - partial reads;
+  - outlines at a resume;
+  - summaries written by a model;
+  - the stub of long shell commands.
+- **Exit:**
+  - Tier 0 tests green on the CI matrix;
+  - the real-traffic replay counters recorded, with the human's consent;
+  - traceability and the observability checklist done;
+  - the compressor documented as "damage detected; off by default".
+
+## S8k — Composition of the cached context (measurement)
+
+- **Requested** by the human on 2026-10-22. Built on 2026-10-22 (`tools/composition.py`); the
+  record is in `TOKLI_EVIDENCE.md`.
+- **Why:** cache reads are about 64 % of the measured cost (S8c cost map). They grow with the
+  length of the context times the number of requests that read it. It has never been measured
+  which parts of the context that cost belongs to.
+- **Contents (proposed, to be specified at Gate 1):**
+  - a local, consented, counters-only measurement over the human's sessions, as `tools.replay`;
+  - the tokens of each segment kind (system prompt, tool definitions, user text, assistant text,
+    tool-call arguments by tool, tool results by tool), each weighted by the number of later
+    requests that read it from the cache;
+  - the same split for the cache writes after a pause.
+- **Exit:** the split recorded in `TOKLI_EVIDENCE.md`, and the candidate levers ranked by their
+  weighted share.
+
+## S8l — Keeping the prompt cache warm across pauses (keepalive)
+
+- **Requested** by the human on 2026-10-22. Planned, not started.
+- **Why:** about 76 % of the cache writes follow a pause longer than the cache lifetime, when the
+  provider writes the whole context again at twice the base input price. A request that reads the
+  cache before it expires costs 0.1× per read.
+- **Scope question for Gate 1:** a keepalive adds requests and tokens to lower the cost.
+  `TOKLI_SCOPE.md` limits Tokli to token reduction, so the scope needs the human's decision.
+- **Contents (proposed):**
+  - first, a simulation at no API cost on the human's real pause timeline (as the S8i timeline
+    simulation): when a keepalive saves money, and when a pause that never resumes makes it a
+    loss;
+  - then, only if the simulation shows a saving, the keepalive itself, off by default, with its
+    cost in telemetry.
+- **Exit:** the simulation recorded; the build decided by the human from it.
+
+## S8m — Edit arguments shortened at their first resend
+
+- **Requested** by the human on 2026-10-22. Planned, not started; to be ordered after S8k.
+- **Why:** on the human's traffic (2026-10-22, counters only, weighted by later re-reads), the
+  arguments of `Write`/`Edit` calls on code files are 16.8 % of the cached context, against 11.0 %
+  for reads of code files. All write arguments together are 31 %.
+- **Idea:** `edit_args_on_resume` shortens old edit arguments only at a resume. The same stub,
+  applied the first time the client sends a call back (it is prefix-stable from then on), saves
+  on every later cache read and not only after a pause.
+- **Known risk:** E10(c) measured more refusals when the assistant's own tool-call history is
+  edited (descriptive stub 11/20). The human set this aside for now (2026-10-22); the slice
+  reports `stop_reason` counts like S8j.
+- **Exit:** to be defined at Gate 1.
+
 ## S7 — OpenAI Chat Completions
 
 - Adapter `openai_chat` (OC-*): `role:"tool"` + user text; usage only when the client asked.

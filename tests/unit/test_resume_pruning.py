@@ -92,6 +92,16 @@ def prune(data: dict[str, Any], conversation: ConversationView | None, **options
     return request, result, json.loads(render(request, result.patches))
 
 
+def seen(seconds: float, pruned: frozenset[str] = frozenset()) -> ConversationView:
+    """The view of a known conversation `seconds` after its previous request, which carried no
+    cache marker (the protocol default lifetime, 3,600 s, and a 60 s margin apply; S8i)."""
+    now = [10_000.0]
+    store = ConversationStore(clock=lambda: now[0])
+    store.record("synthetic", pruned)
+    now[0] += seconds
+    return store.view("synthetic", "anthropic_messages")
+
+
 def stubbed_calls(request, result) -> set[str]:  # type: ignore[no-untyped-def]
     return {request.segment(p.segment_id).tool_call_id for p in result.patches}
 
@@ -156,6 +166,36 @@ def test_human_turn_definition() -> None:
     assert turns["toolu_t0"] == 2
 
 
+def test_conversation_key_ignores_cache_markers() -> None:
+    """S8i SCR-003 regression: the key changed between a conversation's first and second request.
+
+    Root cause: the key hashed the first message as sent. Claude Code puts a `cache_control`
+    marker on the last block of each request, which at the first request is in the first message,
+    so the second request (with no marker there) looked like a new conversation and a resume."""
+    first: dict[str, Any] = {
+        "model": "claude-test",
+        "max_tokens": 64,
+        "system": [{"type": "text", "text": "You are a synthetic agent."}],
+        "messages": [{"role": "user", "content": [{"type": "text", "text": "Start."}]}],
+    }
+    later = json.loads(json.dumps(first))
+    later["system"][0]["cache_control"] = {"type": "ephemeral", "ttl": "1h"}
+    later["messages"] += [
+        {"role": "assistant", "content": "Noted."},
+        {"role": "user", "content": [{"type": "text", "text": "Next."}]},
+    ]
+    marked = json.loads(json.dumps(first))
+    marked["messages"][0]["content"][0]["cache_control"] = {"type": "ephemeral", "ttl": "1h"}
+    keys = {
+        conversation_key(parse(json.dumps(d).encode(), mutable_kinds=ALL_KINDS))
+        for d in (first, later, marked)
+    }
+    assert len(keys) == 1
+    other = json.loads(json.dumps(marked))
+    other["messages"][0]["content"][0]["text"] = "A different task."
+    assert conversation_key(parse(json.dumps(other).encode(), mutable_kinds=ALL_KINDS)) not in keys
+
+
 def test_conversation_key() -> None:
     """ADR 0012: the key depends only on `system` and the first message."""
     a = parse(json.dumps(body(turns_after_edit=2)).encode(), mutable_kinds=ALL_KINDS)
@@ -174,7 +214,7 @@ def test_resume_pruning_keeps_structure_and_paths() -> None:
     """AC-PR-11: at a resume the listed strings become stubs; keys, file paths, ids, order and
     every other value stay the same."""
     data = body()
-    request, result, forwarded = prune(data, ConversationView(7200.0))
+    request, result, forwarded = prune(data, seen(7200.0))
     assert stubbed_calls(request, result) == {"toolu_w1", "toolu_e2"}
     write = forwarded["messages"][1]["content"][0]
     assert write["id"] == "toolu_w1" and write["input"]["file_path"] == "config.py"
@@ -196,20 +236,22 @@ def test_resume_pruning_keeps_structure_and_paths() -> None:
 
 
 def test_resume_pruning_only_at_resume_and_old_calls() -> None:
-    """AC-PR-11, AC-PR-16: nothing before `resume_after_s`; only calls followed by at least
-    `resume_min_age_turns` human turns; tool-only messages do not count; short strings stay."""
+    """AC-PR-11, AC-PR-16: nothing before the cache lifetime plus the margin (S8i); only calls
+    followed by at least `resume_min_age_turns` human turns; tool-only messages do not count;
+    short strings stay."""
     data = body(turns_after_write=6, turns_after_edit=2, tool_only=6)
-    _, before, _ = prune(data, ConversationView(3599.0))
+    _, before, _ = prune(data, seen(3599.0))
     assert before.patches == ()
-    request, after, _ = prune(data, ConversationView(3601.0))
+    request, after, _ = prune(data, seen(3661.0))
     assert stubbed_calls(request, after) == {"toolu_w1"}  # the Edit has 3 human turns after it
-    request, small, _ = prune(data, ConversationView(3601.0), min_tokens=10_000)
+    request, small, _ = prune(data, seen(3661.0), min_tokens=10_000)
     assert small.patches == ()
 
 
 def test_unknown_conversation_is_resume() -> None:
     """AC-PR-13 (S8c review P5): an unknown conversation, or none at all, is a resume."""
-    for conversation in (ConversationView(None), None):
+    unknown = ConversationStore().view("never-seen", "anthropic_messages")
+    for conversation in (unknown, None):
         request, result, _ = prune(body(), conversation)
         assert stubbed_calls(request, result) == {"toolu_w1", "toolu_e2"}
 
@@ -217,9 +259,9 @@ def test_unknown_conversation_is_resume() -> None:
 def test_resume_pruning_reapplies_stored_set_between_resumes() -> None:
     """PR-023: between resumes exactly the stored calls are pruned, even if other calls became
     old meanwhile."""
-    request, result, _ = prune(body(), ConversationView(60.0, frozenset({"toolu_w1"})))
+    request, result, _ = prune(body(), seen(60.0, frozenset({"toolu_w1"})))
     assert stubbed_calls(request, result) == {"toolu_w1"}
-    request, result, _ = prune(body(), ConversationView(60.0, frozenset()))
+    request, result, _ = prune(body(), seen(60.0))
     assert result.patches == ()
 
 
@@ -246,14 +288,14 @@ def test_conversation_store_bounded_and_memory_only(
     monkeypatch.chdir(tmp_path)
     now = [1000.0]
     store = ConversationStore(capacity=2, clock=lambda: now[0])
-    assert store.view("a").seconds_since_last is None
+    assert store.view("a", "anthropic_messages").seconds_since_last is None
     assert store.record("a", {"toolu_1"}) is True  # newly pruned: history rewritten
     now[0] += 30
-    view = store.view("a")
+    view = store.view("a", "anthropic_messages")
     assert view.seconds_since_last == 30 and view.pruned_call_ids == {"toolu_1"}
     assert store.record("a", {"toolu_1"}) is False  # the same set again
     store.record("b", ())
-    store.view("a")  # a is now the most recently used
+    store.view("a", "anthropic_messages")  # a is now the most recently used
     store.record("c", ())
-    assert len(store) == 2 and store.view("b").seconds_since_last is None
+    assert len(store) == 2 and store.view("b", "anthropic_messages").seconds_since_last is None
     assert os.listdir(tmp_path) == []

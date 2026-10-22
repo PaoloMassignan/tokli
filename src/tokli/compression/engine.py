@@ -23,6 +23,7 @@ from tokli.compression import text_shapes
 from tokli.compression.contract import (
     AnyCompressor,
     Applicability,
+    CompressorSpec,
     LosslessCompressor,
     RequestCompressor,
     SegmentRef,
@@ -270,6 +271,40 @@ class Engine:
         """``available`` or ``unavailable(<module>)`` per compressor (CC-010)."""
         return dict(self._availability)
 
+    def _verbatim_filter(
+        self,
+        spec: CompressorSpec,
+        candidates: list[Segment],
+        stat: CompressorStats,
+        invocations: list[Invocation],
+        *,
+        count: bool,
+    ) -> list[Segment]:
+        """CC-021 and CC-023 for a pruner: tool results of verbatim tools, and results whose tool
+        is unresolved, are skipped, except for reference pruners, opted-in compressors (b) and
+        the tools a compressor declares in `target_tools` (c, S8j SCR-001)."""
+        if spec.equivalence == "reference":
+            return candidates
+        settings = self._settings
+        kept: list[Segment] = []
+        for s in candidates:
+            reason = ""
+            if s.kind is SegmentKind.TOOL_RESULT:
+                if s.tool_name is None:
+                    reason = "verbatim_tool(unresolved)"
+                elif (
+                    s.tool_name in settings.verbatim_tools
+                    and spec.id not in settings.verbatim_opt_in
+                    and s.tool_name not in spec.target_tools
+                ):
+                    reason = "verbatim_tool"
+            if not reason:
+                kept.append(s)
+            elif count:
+                stat.skip_reasons["verbatim_tool"] = stat.skip_reasons.get("verbatim_tool", 0) + 1
+                invocations.append(Invocation(s.id, spec.id, "skipped", reason, 0, 0, 0.0))
+        return kept
+
     def _pre_filter(self, compressor: AnyCompressor) -> str:
         spec = compressor.spec
         if not self._settings.enabled.get(spec.id, False):
@@ -459,6 +494,7 @@ class Engine:
             stat.considered += len(candidates)
         elif not any(s.id in only and s.id not in state.terminal for s in candidates):
             return
+        candidates = self._verbatim_filter(spec, candidates, stat, invocations, count=only is None)
         # No budget check: a pruner's decisions must be the same on every request (CC-014).
         refs = [
             SegmentRef(

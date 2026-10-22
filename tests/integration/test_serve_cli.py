@@ -206,3 +206,29 @@ def test_serve_prints_dashboard_address(cli: Cli, monkeypatch: pytest.MonkeyPatc
     monkeypatch.setattr(uvicorn.Server, "run", lambda self, sockets=None: None)
     result = cli.run("serve", "--data-dir", str(data_dir), "--port", "0")
     assert re.search(r"dashboard: http://127\.0\.0\.1:\d+/tokli/", result.err)
+
+
+def test_serve_prints_renamed_key_warning(cli: Cli, monkeypatch: pytest.MonkeyPatch) -> None:
+    """SPEC 017 CF-013 (S8i SCR-001): a renamed key prints a warning at startup naming the
+    layer, the old key and the new key."""
+    import uvicorn
+
+    from tests.integration.servers import BYTE_CATALOG, provision
+    from tokli.app import bootstrap as bootstrap_module
+
+    data_dir = cli.workdir / "data"
+    provision(data_dir)
+    real_bootstrap = bootstrap_module.bootstrap
+    monkeypatch.setattr(
+        "tokli.cli.main.bootstrap",
+        lambda config, **kw: real_bootstrap(config, catalog=BYTE_CATALOG, version="test"),
+    )
+    monkeypatch.setattr(uvicorn.Server, "run", lambda self, sockets=None: None)
+    result = cli.run(
+        "serve", "--data-dir", str(data_dir), "--port", "0", "--set", "pruning.resume_after_s=120"
+    )
+    assert result.code == 0
+    assert (
+        "warning: cli:--set sets 'pruning.resume_after_s', renamed to "
+        "'pruning.cache_ttl_default_s.anthropic_messages'" in result.err
+    )

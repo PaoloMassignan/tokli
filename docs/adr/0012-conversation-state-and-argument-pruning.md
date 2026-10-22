@@ -1,6 +1,6 @@
 # ADR 0012 — Conversation state and pruning of tool-call arguments at resume
 
-Status: accepted (S8c, 2026-10-04; approved at S8c Gate 1) · Related: SPEC 001 CM-009, SPEC 003, SPEC 009
+Status: accepted (S8c, 2026-10-04; approved at S8c Gate 1); amendment 1 accepted (S8i SCR-001, approved at S8i Gate 1, 2026-10-16); amendment 2 accepted (S8i SCR-003, approved 2026-10-22) · Related: SPEC 001 CM-009, SPEC 003, SPEC 009
 CC-006, SPEC 019 PR-005, PR-020…PR-026, ADR 0010 (request-scope compressors), TOKLI_EVIDENCE §2
 (E5b-lite)
 
@@ -69,3 +69,48 @@ It must also be able to change argument strings of selected tool calls.
   dashboard shows `cache_creation_input_tokens` per request, so this is visible.
 - **Portability:** none specific; the wall clock is the only new input.
 - **Migration:** none. New config keys only; the stub text is part of the compressor version.
+
+## Amendment 1 — the resume follows the client's cache lifetime (S8i SCR-001, accepted 2026-10-16)
+
+- **Store contents:** per conversation key, the wall-clock time of the last request, **its
+  `cache_ttl_s`** (SPEC 003 AN-011, absent when the request stated none that Tokli understands),
+  and the pruned call ids. Bound, LRU and memory-only rules are unchanged.
+- **Resume:** a request is a resume when its conversation is unknown, or was last seen more than
+  its cache lifetime plus `pruning.resume_margin_s` (60 s) ago (SPEC 019 PR-021, PR-027).
+  - The lifetime is the previous request's `cache_ttl_s`, or else
+    `pruning.cache_ttl_default_s.<protocol>`.
+  - It replaces the single `pruning.resume_after_s`, which is renamed (SPEC 017 CF-013).
+- **Where the decision is made:** one helper next to the store computes `is_resume`, the lifetime,
+  its source and the seconds since the last request.
+  - The engine passes `is_resume` to request-scope pruners in the read-only conversation view
+    (CC-006).
+  - The pruners no longer receive a threshold.
+  - The four facts go to the trace (PR-028), not to the telemetry schema.
+- **Why per conversation, not per file:** the provider caches the prefix up to a breakpoint, and
+  every read refreshes all of it. A file in the history expires only when its conversation does.
+- **Alternatives considered:**
+  - keeping the fixed threshold: it misses resumes for 5-minute clients, and acts with no margin
+    for 1-hour clients;
+  - the current request's lifetime: the cache was written by the previous request, so its lifetime
+    is the one that applies;
+  - per-file expiry: impossible, for the reason above.
+- **Consequences:**
+  - tests with an injected clock for both lifetimes, the longest-marker rule, the fallbacks and the
+    renamed key;
+  - no persistence or protocol change;
+  - `config_hash` changes once, because the `pruning` section changes.
+- **As implemented (S8i):** `ConversationStore.view(key, protocol)` makes the decision and returns
+  it in the `ConversationView`. The proxy records it as the `conversation` span, after `parse`, so
+  the dashboard's request view shows it.
+
+## Amendment 2 — the key ignores cache markers (S8i SCR-003, accepted 2026-10-22)
+
+- **Key:** SHA-256 of the canonical JSON of `system` and the first message, after every key named
+  `cache_control` has been removed from them at any depth.
+- **Why:** Claude Code puts a `cache_control` marker on the last block of each request. At a
+  conversation's first request that block is in the first message, so the key changed at the
+  second request, which then looked like a new conversation. The marker is a caching hint, not
+  part of the conversation's identity.
+- **Consequences:**
+  - a regression test (`test_conversation_key_ignores_cache_markers`);
+  - after the upgrade every conversation is unknown once, as after a restart.

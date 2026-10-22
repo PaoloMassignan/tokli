@@ -198,3 +198,19 @@ def test_doctor_fails_on_invalid_user_price_book(env: dict[str, str], tmp_path: 
     assert not report.ok
     text = render(report, normalized=False)
     assert "[FAIL] price book valid" in text and "price-book.yaml" in text
+
+
+def test_doctor_prints_renamed_key_warning(env: dict[str, str], tmp_path: Path) -> None:
+    """SPEC 017 CF-013: `tokli doctor` prints the warning for a renamed key."""
+    data_dir = tmp_path / "data"
+    provision_fake(data_dir)
+    config = load_config(
+        CliOverrides(data_dir=str(data_dir), sets=("pruning.resume_after_s=120",)),
+        env,
+        platform_name(),
+    )
+    text = render(build_report(config, ENV, catalog=FAKE_CATALOG), normalized=False)
+    assert (
+        "warning: cli:--set sets 'pruning.resume_after_s', renamed to "
+        "'pruning.cache_ttl_default_s.anthropic_messages'" in text
+    )

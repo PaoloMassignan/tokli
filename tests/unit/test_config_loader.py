@@ -43,7 +43,13 @@ EXAMPLES: dict[str, tuple[str, str, object]] = {
     "compressors.log_filter.debug_sample": ("5", "20", 20),
     "compressors.log_filter.apply_to_verbatim_tools": ("true", "false", False),
     "compressors.edit_args_on_resume.enabled": ("true", "false", False),
-    "pruning.resume_after_s": ("60", "120", 120.0),
+    "compressors.outline_first_read.enabled": ("true", "false", False),  # S8j
+    "pruning.outline_tools": ("[Read]", '["Bash"]', ("Bash",)),
+    "pruning.outline_rules": ("{py: python}", '{"cs": "c_family"}', {"cs": "c_family"}),
+    "pruning.outline_min_tokens": ("10", "20", 20),
+    "pruning.outline_min_run_lines": ("4", "5", 5),
+    "pruning.cache_ttl_default_s.anthropic_messages": ("60", "120", 120.0),  # S8i
+    "pruning.resume_margin_s": ("0", "30", 30.0),  # S8i
     "pruning.resume_min_age_turns": ("2", "6", 6),
     "pruning.resume_min_tokens": ("10", "20", 20),
     "pruning.resume_edit_fields": (
@@ -97,7 +103,13 @@ FILE_EXPECTED: dict[str, object] = {
     "compressors.log_filter.enabled": True,
     "compressors.log_filter.debug_sample": 5,
     "compressors.edit_args_on_resume.enabled": True,
-    "pruning.resume_after_s": 60.0,
+    "compressors.outline_first_read.enabled": True,
+    "pruning.outline_tools": ("Read",),
+    "pruning.outline_rules": {"py": "python"},
+    "pruning.outline_min_tokens": 10,
+    "pruning.outline_min_run_lines": 4,
+    "pruning.cache_ttl_default_s.anthropic_messages": 60.0,
+    "pruning.resume_margin_s": 0.0,
     "pruning.resume_min_age_turns": 2,
     "pruning.resume_min_tokens": 10,
     "pruning.resume_edit_fields": {"Write": ("content",)},
@@ -146,13 +158,16 @@ DEFAULT_BEHAVIOUR_JSON = {
         "log_filter": {"enabled": False, "debug_sample": 10, "apply_to_verbatim_tools": False},
         "edit_args_on_resume": {"enabled": False},  # S8c
         "reread_by_reference": {"enabled": True},  # S8h: on with its version 2 smoke record
+        "outline_first_read": {"enabled": False},  # S8j
     },
     "limits": {"max_transform_bytes": 33554432, "usage_parser_buffer": 1048576},
     "pruning": {
         "duplicate_min_tokens": 64,
         "duplicate_require_same_call": False,
         # S8c (SPEC 017 "Keys added in S8c")
-        "resume_after_s": 3600.0,
+        # S8i SCR-001 (SPEC 017 "Keys changed in S8i"): replaces resume_after_s
+        "cache_ttl_default_s": {"anthropic_messages": 3600.0},
+        "resume_margin_s": 60.0,
         "resume_min_age_turns": 4,
         "resume_min_tokens": 64,
         "resume_edit_fields": {
@@ -165,6 +180,31 @@ DEFAULT_BEHAVIOUR_JSON = {
         "reread_tools": ["Read"],
         "reread_min_run_lines": 5,
         "reread_max_lines": 20000,
+        # S8j (SPEC 017 "Keys added in S8j")
+        "outline_tools": ["Read", "Bash", "PowerShell"],
+        "outline_rules": {
+            "py": "python",
+            **{
+                ext: "c_family"
+                for ext in (
+                    "cs",
+                    "java",
+                    "kt",
+                    "ts",
+                    "tsx",
+                    "js",
+                    "jsx",
+                    "go",
+                    "rs",
+                    "c",
+                    "h",
+                    "cpp",
+                    "hpp",
+                )
+            },
+        },
+        "outline_min_tokens": 500,
+        "outline_min_run_lines": 3,
     },
     "tokens": {
         "default": "o200k_base",
@@ -436,3 +476,64 @@ def test_config_hash_changes_with_pruning_options(env: dict[str, str]) -> None:
         CliOverrides(sets=("pruning.duplicate_min_tokens=128",)), env, platform_name()
     ).config_hash
     assert base != changed
+
+
+# -- S8i SCR-001: renamed keys (CF-013, AC-CF-9) ---------------------------------------------
+
+RENAMED_OLD, RENAMED_NEW = (
+    "pruning.resume_after_s",
+    "pruning.cache_ttl_default_s.anthropic_messages",
+)
+
+
+def test_renamed_key_resume_after_s(env: dict[str, str], tmp_path: Path) -> None:
+    """AC-CF-9: the old key sets the new one, from the file, the environment and --set, with
+    the layer as its source and a warning naming the layer and both keys."""
+    path = write_config(tmp_path / "cfg", "pruning:\n  resume_after_s: 120\n")
+    layers = [
+        (CliOverrides(config_file=str(path)), env, f"file:{path}"),
+        (
+            CliOverrides(),
+            {**env, "TOKLI_PRUNING__RESUME_AFTER_S": "120"},
+            "env:TOKLI_PRUNING__RESUME_AFTER_S",
+        ),
+        (CliOverrides(sets=(f"{RENAMED_OLD}=120",)), env, "cli:--set"),
+    ]
+    for cli, environment, source in layers:
+        config = load_config(cli, environment, platform_name())
+        assert config.settings.pruning.cache_ttl_default_s.anthropic_messages == 120.0
+        assert config.values[RENAMED_NEW] == 120.0
+        assert config.sources[RENAMED_NEW] == source
+        assert RENAMED_OLD not in config.values  # not a schema key any more
+        assert len(config.warnings) == 1, source
+        assert all(part in config.warnings[0] for part in (source, RENAMED_OLD, RENAMED_NEW))
+    assert load_config(CliOverrides(), env, platform_name()).warnings == ()
+
+
+def test_renamed_key_and_new_key_in_one_layer_refused(env: dict[str, str], tmp_path: Path) -> None:
+    """AC-CF-9: both keys in one layer → a startup error naming the layer and both keys; in
+    different layers the usual precedence applies."""
+    path = write_config(
+        tmp_path / "cfg",
+        "pruning:\n  resume_after_s: 120\n  cache_ttl_default_s:\n    anthropic_messages: 90\n",
+    )
+    with pytest.raises(ConfigError) as caught:
+        load_config(CliOverrides(config_file=str(path)), env, platform_name())
+    assert all(part in caught.value.cause for part in (f"file:{path}", RENAMED_OLD, RENAMED_NEW))
+    with pytest.raises(ConfigError):
+        load_config(
+            CliOverrides(sets=(f"{RENAMED_OLD}=1", f"{RENAMED_NEW}=2")), env, platform_name()
+        )
+    only_old = write_config(tmp_path / "cfg2", "pruning:\n  resume_after_s: 120\n")
+    config = load_config(
+        CliOverrides(config_file=str(only_old), sets=(f"{RENAMED_NEW}=200",)), env, platform_name()
+    )
+    assert config.settings.pruning.cache_ttl_default_s.anthropic_messages == 200.0
+    assert config.sources[RENAMED_NEW] == "cli:--set"
+
+
+def test_keys_changed_in_s8i_defaults(env: dict[str, str]) -> None:
+    """SPEC 017 "Keys changed in S8i": one default lifetime per protocol, a 60 s margin."""
+    pruning = load_config(CliOverrides(), env, platform_name()).settings.pruning
+    assert pruning.cache_ttl_default_s.model_dump() == {"anthropic_messages": 3600.0}
+    assert pruning.resume_margin_s == 60.0

@@ -164,6 +164,7 @@ def prop_usage_stream_any_chunk_split(ending: bytes, cuts: list[int]) -> None:
     assert usage.source == "provider"
     assert categories(usage) == (25, 30000, 1000, 200, 15)
     assert usage.events["message_stop"] == 1
+    assert usage.stop_reason == "end_turn"  # AN-012 (S8j)
 
 
 def test_stream_records_usage_field_names_of_message_delta() -> None:
@@ -186,3 +187,42 @@ def test_message_delta_without_split_keeps_cache_split_from_message_start() -> N
     assert categories(usage) == (3, 30000, 1000, 200, 42)
     assert usage.source == "provider"
     assert "iterations" in usage.delta_fields  # unknown fields are named, never parsed
+
+
+# -- AN-012 (S8j): the response's stop reason --------------------------------------------------
+
+
+def _non_stream(stop_reason: object) -> bytes:
+    data = json.loads(fixture("non_stream.json"))
+    if stop_reason is ...:
+        data.pop("stop_reason", None)
+    else:
+        data["stop_reason"] = stop_reason
+    return json.dumps(data).encode()
+
+
+def test_anthropic_stop_reason_non_stream() -> None:
+    """AC-AN-8: the top-level `stop_reason` is kept when it is a plain token, `other` for any
+    other value, and absent when the body has none or cannot be read."""
+    assert body(fixture("non_stream.json")).stop_reason == "end_turn"
+    for value in ("refusal", "tool_use", "max_tokens", "pause_turn"):
+        assert body(_non_stream(value)).stop_reason == value
+    assert body(_non_stream("Weird-Value!")).stop_reason == "other"
+    assert body(_non_stream("x" * 33)).stop_reason == "other"
+    assert body(_non_stream(42)).stop_reason == "other"
+    assert body(_non_stream(None)).stop_reason is None
+    assert body(_non_stream(...)).stop_reason is None
+    assert body(_non_stream("refusal"), limit=10).stop_reason is None  # buffer_limit
+
+
+def test_anthropic_stop_reason_stream() -> None:
+    """AC-AN-8: the last non-null `message_delta.delta.stop_reason`; a stream cut before
+    `message_delta` has none."""
+    basic = fixture("stream_basic.sse")
+    assert stream(basic).stop_reason == "end_turn"
+    refused = basic.replace(b'"stop_reason":"end_turn"', b'"stop_reason":"refusal"')
+    assert stream(refused).stop_reason == "refusal"
+    weird = basic.replace(b'"stop_reason":"end_turn"', b'"stop_reason":"Weird-Value!"')
+    assert stream(weird).stop_reason == "other"
+    usage = stream(fixture("stream_error_event.sse"))
+    assert usage.source == "provider_partial" and usage.stop_reason is None

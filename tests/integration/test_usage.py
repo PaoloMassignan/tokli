@@ -346,3 +346,27 @@ def test_stream_metadata_in_summary_log_line(tokli: Start, upstream: FakeUpstrea
     summary = [json.loads(line) for line in t.log_lines() if '"event": "request"' in line][-1]
     assert summary["sse"]["events"]["message_delta"] == 1
     assert summary["sse"]["delta_usage_fields"] == ["output_tokens"]
+
+
+# -- AN-012, TC-022 (S8j): the stop reason -----------------------------------------------------
+
+
+def test_stop_reason_persisted_and_in_api(tokli: Start, upstream: FakeUpstream) -> None:
+    """AC-TC-18: a refused response persists `refusal` and the request view shows it; a stream
+    shows its `end_turn`; a response without usage persists null."""
+    t = tokli()
+    payload = json.loads((RESPONSES / "non_stream.json").read_bytes())
+
+    async def refused(request: Request) -> Response:
+        return JSONResponse({**payload, "stop_reason": "refusal"})
+
+    upstream.responder = refused
+    assert send(t)["record"]["stop_reason"] == "refusal"
+    upstream.responder = sse_responder(events("stream_basic.sse"))
+    assert send(t, request_body(stream=True))["record"]["stop_reason"] == "end_turn"
+
+    async def no_usage(request: Request) -> Response:
+        return JSONResponse({"id": "msg_test", "type": "message", "content": []})
+
+    upstream.responder = no_usage
+    assert send(t)["record"]["stop_reason"] is None

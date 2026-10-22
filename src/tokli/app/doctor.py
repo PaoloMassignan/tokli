@@ -193,6 +193,7 @@ def render(report: DoctorReport, *, normalized: bool) -> str:
 
     out.append(f"Configuration  hash {config.config_hash[:16]}")
     out += config_lines(config, normalized=normalized)
+    out += [f"  warning: {warning}" for warning in config.warnings]  # CF-013
     out += ["", "Auth", "  anthropic  passthrough", "", "Compressors"]
     for entry in report.compressors:
         state = "enabled" if entry.enabled else "disabled"

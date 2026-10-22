@@ -428,6 +428,135 @@ only.
 The same week's real-traffic replay (S8h) put all lossless compressors together at about 0.1 % of
 tool-result tokens.
 
+### Shell output at resumes, and E10(f) — structures of old reads draw refusals too (2026-10-17)
+
+**What the shell output holds** (the developer's last 7 days, 11 sessions, with consent, counters
+only):
+- Shell results (`Bash`, `PowerShell`): 2.04 M tokens. 61 % are file reads (`cat`, `sed -n`,
+  `Get-Content`), 18 % script output, 11 % searches and listings, about 10 % tests, git and lint.
+- Only 3 % of shell output repeats lines already earlier in the context, so a lossless reference
+  is worth little there.
+- 78 % of the file-read volume reads a range (`sed -n`, `head`, `-TotalCount`). Whole reads of
+  code files are 5.5 %.
+- Shell command text is 0.88 M tokens. 64 % of it is in commands of at least 300 tokens
+  (scripts in heredocs). The week includes an analysis session that wrote many such scripts.
+- A timeline model (every request at its real time, a 1 h prefix cache, list prices, messages
+  only) bounds a resume pruner that removes everything at least 4 human turns old:
+  - Edit/Write arguments: 4.2 % of cost. A run of the real pipeline on the same timeline gives
+    4.1 %;
+  - shell file reads: 3.5 %;
+  - all shell output: 5.3 %.
+
+**Method:** `evals/experiments/e10f_resume_structure.py` on `claude-opus-5-5`; result in
+`evals/experiments/e10f_result.json`.
+- **The conversation** (synthetic, fixed seed): the agent ran a command through `Bash`, five
+  unrelated exchanges follow, then a question. There are three families, with 5 cases each and 2
+  repetitions (170 calls).
+- **Decision rule, fixed before the run:** a form passes if it has at most one refusal more than
+  the control and no more wrong answers, bad edits or blind writes.
+
+| Family and form | Calls | Correct (answer, re-read or valid edit) | Refused |
+|---|---|---|---|
+| Python module read with `cat`, original | 30 | 25 | 5 |
+| the same, **structure** (signatures kept, each body replaced by a note) | 30 | 19 | 11 |
+| the same, E10(d) stub | 30 | 5 | 25 |
+| Markdown spec read with `sed -n`, original | 20 | 20 | 0 |
+| the same, **structure** (headings kept) | 20 | 7 | 13 |
+| the same, E10(d) stub | 20 | 4 | 16 |
+| Long heredoc script, original (output intact) | 10 | 10 | 0 |
+| the same, **command text replaced by a stub** | 10 | 10 | 0 |
+
+**Reading:**
+- The structures fail the rule: 11 refusals against 5 (code), and 13 against 0 (Markdown).
+- On code, the refusals fall on the questions. With the structure the edit task drew no refusal:
+  the agent read the file again in 10 of 10 calls. The body question drew 4 refusals in 10.
+- The control's 5 refusals all come from one question (a function's parameters), on two of the
+  five modules. That question is therefore a weak measure.
+- **When the model did not refuse, it behaved well:** in no call was there a wrong answer, an
+  edit with a wrong anchor or a blind write. Where text was missing it read the file again.
+  The weakness is the refusals, not the model's use of a partial view.
+- The E10(d) stubs reproduce that result: 80–83 % refused.
+- **The script stub passes:** no refusal, and every answer right. Removing the text of an old
+  command whose output is still in the conversation was accepted, at this sample size.
+
+**Consequences:**
+- An outline or heading structure of old shell reads is not viable in this form. The note's
+  wording and position were not varied.
+- The text of long old shell commands is a candidate for resume pruning, with its own smoke
+  evaluation. E10(c) drew refusals for edit arguments, so the sample here is small evidence.
+
+### S8k — composition of the cached context (2026-10-22)
+
+**Method** (`python -m tools.composition --days 14`; `TOKLI_TEST_STRATEGY.md` §2):
+- **Data:** the developer's Claude Code session files of the last 14 days: 34 sessions, 70
+  contexts, 15,300 requests, 413 full rewrites. Subagent side-chains were left out. The run was
+  local, with the developer's consent, and printed counters only.
+- **Tokens:** content is counted with Tokli's estimate tokenizer, and provider usage is exact.
+- **Accounting:**
+  - a block's first later request writes it to the cache;
+  - each further request reads it, or writes it again when that request is a full rewrite (its
+    cache write is at least half of its input);
+  - a compaction ends a context.
+- **The fixed part** (system prompt and tool definitions, absent from the session files) is the
+  intercept of a least-squares line through each context's requests: exact provider input against
+  the estimated content before each request.
+  - It was fitted in 64 of the 70 contexts: median **46,961 provider tokens** per request.
+  - The median ratio of provider to estimated tokens is 1.97.
+- **Check against exact usage:**
+  - the modelled re-reads × the ratio are 5.64 B provider tokens, against 5.998 B exact cache
+    reads (−6 %);
+  - the modelled writes × the ratio are 166 M, against 152 M exact cache writes (+10 %).
+- **Prices:** input-side cost uses the one-hour cache ratios, write 2 and read 0.1. Output is not
+  included.
+
+**Where the input-side cost goes, by kind of cost:**
+
+| Kind | Share |
+|---|---|
+| Cache reads | 62.9 % |
+| Full rewrites (after pauses) | 30.8 % |
+| First writes | 6.3 % |
+
+**By part of the context:**
+
+| Part | Share of re-reads | Share of rewrites | Share of input-side cost |
+|---|---|---|---|
+| **Writes:** `Write`/`Edit` arguments and results | 26.4 % | 28.0 % | **27.1 %** |
+| — of which arguments on code files | 17.6 % | 19.3 % | 18.2 % |
+| — of which arguments on Markdown files | 6.5 % | 6.3 % | 6.6 % |
+| **File reads** (`Read`, shell reads) | 21.7 % | 19.4 % | **20.7 %** |
+| — of which code files | 13.6 % | 11.6 % | 12.7 % |
+| — of which Markdown files | 4.3 % | 3.4 % | 4.0 % |
+| **Other tool results** | 18.3 % | 14.6 % | **17.2 %** |
+| — of which `Bash` (tests, builds, git, scripts) | 14.0 % | 11.2 % | 13.3 % |
+| **Fixed part** (system prompt and tool definitions) | 14.6 % | 21.6 % | **16.7 %** |
+| **Other call arguments** | 10.4 % | 8.2 % | **10.0 %** |
+| — of which `Bash` commands and inline scripts | 8.0 % | 5.7 % | 7.4 % |
+| **Text** (user, assistant, compaction summaries, thinking) | 8.2 % | 7.8 % | **8.2 %** |
+
+**What precedes a ranged read of a code file** (7 days, the same method, 121 ranged reads):
+- a whole read of the same file: none;
+- output that named the file (search, listing, version control): 59 %;
+- other ranges of the same file only: 27 %;
+- nothing, after a compaction: 9 %;
+- the agent wrote the file: 5 %.
+
+The agent navigates by search and reads small windows. It does not read a file whole and then in
+parts.
+
+**Consequences:**
+- **No single part dominates.** The largest is the edit tools' arguments (27 %, 18 % on code).
+- **The fixed part is about a sixth of the cost,** and more than a fifth of what full rewrites
+  cost, because every request reads it. The session files cannot show how it splits between the
+  system prompt and the tool definitions; the proxy can (S8k P1 b).
+- **Full rewrites are about 31 % of the input-side cost,** spread over all parts in proportion.
+  This is the ceiling a keepalive (S8l) works against.
+- **Limits:**
+  - one developer, 14 days, mostly work on this repository, which is specification-heavy, hence
+    the Markdown share;
+  - content tokens are estimates, and the fixed part is fitted;
+  - the cost share leaves out output.
+
 ### Other quantitative inputs
 
 | Input | Value | Use |

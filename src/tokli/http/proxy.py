@@ -102,6 +102,23 @@ class _State:
     services: Services | None = None  # the snapshot this request started with (CF-005)
 
 
+def _trace_resume(
+    trace: Trace, started: float, request: CanonicalRequest, view: ConversationView
+) -> None:
+    """The resume decision as the `conversation` span (SPEC 019 PR-028; counters only) and an
+    unrecognised cache marker (SPEC 003 AN-011)."""
+    attrs: dict[str, Any] = {
+        "resume": view.is_resume,
+        "cache_ttl_s": None if view.cache_ttl_s is None else round(view.cache_ttl_s),
+        "cache_ttl_source": view.cache_ttl_source,
+    }
+    if view.seconds_since_last is not None:
+        attrs["since_last_s"] = round(view.seconds_since_last)
+    trace.span("conversation", started, time.perf_counter(), **attrs)
+    if request.cache_ttl_unrecognised:
+        trace.decide("cache_ttl", "cache_ttl_unrecognised")
+
+
 class ProxyHandler:
     def __init__(self, runtime: Runtime) -> None:
         self._runtime = runtime
@@ -238,15 +255,19 @@ class ProxyHandler:
         state.request, state.counter = request, counter
         # Conversation state (ADR 0012): read before the pipeline; written after, with the calls
         # whose stubs the forwarded request really carries (none when it is passed through).
+        lookup_started = time.perf_counter()
         key = conversation_key(request)
-        conversation = services.conversations.view(key)
+        conversation = services.conversations.view(key, request.protocol)
+        _trace_resume(trace, lookup_started, request, conversation)
         carried: list[frozenset[str]] = [frozenset()]
         try:
             return self._transform_parsed(
                 body, request, trace, state, services, conversation, carried
             )
         finally:
-            state.history_rewritten = services.conversations.record(key, carried[0])
+            state.history_rewritten = services.conversations.record(
+                key, carried[0], request.cache_ttl_s
+            )
 
     def _transform_parsed(
         self,

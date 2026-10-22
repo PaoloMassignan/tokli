@@ -4,6 +4,8 @@ Status: Draft · Slice: S1 (request), S2 (usage) · Related: SPEC 001, 002
 Approved for S1 (2026-09-30): AN-001…AN-004, AN-008. Usage (AN-005…AN-007, AN-009) in S2.
 Approved for S2 (2026-10-02): AN-005…AN-007, AN-009, AN-010.
 Changed for S8c (approved 2026-10-04): the `tool_use.input` row of the segment mapping.
+Changed by S8i SCR-001 (approved for S8i 2026-10-16): new AN-011, AC-AN-7.
+Approved for S8j (2026-10-22): AN-012, AC-AN-8.
 
 ## Purpose
 Map `POST /v1/messages` requests to canonical segments and back, and extract provider usage from
@@ -33,6 +35,7 @@ Evidence: TOKLI_EVIDENCE.md (hazards and measurements); per-requirement rational
 
 `attrs.cache_breakpoint_after = true` when the containing block carries `cache_control`.
 `attrs.is_error` mirrors `tool_result.is_error`.
+`cache_ttl_s` on the canonical request is the longest lifetime the client asked for (AN-011).
 
 ## Requirements
 
@@ -48,6 +51,8 @@ Evidence: TOKLI_EVIDENCE.md (hazards and measurements); per-requirement rational
 | AN-010 | WHEN a stream ends after `message_start` without a final `message_delta` (error event, upstream break or client disconnect), THE SYSTEM SHALL record the usage seen so far with `usage_source: provider_partial`. The input categories (complete at `message_start`) are used for calibration; the output figure is labelled partial. |
 | AN-008 | THE SYSTEM SHALL relay `POST /v1/messages/count_tokens` and all other `/v1/*` endpoints verbatim in v1. |
 | AN-009 | THE usage parser SHALL bound its memory to `limits.usage_parser_buffer` (default 1 MiB of unparsed event data, or of a non-streaming response body) and SHALL stop parsing, not buffering, when the bound is hit. |
+| AN-011 | THE adapter SHALL set `cache_ttl_s` on the canonical request to the longest lifetime among the `cache_control` markers in `system`, `tools` and `messages`: 300 for a marker of `type: "ephemeral"` without `ttl` or with `ttl: "5m"`, and 3,600 for `ttl: "1h"`. WHEN the request has no marker, or any marker has another `type` or `ttl`, THE adapter SHALL leave `cache_ttl_s` absent, and in the second case SHALL record the reason code `cache_ttl_unrecognised` in the trace. (S8i SCR-001.) |
+| AN-012 | THE usage parser SHALL read the response's `stop_reason`: the top-level `stop_reason` of a non-streaming response, or the last non-null `message_delta.delta.stop_reason` of a stream. It SHALL keep a value that matches `^[a-z_]{1,32}$`, record `other` for any other string, and leave it absent when the response carries none or usage is unavailable for a reason that prevents reading it. (S8j.) |
 
 ## Invariants
 - Block order inside every `content` array is unchanged (CM-004), so `tool_result`-first ordering is always preserved.
@@ -66,10 +71,13 @@ Trace: segment counts by kind, `tool_name` resolution rate, number of cache brea
 - AC-AN-6 (AN-007): each `<why>` is produced by a matching fixture (4xx response, encoded body, oversized body, malformed JSON, response without usage, client disconnect before `message_start`).
 - AC-AN-4: the stream relay timing test (AC-PX-3) passes with the usage tee active.
 - AC-AN-5: `count_tokens` and `models` requests are relayed byte-identically.
+- AC-AN-8 (AN-012): a non-streaming response and a stream ending with `stop_reason: "refusal"` each give `refusal`; `end_turn` and `tool_use` are kept; a value `"Weird-Value!"` gives `other`; a stream cut before `message_delta` gives none.
+- AC-AN-7 (AN-011): markers in `system`, `tools` and a message block, with `ttl` absent, `"5m"` and `"1h"` in every combination → `cache_ttl_s` is the longest (300 or 3,600). No marker → absent. A marker with `ttl: "24h"` or another `type` → absent, and `cache_ttl_unrecognised` is traced. The forwarded body is unchanged in every case.
 
 ## Test scenarios
 `test_anthropic_segment_mapping` · `test_anthropic_tool_name_resolution` ·
 `test_anthropic_block_attributes_preserved` · `test_anthropic_cache_control_count_preserved` ·
+`test_adapter_exposes_cache_ttl` · `test_anthropic_stop_reason_non_stream` · `test_anthropic_stop_reason_stream` ·
 `test_anthropic_usage_non_stream` · `test_anthropic_usage_stream` ·
 `test_anthropic_usage_stream_with_error_event` · `test_usage_parser_failure_is_unavailable` ·
 `prop_usage_stream_any_chunk_split` · `test_stream_causal_relay` (with the usage tee) ·

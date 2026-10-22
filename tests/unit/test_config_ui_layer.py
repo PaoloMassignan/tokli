@@ -43,6 +43,7 @@ def test_keys_marked_ui_editable() -> None:
         "compressors.log_filter.apply_to_verbatim_tools",
         "compressors.edit_args_on_resume.enabled",
         "compressors.reread_by_reference.enabled",
+        "compressors.outline_first_read.enabled",  # S8j: a compressor toggle (CF-009)
         "telemetry.retention_days",
     }
 

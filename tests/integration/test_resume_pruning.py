@@ -1,5 +1,6 @@
 """SPEC 019 `edit_args_on_resume` end to end (S8c): AC-PR-11…AC-PR-14, PR-023, PR-025; the
-conversation state of ADR 0012 lives in the running Tokli."""
+conversation state of ADR 0012 lives in the running Tokli. S8i SCR-001: the resume follows the
+client's cache lifetime (AC-PR-17, AC-PR-19, AN-011's trace reason)."""
 
 from __future__ import annotations
 
@@ -115,3 +116,83 @@ def test_pruned_history_is_accepted_shape(tokli: Start, upstream: FakeUpstream) 
     sent = forwarded(upstream)
     assert [m["role"] for m in sent["messages"]] == [m["role"] for m in data["messages"]]
     assert call_ids(sent) == call_ids(data)
+
+
+def marked(data: dict[str, Any], ttl: str | None) -> dict[str, Any]:
+    """`data` with a `cache_control` marker on its system prompt (`ttl` None: no `ttl` field)."""
+    marked_data = copy.deepcopy(data)
+    marker: dict[str, Any] = (
+        {"type": "ephemeral"} if ttl is None else {"type": "ephemeral", "ttl": ttl}
+    )
+    marked_data["system"] = [{"type": "text", "text": data["system"], "cache_control": marker}]
+    return marked_data
+
+
+def resume_attrs(trace: dict[str, Any]) -> dict[str, Any]:
+    attrs = next(s["attrs"] for s in trace["trace"]["spans"] if s["name"] == "conversation")
+    assert "Start the synthetic task" not in json.dumps(trace)  # counters only (OB-007)
+    return {
+        k: attrs[k]
+        for k in ("resume", "cache_ttl_s", "cache_ttl_source", "since_last_s")
+        if k in attrs
+    }
+
+
+def test_resume_trace_attributes(tokli: Start, upstream: FakeUpstream) -> None:
+    """AC-PR-17, AC-PR-19 (PR-021, PR-027, PR-028): with a 5 min marker, 361 s later is a resume
+    and 360 s later is not; each trace carries the four attributes."""
+    t = tokli(*ON)
+    now = [20_000.0]
+    t.services.conversations.clock = lambda: now[0]
+    data = marked(body(turns_after_write=6, turns_after_edit=6), None)
+
+    first = send(t, data)
+    assert resume_attrs(first) == {
+        "resume": True,
+        "cache_ttl_s": None,
+        "cache_ttl_source": "unknown_conversation",
+    }
+
+    now[0] += 360
+    trace = send(t, data)
+    assert resume_attrs(trace) == {
+        "resume": False,
+        "cache_ttl_s": 300,
+        "cache_ttl_source": "previous_request",
+        "since_last_s": 360,
+    }
+
+    now[0] += 361
+    trace = send(t, data)
+    assert resume_attrs(trace) == {
+        "resume": True,
+        "cache_ttl_s": 300,
+        "cache_ttl_source": "previous_request",
+        "since_last_s": 361,
+    }
+
+
+def test_resume_unknown_ttl_uses_protocol_default_and_traces(
+    tokli: Start, upstream: FakeUpstream
+) -> None:
+    """AC-PR-18, AN-011: a marker with `ttl: "24h"` → `cache_ttl_unrecognised` in the trace and
+    the next request uses `pruning.cache_ttl_default_s.anthropic_messages`; the body is
+    forwarded unchanged."""
+    t = tokli(*ON, "pruning.cache_ttl_default_s.anthropic_messages=120")
+    now = [30_000.0]
+    t.services.conversations.clock = lambda: now[0]
+    data = marked(body(), "24h")
+
+    trace = send(t, data)
+    reasons = [d["reason"] for d in trace["trace"]["decisions"]]
+    assert "cache_ttl_unrecognised" in reasons
+    assert forwarded(upstream)["system"] == data["system"]
+
+    now[0] += 180
+    trace = send(t, data)
+    assert resume_attrs(trace)["resume"] is False
+    assert resume_attrs(trace)["cache_ttl_s"] == 120
+    assert resume_attrs(trace)["cache_ttl_source"] == "protocol_default"
+
+    now[0] += 181
+    assert resume_attrs(send(t, data))["resume"] is True

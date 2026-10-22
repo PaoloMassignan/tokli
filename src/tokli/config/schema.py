@@ -144,6 +144,28 @@ class CompressorsSection(BaseModel):
     # On by default since its smoke record (2026-10-04) says no_measurable_damage (CC-020).
     # On since its version 2 smoke record (2026-10-09; CC-020; S8h).
     reread_by_reference: CompressorToggle = CompressorToggle(enabled=True)
+    # SELECTIVE, off by default; E10(f): damage detected (SPEC 019 PR-040, S8j).
+    outline_first_read: CompressorToggle = CompressorToggle(enabled=False)
+
+
+class CacheTtlDefaults(BaseModel):
+    """The cache lifetime per protocol when a request states none Tokli understands (SPEC 019
+    PR-027; S8i SCR-001). One entry per protocol with an adapter."""
+
+    model_config = _STRICT
+
+    anthropic_messages: float = Field(default=3600.0, gt=0)
+
+
+OutlineRule = Literal["python", "c_family"]
+_C_FAMILY = ("cs", "java", "kt", "ts", "tsx", "js", "jsx", "go", "rs", "c", "h", "cpp", "hpp")
+
+
+def _default_outline_rules() -> dict[str, OutlineRule]:
+    """SPEC 017 "Keys added in S8j": code files only (S8j review C)."""
+    rules: dict[str, OutlineRule] = {"py": "python"}
+    rules.update(dict.fromkeys(_C_FAMILY, "c_family"))
+    return rules
 
 
 class PruningSection(BaseModel):
@@ -154,7 +176,9 @@ class PruningSection(BaseModel):
     duplicate_min_tokens: int = Field(default=64, ge=0)  # POLICY, provisional
     duplicate_require_same_call: bool = False
     # `edit_args_on_resume` (S8c, SPEC 019 PR-021…PR-024, ADR 0012)
-    resume_after_s: float = Field(default=3600.0, gt=0)
+    # S8i SCR-001: the resume follows the client's cache lifetime (replaces resume_after_s)
+    cache_ttl_default_s: CacheTtlDefaults = Field(default_factory=CacheTtlDefaults)
+    resume_margin_s: float = Field(default=60.0, ge=0)
     resume_min_age_turns: int = Field(default=4, ge=0)
     resume_min_tokens: int = Field(default=64, ge=0)
     resume_edit_fields: dict[str, list[str]] = Field(
@@ -169,6 +193,11 @@ class PruningSection(BaseModel):
     reread_tools: list[str] = Field(default_factory=lambda: ["Read"])
     reread_min_run_lines: int = Field(default=5, ge=1)
     reread_max_lines: int = Field(default=20000, ge=1)
+    # `outline_first_read` (S8j, SPEC 019 PR-040…PR-046)
+    outline_tools: list[str] = Field(default_factory=lambda: ["Read", "Bash", "PowerShell"])
+    outline_rules: dict[str, OutlineRule] = Field(default_factory=_default_outline_rules)
+    outline_min_tokens: int = Field(default=500, ge=0)
+    outline_min_run_lines: int = Field(default=3, ge=1)
 
 
 class ObservabilitySection(BaseModel):

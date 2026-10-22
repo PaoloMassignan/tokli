@@ -32,6 +32,8 @@ class CompressorSpec:
     terminal: bool
     requires: tuple[str, ...]
     default_enabled: bool
+    # CC-021 (c), S8j SCR-001: the tools a SELECTIVE, off-by-default compressor targets.
+    target_tools: frozenset[str] = frozenset()
 
 
 @dataclass(frozen=True)

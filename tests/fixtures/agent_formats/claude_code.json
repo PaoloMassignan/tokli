@@ -229,6 +229,30 @@
    ]
   },
   {
+   "role": "assistant",
+   "content": [
+    {
+     "type": "tool_use",
+     "id": "toolu_10",
+     "name": "Bash",
+     "input": {
+      "command": "cat src/worker.py",
+      "description": "Show the worker"
+     }
+    }
+   ]
+  },
+  {
+   "role": "user",
+   "content": [
+    {
+     "type": "tool_result",
+     "tool_use_id": "toolu_10",
+     "content": "\"\"\"Synthetic worker.\"\"\"\n\nimport logging\n\nLOG = logging.getLogger()\n\n\ndef synthetic_step_1(value: int) -> int:\n    \"\"\"Synthetic step 1.\"\"\"\n    limit = 1007\n    total = 0\n    for item in range(value):\n        total += item % limit\n    LOG.debug('synthetic step 1 done')\n    return total\n\ndef synthetic_step_2(value: int) -> int:\n    \"\"\"Synthetic step 2.\"\"\"\n    limit = 2007\n    total = 0\n    for item in range(value):\n        total += item % limit\n    LOG.debug('synthetic step 2 done')\n    return total\n\ndef synthetic_step_3(value: int) -> int:\n    \"\"\"Synthetic step 3.\"\"\"\n    limit = 3007\n    total = 0\n    for item in range(value):\n        total += item % limit\n    LOG.debug('synthetic step 3 done')\n    return total\n\ndef synthetic_step_4(value: int) -> int:\n    \"\"\"Synthetic step 4.\"\"\"\n    limit = 4007\n    total = 0\n    for item in range(value):\n        total += item % limit\n    LOG.debug('synthetic step 4 done')\n    return total\n"
+    }
+   ]
+  },
+  {
    "role": "user",
    "content": "What should change next?"
   }

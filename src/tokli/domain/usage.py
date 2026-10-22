@@ -18,6 +18,7 @@ class Usage:
     output: int | None = None
     events: Mapping[str, int] = field(default_factory=dict)
     delta_fields: tuple[str, ...] = ()  # usage field names seen in message_delta (E4)
+    stop_reason: str | None = None  # SPEC 003 AN-012 (S8j)
 
     @property
     def input_total(self) -> int | None:

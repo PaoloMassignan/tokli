@@ -43,6 +43,12 @@ Request 01J8Z…A83F  anthropic_messages  model=claude-sonnet-4-…  stream=true
 Each span has a name, start offset, duration, attributes, and a status of `ok`, `skipped` or
 `error(code)`.
 
+For transformable requests, the `conversation` span, after `parse`, holds the resume decision
+(SPEC 019 PR-028, S8i): `resume` (true or false), `cache_ttl_s` (the lifetime used; null for an unknown
+conversation), `cache_ttl_source` (`previous_request`, `protocol_default` or
+`unknown_conversation`) and `since_last_s` (seconds since the conversation's previous request;
+absent when it is unknown).
+
 ## 4. Decision records
 
 Decisions that change what is forwarded are always recorded, with a machine-readable reason:
@@ -57,6 +63,7 @@ Decisions that change what is forwarded are always recorded, with a machine-read
 | Upstream | `upstream_status(<code>)`, `upstream_unreachable`, `upstream_timeout`, `client_disconnected` |
 | Usage | `usage_unavailable(<why>)`, `<why>` ∈ `upstream_status`, `content_encoding`, `buffer_limit`, `parse_error`, `no_usage`, `client_disconnected` (AN-007) |
 | Calibration | `calibration_outlier`, `calibration_unavailable` (TM-009) |
+| Cache lifetime | `cache_ttl_unrecognised`: a `cache_control` marker Tokli does not understand, so the protocol default applies (SPEC 003 AN-011, S8i) |
 
 "Why didn't `json_minify` run on my request?" is answered from the trace alone.
 

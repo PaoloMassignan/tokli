@@ -6,6 +6,8 @@ Approved for S2 (2026-10-02): the keys in "Keys added in S2".
 Changed by S4 SCR-002 (2026-10-03): CF-006 includes the `pruning` section.
 Approved for S4 (2026-10-03): CF-001 layer 5 (UI overrides), CF-002 (`ui` source), CF-009, the keys in "Keys added in S4".
 Changed by S8a SCR-001 (approved for S8a-1, 2026-10-03): CF-009 (the verbatim opt-in is UI-editable). Approved for S8a-1: the keys in "Keys added in S8a-1".
+Approved for S8j (2026-10-22): the keys in "Keys added in S8j".
+Changed by S8i SCR-001 (approved for S8i 2026-10-16): "Keys changed in S8i", new CF-013, "Renamed keys", AC-CF-9.
 
 ## Purpose
 Every behaviour-affecting setting has one definition, one precedence rule and a visible source.
@@ -102,11 +104,35 @@ UI-editable (CF-009): `compressors.<id>.enabled`, `telemetry.retention_days`.
 | Key | Default |
 |---|---|
 | `compressors.edit_args_on_resume.enabled` | `false` (SELECTIVE; CC-002) |
-| `pruning.resume_after_s` | `3600` (S8c review P4; rewrites follow pauses of more than an hour, E5b-lite) |
+| `pruning.resume_after_s` | `3600` (S8c review P4; rewrites follow pauses of more than an hour, E5b-lite). Renamed in S8i (CF-013). |
 | `pruning.resume_min_age_turns` | `4` |
 | `pruning.resume_min_tokens` | `64` (per argument string) |
 | `pruning.resume_edit_fields` | `{"Write": ["content"], "Edit": ["old_string", "new_string"], "MultiEdit": ["edits/*/old_string", "edits/*/new_string"]}` |
 | `pruning.conversation_states` | `1024` (ADR 0012) |
+
+## Keys added in S8j
+
+| Key | Default |
+|---|---|
+| `compressors.outline_first_read.enabled` | `false` (SELECTIVE; CC-002; E10(f): damage detected) |
+| `pruning.outline_tools` | `["Read", "Bash", "PowerShell"]` (S8j review P1) |
+| `pruning.outline_rules` | `{"py": "python", "cs": "c_family", "java": "c_family", "kt": "c_family", "ts": "c_family", "tsx": "c_family", "js": "c_family", "jsx": "c_family", "go": "c_family", "rs": "c_family", "c": "c_family", "h": "c_family", "cpp": "c_family", "hpp": "c_family"}` (code only, S8j review C; values ∈ `python`, `c_family`) |
+| `pruning.outline_min_tokens` | `500` (S8j review P5) |
+| `pruning.outline_min_run_lines` | `3` (S8j review P4) |
+
+## Keys changed in S8i (S8i SCR-001)
+
+| Key | Default |
+|---|---|
+| `pruning.cache_ttl_default_s` | `{anthropic_messages: 3600}`: the cache lifetime, per protocol, when the request states none that Tokli understands (SPEC 019 PR-027; S8i review P2). One entry per protocol with an adapter. |
+| `pruning.resume_margin_s` | `60` (SPEC 019 PR-021; S8i review P3) |
+| `pruning.resume_after_s` | removed; renamed to `pruning.cache_ttl_default_s.anthropic_messages` (CF-013) |
+
+## Renamed keys
+
+| Old key | New key | Since |
+|---|---|---|
+| `pruning.resume_after_s` | `pruning.cache_ttl_default_s.anthropic_messages` | S8i |
 
 ## Keys added in S8a-1
 
@@ -135,6 +161,7 @@ UI-editable (CF-009): `compressors.<id>.enabled`, `telemetry.retention_days`.
 | CF-010 | Secrets SHALL NOT be configurable by value in the config file. Only references (`key_env`, `key_file`) are allowed. |
 | CF-011 | WHEN an environment variable starting with `TOKLI_` is neither a reserved variable nor the name of a schema key, or its value does not parse for the key's type, THE SYSTEM SHALL refuse to start with an error naming the variable. |
 | CF-012 | THE config file reader SHALL reject duplicate keys and values whose YAML type does not match the schema type, naming the file, key and expected type. |
+| CF-013 | WHEN a layer sets a key listed in "Renamed keys", THE SYSTEM SHALL use its value for the new key, SHALL print a warning naming the layer, the old key and the new key at startup and in `tokli doctor`, and SHALL refuse to start (CF-003) if the same layer also sets the new key. (S8i SCR-001.) |
 
 ## Acceptance criteria
 - AC-CF-1: parametrised test over every schema key: file < env < CLI resolves as specified, and the source is reported. For UI-editable keys: file < UI, and env/CLI always win over UI (the key is reported locked).
@@ -144,6 +171,7 @@ UI-editable (CF-009): `compressors.<id>.enabled`, `telemetry.retention_days`.
 - AC-CF-5: a config file containing `api_key: sk-…` → startup error "secrets must be referenced via key_env/key_file".
 - AC-CF-6 (CF-011): `TOKLI_TOKENS__MODEL_MAP='[not json'` → error naming the variable. `TOKLI_FOO=1` → error naming it. `TOKLI_DATA_DIR` is accepted.
 - AC-CF-7 (CF-012): a file with a duplicated key, and a file with `yes` for a boolean key, are each rejected with file, key and expected type.
+- AC-CF-9 (CF-013): `pruning.resume_after_s: 120` in the file → `cache_ttl_default_s.anthropic_messages = 120` with source `file:<path>` and a warning naming both keys; the same through `TOKLI_PRUNING__RESUME_AFTER_S` and `--set`. Both keys in one layer → startup error naming the layer and both keys.
 - AC-CF-8 (CF-008): config and data dirs resolve per the table on each OS (platform mocked), and flags and variables override them.
 
 ## Test scenarios
@@ -152,4 +180,5 @@ UI-editable (CF-009): `compressors.<id>.enabled`, `telemetry.retention_days`.
 `test_config_snapshot_immutable` · `test_config_hash_stable_and_sensitive` · `test_optional_capability_never_silently_substituted` ·
 `test_data_dir_resolution_per_platform` · `test_secret_values_rejected_in_config` ·
 `test_config_dir_resolution_per_platform` · `test_env_json_value_errors_name_variable` · `test_reserved_env_vars_only` ·
-`test_duplicate_yaml_key_rejected` · `test_yaml_implicit_types_rejected` · `test_set_flag_overrides_env`
+`test_duplicate_yaml_key_rejected` · `test_yaml_implicit_types_rejected` · `test_set_flag_overrides_env` ·
+`test_renamed_key_resume_after_s`

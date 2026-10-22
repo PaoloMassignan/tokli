@@ -40,7 +40,7 @@ alphabetical by id.
 | Shrink or nothing | A result is kept only if it saves at least 4 tokens **and** at least 1 % of the segment. Otherwise the original text stays. |
 | Never longer | No segment, and no request, is ever forwarded longer than the original. |
 | Protected text | Text marked protected (for example `<system-reminder>…</system-reminder>` blocks) must come out unchanged and in order, or the result is rejected. |
-| Verbatim tools | Results of tools whose output agents often copy back byte-for-byte (default `Read`, `Bash`, `shell`, `shell_command`, `container.exec`) are not transformed. Exceptions: `duplicate_tool_results`, because it leaves the original bytes in place (§4); and a compressor for which the user switched on **"Also on Read, Bash…"** (`apply_to_verbatim_tools`, off by default; today `search_group` and `log_filter` offer it). A result whose tool name is unknown is always treated as verbatim. |
+| Verbatim tools | Results of tools whose output agents often copy back byte-for-byte (default `Read`, `Bash`, `shell`, `shell_command`, `container.exec`) are not transformed. Exceptions: `duplicate_tool_results`, because it leaves the original bytes in place (§4); a compressor for which the user switched on **"Also on Read, Bash…"** (`apply_to_verbatim_tools`, off by default; today `search_group` and `log_filter` offer it); and `outline_first_read`, which exists only for those tools (§10b). A result whose tool name is unknown is always treated as verbatim. |
 | Failure is harmless | If a compressor crashes or is too slow, the text stays as it was, and the failure is recorded. The request always goes through. |
 | Deterministic | Same input and same configuration give the same output, on every machine. |
 | Measured | For every request and compressor, Tokli records how many segments it looked at, how many it changed, the tokens it saved and the time it took. |
@@ -86,6 +86,7 @@ not count (S8a SCR-002).
 | `diff_context_trim` | Keeps every changed line of a diff, and only 1 unchanged line around each change | selective | off | — | planned (S8a-2) |
 | `superseded_tool_results` | Replaces an old file read with a stub when a newer full version exists later | selective | off | — | planned (S8a-3) |
 | `edit_args_on_resume` | After a long pause, replaces the text of old `Write`/`Edit` calls with a one-line stub | selective | off — **not recommended** | **damage detected** (refusals, 2026-10-04) | built (S8c) |
+| `outline_first_read` | Sends only the skeleton of a code file the first time it is read whole; later reads go whole | selective | off — **not recommended** | **damage detected** (refusals, E10(f), 2026-10-17) | built (S8j) |
 
 What these compressors save on real Claude Code traffic is in §12.
 
@@ -614,10 +615,18 @@ content costs nothing extra.
 
 **How it works.**
 1. **Conversation:** Tokli recognises the conversation by a hash of its first message and its
-   system prompt. In memory only, it keeps the time of the conversation's last request and which
-   calls it pruned.
-2. **Resume:** a request is a **resume** when the conversation was last seen more than an hour
-   ago (`pruning.resume_after_s`), or is new to Tokli, for example after a restart.
+   system prompt. In memory only, it keeps the time of the conversation's last request, the cache
+   lifetime that request asked for, and which calls it pruned.
+2. **Resume:** a request is a **resume** when the provider's cache for the conversation has
+   expired, or the conversation is new to Tokli, for example after a restart. The cache has
+   expired when the conversation was last seen more than its cache lifetime plus a margin ago
+   (`pruning.resume_margin_s`, 60 s):
+   - the lifetime is the one the previous request asked for: in Anthropic Messages, the longest
+     `cache_control` `ttl` (`"1h"` = 3,600 s; `"5m"` or none = 300 s);
+   - when the previous request stated no lifetime Tokli understands, the protocol's default
+     applies (`pruning.cache_ttl_default_s.anthropic_messages`, 3,600 s).
+
+   Claude Code asks for `"1h"`, so for it a resume follows a pause of more than 61 minutes.
 3. **At a resume:** every `Write`/`Edit`/`MultiEdit` call followed by at least 4 of your messages
    (`pruning.resume_min_age_turns`) has its long strings replaced: `content`, `old_string`,
    `new_string`. Messages that only carry tool results do not count as yours.
@@ -649,7 +658,8 @@ when it does (`edit_content_not_needed`). Experiment E10(a) showed both parts on
 - the provider accepts the changed history;
 - asked for a value, the model read the file instead of guessing.
 
-**Settings.** `compressors.edit_args_on_resume.enabled` (off), `pruning.resume_after_s` (3600),
+**Settings.** `compressors.edit_args_on_resume.enabled` (off),
+`pruning.cache_ttl_default_s.anthropic_messages` (3600), `pruning.resume_margin_s` (60),
 `pruning.resume_min_age_turns` (4), `pruning.resume_min_tokens` (64),
 `pruning.resume_edit_fields`, `pruning.conversation_states` (1024).
 
@@ -667,6 +677,80 @@ when it does (`edit_content_not_needed`). Experiment E10(a) showed both parts on
 - **A guess of "resume" while the cache is still warm costs one cache write.** For example when
   Tokli restarted a few minutes ago.
 - **A re-read costs a tool call.** The dogfood week measures both with exact provider usage.
+
+## 10b. `outline_first_read` (selective, S8j)
+
+**In one sentence.** The first time the agent reads a code file whole, Tokli forwards only its
+skeleton (the declarations), and every later read of that file goes whole.
+
+**Problem.** Agents often read a whole file to find one function. The whole file then stays in
+the conversation and is paid for on every turn.
+
+**How it works.**
+1. **Which reads:** a whole read of one code file:
+   - `Read` without `offset`/`limit`;
+   - `cat`, `type`, `Get-Content`, `cat -n` or `nl` through `Bash` or `PowerShell`, optionally
+     after one `cd <dir> &&`.
+
+   It must be at least 500 tokens (`pruning.outline_min_tokens`) and not an error. Partial reads
+   (`sed -n`, `head`, `tail`, `offset`/`limit`) stay whole, because the agent asked for exactly
+   those lines.
+2. **Which files:** by extension (`pruning.outline_rules`): Python, and the C family (`cs`,
+   `java`, `kt`, `ts`, `tsx`, `js`, `jsx`, `go`, `rs`, `c`, `h`, `cpp`, `hpp`).
+3. **Only the first time:** a read is outlined only when no earlier tool call of the
+   conversation read, wrote or edited the same file. Every later read of it is forwarded whole,
+   so reading the file again is how the agent gets the full text.
+4. **The skeleton:**
+   - kept: the first 8 lines, every declaration line (classes, functions, methods, decorators)
+     and every unindented line;
+   - each run of at least 3 other lines (`pruning.outline_min_run_lines`) becomes one note,
+     indented like the run.
+
+   `Read` numbering stays on the kept lines.
+5. **Prefix-stable:** the decision is taken at the first send and never changes, so the provider
+   cache stays valid. It needs no conversation state.
+
+**Example** (`cat src/harbor.py`):
+
+```text
+def load_harbor(count: int, label: str) -> int:
+    [tokli: lines 11-18 omitted — run the command again for them]
+class Quartz:
+    """A synthetic class."""
+
+    def __init__(self, size: int) -> None:
+        [tokli: lines 23-25 omitted — run the command again for them]
+```
+
+**Proven (the retention rule).**
+- Only the first whole read of a code file changes.
+- Kept lines, protected text and numbering are verbatim and in order.
+- The forwarded beginning of the conversation is the same from one request to the next.
+
+**Not proven, so selective.** The bodies of the functions are gone from that read. To use them,
+the agent must read the file again.
+
+**Assumed.** When the agent needs an omitted part, it reads the file again instead of answering
+or editing from the skeleton (`outline_suffices_until_reread`).
+
+**Settings.**
+- `compressors.outline_first_read.enabled` (off; a single switch, although `Read`, `Bash` and
+  `PowerShell` are verbatim tools);
+- `pruning.outline_tools` (`Read`, `Bash`, `PowerShell`), `pruning.outline_rules`,
+  `pruning.outline_min_tokens` (500), `pruning.outline_min_run_lines` (3).
+
+**Evaluation: damage detected; off by default; it exists by the developer's decision.**
+- In E10(f) on `claude-opus-5-5` the skeleton drew more **refusals** than the whole file on
+  questions about the code: 11 in 30 calls, against 5.
+- On an edit task it drew none: the agent read the file again in 10 of 10 calls.
+- In no call was there a wrong answer, a wrong edit or a file rewritten from the skeleton.
+- Every response's `stop_reason` is recorded in telemetry (schema v5), so refusals in real use
+  can be counted when it is switched on.
+
+**What it is worth.**
+- On the developer's traffic (7 days, the replay of 2026-10-22) it applied to 6 reads and saved
+  about 1.3 % of tool-result tokens.
+- Each skeleton the agent reads again costs the skeleton plus the whole file.
 
 ## 10. What Tokli deliberately does not do (v1)
 

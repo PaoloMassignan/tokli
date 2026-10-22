@@ -9,6 +9,7 @@ parsing and drop what they hold (AN-009).
 from __future__ import annotations
 
 import json
+import re
 from typing import Any
 
 from tokli.domain.usage import Usage
@@ -57,11 +58,22 @@ def map_usage(usage: Any) -> dict[str, int]:
     return mapped
 
 
+_STOP_TOKEN = re.compile(r"[a-z_]{1,32}")
+
+
+def stop_reason_of(value: Any) -> str | None:
+    """AN-012: a plain token is kept, any other value is `other`, none is ``None``."""
+    if value is None:
+        return None
+    return value if isinstance(value, str) and _STOP_TOKEN.fullmatch(value) else "other"
+
+
 def _usage(
     source: str,
     values: dict[str, int],
     events: dict[str, int],
     delta_fields: tuple[str, ...] = (),
+    stop_reason: str | None = None,
 ) -> Usage:
     if "input" in values:  # the other input categories are 0 when the provider omits them
         for name in ("cache_read", "cache_write_5m", "cache_write_1h"):
@@ -75,6 +87,7 @@ def _usage(
         output=values.get("output"),
         events=dict(events),
         delta_fields=delta_fields,
+        stop_reason=stop_reason,
     )
 
 
@@ -84,6 +97,7 @@ class StreamUsageParser:
 
     def __init__(self, limit: int) -> None:
         self._limit = limit
+        self._stop_reason: str | None = None  # AN-012
         self._pending = bytearray()  # the unterminated tail of the stream
         self._event = ""
         self._data: list[bytes] = []
@@ -174,6 +188,9 @@ class StreamUsageParser:
                 self._started = True
                 self._values.update(values)
         elif event == "message_delta":
+            delta = payload.get("delta")
+            if isinstance(delta, dict) and delta.get("stop_reason") is not None:
+                self._stop_reason = stop_reason_of(delta["stop_reason"])
             raw = payload.get("usage")
             if isinstance(raw, dict):
                 self._delta_fields.update(str(name) for name in raw)
@@ -201,9 +218,9 @@ class StreamUsageParser:
             return unavailable(self._failure, self._events)
         fields = tuple(sorted(self._delta_fields))
         if self._final and self._started:
-            return _usage("provider", self._values, self._events, fields)
+            return _usage("provider", self._values, self._events, fields, self._stop_reason)
         if self._started:
-            return _usage("provider_partial", self._values, self._events, fields)
+            return _usage("provider_partial", self._values, self._events, fields, self._stop_reason)
         return unavailable("client_disconnected" if disconnected else "no_usage", self._events)
 
 
@@ -239,4 +256,5 @@ class BodyUsageParser:
         values = map_usage(payload.get("usage") if isinstance(payload, dict) else None)
         if "input" not in values:
             return unavailable("no_usage")
-        return _usage("provider", values, {})
+        stop = stop_reason_of(payload.get("stop_reason"))
+        return _usage("provider", values, {}, stop_reason=stop)

@@ -204,13 +204,13 @@ def test_schema_migration_forward_from_v1(tmp_path: Path) -> None:
     store.flush()
     got = store.get(new.request_id)
     store.close()
-    assert SCHEMA_VERSION == 4
+    assert SCHEMA_VERSION == 5  # S8j: stop_reason (ADR 0015)
     assert old is not None and old["record"]["header_names"] is None
     assert old["record"]["est_original_tokens"] == 100 and old["record"]["ms_total"] == 904.0
     assert got is not None and got["record"]["header_names"] == ["x-api-key"]
     with sqlite3.connect(path) as db:
         assert db.execute("SELECT value FROM meta WHERE key = 'schema_version'").fetchone() == (
-            "4",
+            "5",
         )
         assert db.execute("SELECT COUNT(*) FROM requests").fetchone() == (2,)
         columns = {row[1] for row in db.execute("PRAGMA table_info(compressor_stats)")}
@@ -368,6 +368,7 @@ def test_close_never_closes_the_connection_under_a_busy_writer(
 
 
 V4_REQUEST = ("saved_cache_read", "saved_cache_write", "saved_input")
+V5_REQUEST = ("stop_reason",)  # S8j, ADR 0015
 
 
 def test_schema_migration_v3_to_v4(tmp_path: Path) -> None:
@@ -378,7 +379,7 @@ def test_schema_migration_v3_to_v4(tmp_path: Path) -> None:
     from tokli.telemetry.store import _REQUEST_TYPES, _STATS_TYPES
 
     path = tmp_path / "t.db"
-    columns = [f.name for f in fields(RequestRecord) if f.name not in V4_REQUEST]
+    columns = [f.name for f in fields(RequestRecord) if f.name not in (*V4_REQUEST, *V5_REQUEST)]
     stats_columns = [f.name for f in fields(CompressorStatsRecord) if f.name not in V4_REQUEST]
     row = {k: v for k, v in asdict(RECORD).items() if k in columns}
     row["header_names"] = None
@@ -432,5 +433,62 @@ def test_schema_migration_v3_to_v4(tmp_path: Path) -> None:
     assert got["compressors"][0]["saved_cache_read"] == 7
     with sqlite3.connect(path) as db:
         assert db.execute("SELECT value FROM meta WHERE key = 'schema_version'").fetchone() == (
-            "4",
+            str(SCHEMA_VERSION),
+        )
+
+
+def test_migration_v4_to_v5(tmp_path: Path) -> None:
+    """AC-TC-18, ADR 0015: a v4 database gains `requests.stop_reason` in place; its rows keep
+    every value and read it as null; new rows store it."""
+    from dataclasses import asdict, fields
+
+    from tokli.telemetry.store import _REQUEST_TYPES, _STATS_TYPES
+
+    path = tmp_path / "t.db"
+    columns = [f.name for f in fields(RequestRecord) if f.name not in V5_REQUEST]
+    stats_columns = [f.name for f in fields(CompressorStatsRecord)]
+    row = {k: v for k, v in asdict(RECORD).items() if k in columns}
+    row["header_names"] = None
+    stat = asdict(STATS)
+    stat["skip_reasons"] = "{}"
+    with sqlite3.connect(path) as db:  # a database exactly as a v4 build wrote it
+        db.execute("CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)")
+        db.execute("INSERT INTO meta VALUES ('schema_version', '4')")
+        db.execute(
+            "CREATE TABLE requests ("
+            + ", ".join(
+                f"{c} {_REQUEST_TYPES[c]}" + (" PRIMARY KEY" if c == "request_id" else "")
+                for c in columns
+            )
+            + ")"
+        )
+        db.execute(
+            f"INSERT INTO requests ({', '.join(columns)}) "
+            f"VALUES ({', '.join('?' for _ in columns)})",
+            [row[c] for c in columns],
+        )
+        db.execute(
+            "CREATE TABLE compressor_stats ("
+            + ", ".join(f"{c} {_STATS_TYPES[c]}" for c in stats_columns)
+            + ", PRIMARY KEY (request_id, compressor_id))"
+        )
+        db.execute(
+            f"INSERT INTO compressor_stats ({', '.join(stats_columns)}) "
+            f"VALUES ({', '.join('?' for _ in stats_columns)})",
+            [stat[c] for c in stats_columns],
+        )
+    sqlite3.connect(path).close()
+    store = open_store(path)
+    old = store.get(RECORD.request_id)
+    new = replace(RECORD, request_id="01NEW00000000000000000000C", stop_reason="refusal")
+    store.submit(new, [])
+    store.flush()
+    got = store.get(new.request_id)
+    store.close()
+    assert old is not None and old["record"]["stop_reason"] is None
+    assert old["record"]["est_original_tokens"] == RECORD.est_original_tokens
+    assert got is not None and got["record"]["stop_reason"] == "refusal"
+    with sqlite3.connect(path) as db:
+        assert db.execute("SELECT value FROM meta WHERE key = 'schema_version'").fetchone() == (
+            "5",
         )

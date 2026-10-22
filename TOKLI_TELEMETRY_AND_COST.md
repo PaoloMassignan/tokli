@@ -67,6 +67,7 @@ persisted by default. It is available in the in-memory trace ring buffer and at
 | `error_code` | text \| null | Tokli error taxonomy (OB spec) |
 | `header_names` | JSON list \| null | client request header names, lower-cased and sorted, never values (OB-012; schema v2) |
 | `saved_cache_read`, `saved_cache_write`, `saved_input` | int \| null | the estimated saving split by the usage region it sat in (TC-017; schema v4, ADR 0014) |
+| `stop_reason` | text \| null | the response's `stop_reason` (`end_turn`, `tool_use`, `refusal`, …; `other` for an unexpected value; AN-012, TC-022; schema v5, ADR 0015) |
 
 ### CompressorStats (persisted, per request × compressor)
 

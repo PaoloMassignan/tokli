@@ -23,7 +23,7 @@ from typing import Any, Union, get_args, get_origin, get_type_hints
 
 from tokli.telemetry.records import CompressorStatsRecord, RequestRecord
 
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5  # v5: requests.stop_reason (TC-022, ADR 0015)
 _LOG = logging.getLogger("tokli.telemetry")
 _WARN_INTERVAL_S = 60.0
 _CLOSE_TIMEOUT_S = 10.0  # how long close() waits for the writer thread

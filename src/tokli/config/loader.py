@@ -37,6 +37,10 @@ RESERVED_ENV: frozenset[str] = frozenset(
 CONFIG_FILE_NAME = "tokli.yaml"
 UI_OVERRIDES_FILE = "ui-overrides.yaml"
 _KEYS_CACHE = frozenset(schema_keys())
+# SPEC 017 "Renamed keys" (CF-013): old key → new key. The old key is not a schema key.
+RENAMED_KEYS: Mapping[str, str] = MappingProxyType(
+    {"pruning.resume_after_s": "pruning.cache_ttl_default_s.anthropic_messages"}  # S8i
+)
 _SHOW_FIX = "run 'tokli config show' to list valid settings"
 
 
@@ -62,6 +66,7 @@ class EffectiveConfig:
     config_hash: str
     locked: Mapping[str, str] = field(default_factory=lambda: MappingProxyType({}))
     reloader: Callable[[], EffectiveConfig] | None = field(default=None, compare=False, repr=False)
+    warnings: tuple[str, ...] = ()  # e.g. a renamed key (CF-013)
 
     def reload(self) -> EffectiveConfig:
         """A new snapshot from the same CLI and environment, reading the files again."""
@@ -180,6 +185,31 @@ def _cli_layer(
         if info is None:
             raise ConfigError(cause=f"cli:--set: unknown setting '{key}'", fix=_SHOW_FIX)
         layer[key] = _Setting(_parse_text_value(info, raw, "cli:--set"), "cli:--set")
+    return layer
+
+
+def _with_renamed(keys: Mapping[str, KeyInfo]) -> dict[str, KeyInfo]:
+    """The schema keys plus the old names a layer may still use (CF-013)."""
+    accepted = dict(keys)
+    for old, new in RENAMED_KEYS.items():
+        env_var = "TOKLI_" + "__".join(part.upper() for part in old.split("."))
+        accepted[old] = KeyInfo(key=old, env_var=env_var, text=keys[new].text)
+    return accepted
+
+
+def _rename(layer: dict[str, _Setting], warnings: list[str]) -> dict[str, _Setting]:
+    """Moves each old key of one layer to its new name, with a warning (CF-013)."""
+    for old, new in RENAMED_KEYS.items():
+        setting = layer.pop(old, None)
+        if setting is None:
+            continue
+        if new in layer:
+            raise ConfigError(
+                cause=f"{setting.source}: sets both '{old}' and its new name '{new}'",
+                fix=f"remove '{old}' and keep '{new}'",
+            )
+        layer[new] = setting
+        warnings.append(f"{setting.source} sets '{old}', renamed to '{new}'; use the new name")
     return layer
 
 
@@ -310,6 +340,8 @@ def read_ui_overrides(path: Path) -> dict[str, object]:
 def load_config(cli: CliOverrides, env: Mapping[str, str], platform: str) -> EffectiveConfig:
     """Resolve every setting by precedence and return an immutable snapshot."""
     keys = schema_keys()
+    accepted = _with_renamed(keys)
+    warnings: list[str] = []
     dirs = resolve_dirs(
         cli_config_dir=cli.config_dir, cli_data_dir=cli.data_dir, env=env, platform=platform
     )
@@ -317,9 +349,12 @@ def load_config(cli: CliOverrides, env: Mapping[str, str], platform: str) -> Eff
 
     merged: dict[str, _Setting] = {}
     if config_file is not None:
-        merged.update(_file_layer(config_file, keys))
+        merged.update(_rename(_file_layer(config_file, accepted), warnings))
     ui = _ui_layer(dirs.data_dir / UI_OVERRIDES_FILE, keys)
-    pinned = {**_env_layer(env, keys), **_cli_layer(cli.sets, cli.named, keys)}
+    pinned = {
+        **_rename(_env_layer(env, accepted), warnings),
+        **_rename(_cli_layer(cli.sets, cli.named, accepted), warnings),
+    }
     merged.update({key: setting for key, setting in ui.items() if key not in pinned})
     merged.update(pinned)
     locked = {key: pinned[key].source for key in sorted(pinned) if keys[key].ui_editable}
@@ -339,4 +374,5 @@ def load_config(cli: CliOverrides, env: Mapping[str, str], platform: str) -> Eff
         config_hash=_config_hash(settings),
         locked=MappingProxyType(locked),
         reloader=lambda: load_config(cli, env, platform),
+        warnings=tuple(warnings),
     )

@@ -8,6 +8,8 @@ only (2026-10-09, 21 days); no real line was read into this file:
 - `Edit` input `{file_path, old_string, new_string, replace_all}`; `Write` input
   `{file_path, content}`. Their results are short strings.
 - `Bash` input `{command, description}` (sometimes `timeout`, `run_in_background`); string result.
+  Claude Code often reads files through it: 61 % of shell output was file reads such as `cat`
+  (2026-10-17, 7 days, counters only; S8j).
 - `Grep` input `{pattern, path, output_mode, -n}`; string result, `path:line:content` lines.
 - MCP tools (`mcp__<server>__<tool>`): the result is a list of `text` blocks.
 
@@ -24,6 +26,7 @@ HERE = Path(__file__).resolve().parent
 ROOT_DIR = "C:\\work\\demo"  # a synthetic Windows working directory
 MODULE = ROOT_DIR + "\\src\\module.py"
 NEW_FILE = ROOT_DIR + "\\src\\helpers.py"
+WORKER = "src/worker.py"  # read through Bash with a relative path
 REMINDER = "<system-reminder>\nA synthetic reminder about the session.\n</system-reminder>"
 
 
@@ -54,6 +57,19 @@ def build() -> dict[str, Any]:
         *module[21:],
     ]
     helpers = [f"HELPER_{n} = {n} * 7  # synthetic helper constant" for n in range(1, 31)]
+    worker = ['"""Synthetic worker."""', "", "import logging", "", "LOG = logging.getLogger()", ""]
+    for n in range(1, 5):
+        worker += [
+            "",
+            f"def synthetic_step_{n}(value: int) -> int:",
+            f'    """Synthetic step {n}."""',
+            f"    limit = {n * 1000 + 7}",
+            "    total = 0",
+            "    for item in range(value):",
+            "        total += item % limit",
+            f"    LOG.debug('synthetic step {n} done')",
+            "    return total",
+        ]
     listing = json.dumps(
         {"items": [{"id": n, "name": f"item-{n}", "tags": ["alpha", "beta"]} for n in range(12)]},
         indent=2,
@@ -102,6 +118,8 @@ def build() -> dict[str, Any]:
         result("toolu_08", numbered(helpers)),
         call("toolu_09", "mcp__demo__list_items", {}),
         result("toolu_09", [{"type": "text", "text": listing}]),
+        call("toolu_10", "Bash", {"command": f"cat {WORKER}", "description": "Show the worker"}),
+        result("toolu_10", "\n".join(worker) + "\n"),
         {"role": "user", "content": "What should change next?"},
     ]
     return {"model": "claude-opus-5-5", "max_tokens": 1024, "stream": True, "messages": messages}

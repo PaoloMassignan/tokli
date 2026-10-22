@@ -53,6 +53,7 @@ class RequestRecord:
     saved_cache_read: int | None = None
     saved_cache_write: int | None = None
     saved_input: int | None = None
+    stop_reason: str | None = None  # schema v5 (TC-022, ADR 0015)
 
 
 @dataclass(frozen=True)

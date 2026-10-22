@@ -198,6 +198,8 @@ def _serve(config: EffectiveConfig) -> int:
     print(f"dashboard: http://{host}:{port}/tokli/", file=sys.stderr)  # UI-011
     print(f"config dir: {dirs.config_dir} [{dirs.config_dir_source}]", file=sys.stderr)
     print(f"data dir:   {dirs.data_dir} [{dirs.data_dir_source}]", file=sys.stderr, flush=True)
+    for warning in config.warnings:  # CF-013
+        print(f"warning: {warning}", file=sys.stderr)
     if not is_loopback(config.settings.server.host):
         print("warning: listening on a non-loopback address (--allow-remote)", file=sys.stderr)
     app = create_app(services, listen=f"{host}:{port}")

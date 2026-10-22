@@ -43,10 +43,7 @@ STUB = (
 class EditArgsOnResume:
     spec = SPEC
 
-    def __init__(
-        self, resume_after_s: float = 3600.0, min_age_turns: int = 4, min_tokens: int = 64
-    ) -> None:
-        self._resume_after_s = resume_after_s
+    def __init__(self, min_age_turns: int = 4, min_tokens: int = 64) -> None:
         self._min_age_turns = min_age_turns
         self._min_tokens = min_tokens
 
@@ -58,8 +55,8 @@ class EditArgsOnResume:
         count: Callable[[str], int],
         conversation: ConversationView | None = None,
     ) -> list[Proposal]:
-        since = conversation.seconds_since_last if conversation is not None else None
-        resume = since is None or since > self._resume_after_s  # PR-021 (unknown: resume, P5)
+        # PR-021: decided by the conversation store (S8i); no conversation at all is a resume.
+        resume = conversation is None or conversation.is_resume
         stored = conversation.pruned_call_ids if conversation is not None else frozenset()
         turns = {t.call_id: t.human_turns_after for t in tools}
         proposals: list[Proposal] = []

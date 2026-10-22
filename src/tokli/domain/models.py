@@ -90,6 +90,9 @@ class CanonicalRequest:
     original_json: Any = field(repr=False)
     original_bytes: bytes = field(repr=False)
     tools: tuple[ToolRecord, ...] = ()
+    # The longest cache lifetime the client asked for, in seconds (SPEC 003 AN-011; S8i).
+    cache_ttl_s: int | None = None
+    cache_ttl_unrecognised: bool = False  # a marker Tokli does not understand (AN-011)
 
     def segment(self, segment_id: str) -> Segment:
         for segment in self.segments:

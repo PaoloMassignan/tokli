@@ -32,12 +32,16 @@ class StageView:
 
 @dataclass(frozen=True)
 class ConversationView:
-    """What Tokli remembers about the request's conversation (SPEC 019 PR-021…PR-024, ADR 0012):
-    seconds since its previous request (``None`` when the conversation is unknown) and the tool
-    calls pruned at its last resume."""
+    """What Tokli knows about the request's conversation (SPEC 019 PR-021…PR-024, PR-027,
+    PR-028; ADR 0012): whether the request is a resume, the tool calls pruned at its last resume,
+    and, for the trace, the seconds since its previous request (``None`` when the conversation
+    is unknown) and the cache lifetime the decision used, with its source."""
 
-    seconds_since_last: float | None
+    is_resume: bool
     pruned_call_ids: frozenset[str] = frozenset()
+    seconds_since_last: float | None = None
+    cache_ttl_s: float | None = None
+    cache_ttl_source: str = "unknown_conversation"
 
 
 @dataclass(frozen=True)

@@ -116,6 +116,7 @@ def record_request(
         usage_cache_write_5m=usage.cache_write_5m,
         usage_cache_write_1h=usage.cache_write_1h,
         usage_output=usage.output,
+        stop_reason=usage.stop_reason,  # AN-012, TC-022 (S8j)
         calibration_k=calibration.k,
         header_names=observed.header_names,
         history_rewritten=observed.history_rewritten,

@@ -113,7 +113,18 @@ def expect_edit_args_on_resume() -> None:
             assert all(field in args for args in inputs), (tool, field)
 
 
+def expect_outline_first_read() -> None:
+    """S8j: the first whole read of a code file through `Bash` (`cat`, relative path) gets its
+    skeleton; the `Read` of `module.py` (numbered, Windows path) is a candidate with nothing to
+    omit, and the `Read` of the file the agent wrote is `seen_before`."""
+    report = run_alone("outline_first_read")
+    assert accepted(report, "outline_first_read") == 1
+    stat = next(s for s in report.stats if s.compressor_id == "outline_first_read")
+    assert stat.skip_reasons.get("not_applicable(seen_before)", 0) >= 1
+
+
 EXPECTATIONS: dict[str, Callable[[], None]] = {
+    "outline_first_read": expect_outline_first_read,
     "json_minify": expect_json_minify,
     "duplicate_tool_results": expect_duplicate_tool_results,
     "reread_by_reference": expect_reread_by_reference,
