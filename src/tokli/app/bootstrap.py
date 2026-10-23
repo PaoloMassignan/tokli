@@ -11,6 +11,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 
 from tokli.app.conversations import ConversationStore
+from tokli.app.keepalive import Keepalive
 from tokli.app.setup_tokenizers import required_tokenizers
 from tokli.compression.engine import Engine, EngineSettings
 from tokli.compression.registry import build_registry
@@ -54,6 +55,8 @@ class Services:
     # Argument strings exposed as TOOL_CALL_ARGS, only while `edit_args_on_resume` is on.
     arg_fields: Mapping[str, Sequence[str]] = field(default_factory=dict)
     prices: PriceTable = field(default_factory=lambda: PriceTable(load_shipped()))
+    # Cache keepalive (SPEC 020, ADR 0016); kept across config changes.
+    keepalive: Keepalive = field(default_factory=Keepalive)
 
 
 class StartupError(Exception):
@@ -94,33 +97,48 @@ def bootstrap(
 
     parts = _compression(config, selector)
     anthropic = settings.upstreams.anthropic
+    upstream = Upstream(
+        anthropic.base_url,
+        anthropic.connect_timeout_s,
+        anthropic.read_timeout_s,
+        settings.tls.ca_bundle,
+    )
+    traces = TraceBuffer(settings.observability.trace_buffer)
+    store = (
+        TelemetryStore(config.dirs.data_dir / TELEMETRY_DB, settings.telemetry.retention_days)
+        if telemetry
+        else None
+    )
+    conversations = ConversationStore(
+        settings.pruning.conversation_states,
+        ttl_defaults=settings.pruning.cache_ttl_default_s.model_dump(),
+        margin_s=settings.pruning.resume_margin_s,
+    )
     return Services(
         config=config,
         pipeline=parts.pipeline,
         selector=selector,
         mutable_kinds=parts.mutable_kinds,
         arg_fields=parts.arg_fields,
-        upstream=Upstream(
-            anthropic.base_url,
-            anthropic.connect_timeout_s,
-            anthropic.read_timeout_s,
-            settings.tls.ca_bundle,
-        ),
-        traces=TraceBuffer(settings.observability.trace_buffer),
+        upstream=upstream,
+        traces=traces,
         prices=prices,
-        store=(
-            TelemetryStore(config.dirs.data_dir / TELEMETRY_DB, settings.telemetry.retention_days)
-            if telemetry
-            else None
-        ),
+        store=store,
         availability=parts.availability,
         enabled=parts.enabled,
         version=version,
         policy=parts.policy,
-        conversations=ConversationStore(
-            settings.pruning.conversation_states,
-            ttl_defaults=settings.pruning.cache_ttl_default_s.model_dump(),
+        conversations=conversations,
+        keepalive=Keepalive(
+            settings.keepalive,
+            upstream=upstream,
+            conversations=conversations,
+            store=store,
+            traces=traces,
             margin_s=settings.pruning.resume_margin_s,
+            usage_limit=settings.limits.usage_parser_buffer,
+            policy=parts.policy,
+            config_hash=config.config_hash,
         ),
     )
 
@@ -191,11 +209,13 @@ def _compression(config: EffectiveConfig, selector: Selector) -> _Compression:
 
 
 def rebuild(services: Services, config: EffectiveConfig) -> Services:
-    """Services for a new configuration snapshot: tokenizers, upstream client, sinks and the
-    trace buffer are kept; the compression pipeline is rebuilt (ADR 0009)."""
+    """Services for a new configuration snapshot: tokenizers, upstream client, sinks, the trace
+    buffer and the keepalive are kept; the compression pipeline is rebuilt (ADR 0009), and the
+    keepalive takes the new settings (SPEC 020 KA-011)."""
     parts = _compression(config, services.selector)
     if services.store is not None:
         services.store.set_retention(config.settings.telemetry.retention_days)
+    services.keepalive.configure(config.settings.keepalive, parts.policy, config.config_hash)
     return dataclasses.replace(
         services,
         config=config,

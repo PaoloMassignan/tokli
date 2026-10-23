@@ -8,6 +8,9 @@ Approved for S4 (2026-10-03): CF-001 layer 5 (UI overrides), CF-002 (`ui` source
 Changed by S8a SCR-001 (approved for S8a-1, 2026-10-03): CF-009 (the verbatim opt-in is UI-editable). Approved for S8a-1: the keys in "Keys added in S8a-1".
 Approved for S8j (2026-10-22): the keys in "Keys added in S8j".
 Changed by S8i SCR-001 (approved for S8i 2026-10-16): "Keys changed in S8i", new CF-013, "Renamed keys", AC-CF-9.
+Approved for S8l (2026-10-23): the keys in "Keys added in S8l".
+Changed by S8l SCR-001 (approved for S8l 2026-10-23): CF-009 (the keepalive toggles are UI-editable).
+Changed by S8l SCR-004 (approved 2026-10-23): the defaults of `keepalive.enabled` and `keepalive.oauth`.
 
 ## Purpose
 Every behaviour-affecting setting has one definition, one precedence rule and a visible source.
@@ -134,6 +137,20 @@ UI-editable (CF-009): `compressors.<id>.enabled`, `telemetry.retention_days`.
 |---|---|---|
 | `pruning.resume_after_s` | `pruning.cache_ttl_default_s.anthropic_messages` | S8i |
 
+## Keys added in S8l
+
+The `keepalive` section does not change forwarded bodies and is not part of `config_hash` (CF-006).
+
+| Key | Default |
+|---|---|
+| `keepalive.enabled` | `true` (SPEC 020 KA-001; S8l SCR-004; UI-editable) |
+| `keepalive.oauth` | `true` (S8l SCR-004; UI-editable) |
+| `keepalive.horizon_s` | `43200` (12 h, the best net in the S8l simulation; S8l review P4) |
+| `keepalive.lead_s` | `300` (a ping 5 min before the lifetime ends; S8l review P4) |
+| `keepalive.min_ttl_s` | `3600` (one-hour lifetimes only; SPEC 020 rationale) |
+| `keepalive.min_prefix_tokens` | `20000` (provider tokens; S8l review P4) |
+| `keepalive.max_conversations` | `8` (S8l review P4) |
+
 ## Keys added in S8a-1
 
 | Key | Default |
@@ -157,7 +174,7 @@ UI-editable (CF-009): `compressors.<id>.enabled`, `telemetry.retention_days`.
 | CF-006 | THE SYSTEM SHALL compute `config_hash` over the canonical JSON of behaviour-affecting keys (sections `compression`, `compressors`, `pipeline`, `pruning`, `tokens`, `limits`, where present), excluding paths, ports and credentials. |
 | CF-007 | WHEN a configured optional capability cannot be provided (missing dependency or file), THE SYSTEM SHALL either fail at startup (if marked `required`) or report it as unavailable, and SHALL NOT substitute a different behaviour silently. |
 | CF-008 | THE SYSTEM SHALL resolve the data dir as `--data-dir` → `TOKLI_DATA_DIR` → platform default, and the config dir as `--config-dir` → `TOKLI_CONFIG_DIR` → platform default (table above), and SHALL print both at startup and in `tokli doctor`. |
-| CF-009 | THE configuration schema SHALL mark each key as `ui_editable` or not. v1 UI-editable keys: `compressors.<id>.enabled`, `compressors.<id>.apply_to_verbatim_tools` (where it exists), `telemetry.retention_days`. (S4 SCR-001: there is no policy key. S8a SCR-001: the verbatim opt-in.) |
+| CF-009 | THE configuration schema SHALL mark each key as `ui_editable` or not. v1 UI-editable keys: `compressors.<id>.enabled`, `compressors.<id>.apply_to_verbatim_tools` (where it exists), `telemetry.retention_days`, `keepalive.enabled`, `keepalive.oauth`. (S4 SCR-001: there is no policy key. S8a SCR-001: the verbatim opt-in. S8l SCR-001: the keepalive toggles.) |
 | CF-010 | Secrets SHALL NOT be configurable by value in the config file. Only references (`key_env`, `key_file`) are allowed. |
 | CF-011 | WHEN an environment variable starting with `TOKLI_` is neither a reserved variable nor the name of a schema key, or its value does not parse for the key's type, THE SYSTEM SHALL refuse to start with an error naming the variable. |
 | CF-012 | THE config file reader SHALL reject duplicate keys and values whose YAML type does not match the schema type, naming the file, key and expected type. |

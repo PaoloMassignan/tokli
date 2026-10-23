@@ -1,0 +1,98 @@
+{
+  "model": "claude-opus-5-5",
+  "ttl": "5m",
+  "rows": {
+    "plain/first": {
+      "status": 200,
+      "t": 1792671414.2,
+      "stop_reason": "end_turn",
+      "input": 4,
+      "cache_read": 0,
+      "cache_write": 63915,
+      "cache_write_5m": 63915,
+      "cache_write_1h": 0,
+      "output": 201,
+      "at_s": 6
+    },
+    "thinking/first": {
+      "status": 400,
+      "t": 1792671414.5,
+      "error_type": "invalid_request_error",
+      "at_s": 6
+    },
+    "control/first": {
+      "status": 200,
+      "t": 1792671422.1,
+      "stop_reason": "end_turn",
+      "input": 4,
+      "cache_read": 525,
+      "cache_write": 63390,
+      "cache_write_5m": 63390,
+      "cache_write_1h": 0,
+      "output": 194,
+      "at_s": 14
+    },
+    "plain/ping": {
+      "status": 200,
+      "t": 1792671651.8,
+      "stop_reason": "max_tokens",
+      "input": 4,
+      "cache_read": 63915,
+      "cache_write": 0,
+      "cache_write_5m": 0,
+      "cache_write_1h": 0,
+      "output": 1,
+      "at_s": 244
+    },
+    "thinking/ping": {
+      "status": 400,
+      "t": 1792671652.3,
+      "error_type": "invalid_request_error",
+      "at_s": 244
+    },
+    "plain/return": {
+      "status": 200,
+      "t": 1792671892.9,
+      "stop_reason": "tool_use",
+      "input": 4,
+      "cache_read": 63915,
+      "cache_write": 35,
+      "cache_write_5m": 35,
+      "cache_write_1h": 0,
+      "output": 155,
+      "at_s": 485
+    },
+    "thinking/return": {
+      "status": 400,
+      "t": 1792671893.2,
+      "error_type": "invalid_request_error",
+      "at_s": 485
+    },
+    "control/return": {
+      "status": 200,
+      "t": 1792671897.2,
+      "stop_reason": "tool_use",
+      "input": 4,
+      "cache_read": 525,
+      "cache_write": 63425,
+      "cache_write_5m": 63425,
+      "cache_write_1h": 0,
+      "output": 149,
+      "at_s": 489
+    }
+  },
+  "verdict": {
+    "plain": {
+      "a_ping_reads_prefix": true,
+      "b_return_warm": true,
+      "c_ping_output_tokens": 1
+    },
+    "thinking": {
+      "a_ping_reads_prefix": false,
+      "b_return_warm": false,
+      "c_ping_output_tokens": null
+    },
+    "control_return_cold": true,
+    "go": true
+  }
+}

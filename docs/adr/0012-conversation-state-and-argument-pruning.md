@@ -1,6 +1,6 @@
 # ADR 0012 — Conversation state and pruning of tool-call arguments at resume
 
-Status: accepted (S8c, 2026-10-04; approved at S8c Gate 1); amendment 1 accepted (S8i SCR-001, approved at S8i Gate 1, 2026-10-16); amendment 2 accepted (S8i SCR-003, approved 2026-10-22) · Related: SPEC 001 CM-009, SPEC 003, SPEC 009
+Status: accepted (S8c, 2026-10-04; approved at S8c Gate 1); amendment 1 accepted (S8i SCR-001, approved at S8i Gate 1, 2026-10-16); amendment 2 accepted (S8i SCR-003, approved 2026-10-22); amendment 3 accepted (S8l SCR-001, approved 2026-10-23) · Related: SPEC 001 CM-009, SPEC 003, SPEC 009
 CC-006, SPEC 019 PR-005, PR-020…PR-026, ADR 0010 (request-scope compressors), TOKLI_EVIDENCE §2
 (E5b-lite)
 
@@ -114,3 +114,9 @@ It must also be able to change argument strings of selected tool calls.
 - **Consequences:**
   - a regression test (`test_conversation_key_ignores_cache_markers`);
   - after the upgrade every conversation is unknown once, as after a restart.
+
+## Amendment 3 (S8l SCR-001, 2026-10-23)
+
+The store's time is the later of the conversation's last request and its last successful keepalive
+request (SPEC 020 KA-013, SPEC 019 PR-021). The cache lifetime and the pruned call ids stay those
+of the last client request. The store still holds no content.

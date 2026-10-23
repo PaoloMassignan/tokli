@@ -1,5 +1,5 @@
-"""SQLite telemetry store, schema v4 (TC-001, TC-002, TC-010, TC-011, TC-012; ADR 0003, 0005,
-0007, 0014).
+"""SQLite telemetry store, schema v6 (TC-001, TC-002, TC-010, TC-011, TC-012; ADR 0003, 0005,
+0007, 0014, 0015, 0017).
 
 Writes happen on one background thread through a bounded queue, so the request path never waits
 for the disk. A failing write never breaks traffic: it is counted, the store reports unhealthy,
@@ -23,7 +23,7 @@ from typing import Any, Union, get_args, get_origin, get_type_hints
 
 from tokli.telemetry.records import CompressorStatsRecord, RequestRecord
 
-SCHEMA_VERSION = 5  # v5: requests.stop_reason (TC-022, ADR 0015)
+SCHEMA_VERSION = 6  # v6: keepalive columns (TC-023, TC-024, ADR 0017)
 _LOG = logging.getLogger("tokli.telemetry")
 _WARN_INTERVAL_S = 60.0
 _CLOSE_TIMEOUT_S = 10.0  # how long close() waits for the writer thread
@@ -67,6 +67,8 @@ _REQUEST_COLUMNS = list(_REQUEST_TYPES)
 _STATS_COLUMNS = list(_STATS_TYPES)
 _REQUEST_HINTS = get_type_hints(RequestRecord)
 _BOOL_COLUMNS = {c for c in _REQUEST_COLUMNS if _base_type(c, _REQUEST_HINTS[c]) is bool}
+# `bool | None` columns keep null as unknown (keepalive_bridged, ADR 0017).
+_NULLABLE_BOOLS = {c for c in _BOOL_COLUMNS if _REQUEST_HINTS[c] is not bool}
 _JSON_COLUMNS = {c for c in _REQUEST_COLUMNS if _base_type(c, _REQUEST_HINTS[c]) is tuple}
 
 
@@ -315,7 +317,8 @@ class TelemetryStore:
             return None
         record = dict(zip(_REQUEST_COLUMNS, row, strict=True))
         for column in _BOOL_COLUMNS:
-            record[column] = bool(record[column])
+            if record[column] is not None or column not in _NULLABLE_BOOLS:
+                record[column] = bool(record[column])
         for column in _JSON_COLUMNS:
             if record[column] is not None:
                 record[column] = json.loads(record[column])

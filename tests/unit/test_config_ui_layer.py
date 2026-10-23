@@ -31,8 +31,8 @@ def cfg(tmp_path: Path, env: dict[str, str], *sets: str, config: str | None = No
 
 
 def test_keys_marked_ui_editable() -> None:
-    """CF-009 after S8a SCR-001: compressor toggles, the verbatim opt-in where a compressor
-    declares it, and the retention period."""
+    """CF-009 after S8a SCR-001 and S8l SCR-001: compressor toggles, the verbatim opt-in where a
+    compressor declares it, the retention period and the keepalive toggles."""
     editable = {k for k, info in schema_keys().items() if info.ui_editable}
     assert editable == {
         "compressors.json_minify.enabled",
@@ -45,6 +45,8 @@ def test_keys_marked_ui_editable() -> None:
         "compressors.reread_by_reference.enabled",
         "compressors.outline_first_read.enabled",  # S8j: a compressor toggle (CF-009)
         "telemetry.retention_days",
+        "keepalive.enabled",  # S8l SCR-001
+        "keepalive.oauth",
     }
 
 
@@ -124,3 +126,19 @@ def test_config_reload_reads_new_overrides(tmp_path: Path, env: dict[str, str]) 
     overrides(tmp_path / "data", "telemetry:\n  retention_days: 7\n")
     assert config.reload().values["telemetry.retention_days"] == 7
     assert config.values["telemetry.retention_days"] == 30  # the old snapshot never changes
+
+
+def test_s8l_keys_and_defaults(tmp_path: Path, env: dict[str, str]) -> None:
+    """SPEC 017 "Keys added in S8l"; the keepalive section is not part of `config_hash`."""
+    config = cfg(tmp_path, env)
+    assert {k: v for k, v in config.values.items() if k.startswith("keepalive.")} == {
+        "keepalive.enabled": True,  # S8l SCR-004
+        "keepalive.oauth": True,
+        "keepalive.horizon_s": 43200,
+        "keepalive.lead_s": 300,
+        "keepalive.min_ttl_s": 3600,
+        "keepalive.min_prefix_tokens": 20000,
+        "keepalive.max_conversations": 8,
+    }
+    on = cfg(tmp_path, {**env, "TOKLI_KEEPALIVE__ENABLED": "true"})
+    assert on.config_hash == config.config_hash

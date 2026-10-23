@@ -58,8 +58,31 @@ USAGE_WHY = frozenset(
     }
 )
 CALIBRATION = frozenset({"calibration_outlier", "calibration_unavailable"})  # TM-009
+KEEPALIVE = frozenset(  # KA-010; ineligible(<why>), <why> as in KEEPALIVE_WHY
+    {
+        "horizon",
+        "expired",
+        "cache_missed",
+        "auth_rejected",
+        "upstream_error",
+        "evicted",
+        "disabled",
+        "shutdown",
+        "ineligible",
+    }
+)
+KEEPALIVE_WHY = frozenset(
+    {
+        "upstream_status",
+        "no_usage",
+        "short_ttl",
+        "too_small",
+        "credential_kind",
+        "oauth_not_enabled",
+    }
+)
 
-ALL = ROUTE | PASSTHROUGH | SKIP | REJECT | STAGE | UPSTREAM | USAGE | CALIBRATION
+ALL = ROUTE | PASSTHROUGH | SKIP | REJECT | STAGE | UPSTREAM | USAGE | CALIBRATION | KEEPALIVE
 
 
 def is_known(code: str) -> bool:

@@ -585,12 +585,15 @@ def test_ui_screenshots(tokli: Tokli) -> None:
 
 @pytest.fixture
 def prose_only(tmp_path: Path) -> Iterator[Tokli]:
-    """A Tokli whose only traffic is the test's own."""
+    """A Tokli whose only traffic is the test's own. The request budget is lifted: under a loaded
+    full run a cold first request can exceed 50 ms, and a compressor skipped for the budget is
+    not counted as "not applying"."""
     upstream = FakeUpstream()
     usage_upstream(upstream)
     with serve(upstream.app()) as upstream_url:
         upstream.url = upstream_url
-        with run_tokli(make_config(tmp_path, upstream_url)) as t:
+        config = make_config(tmp_path, upstream_url, "compression.request_budget_ms=100000")
+        with run_tokli(config) as t:
             yield t
 
 
@@ -653,3 +656,99 @@ def test_ui_flags_compressor_not_applying(prose_only: Tokli) -> None:
         browser.close()
     assert "does not apply to your traffic" in text
     assert "results are not JSON" in text
+
+
+# -- S8l: cache keepalive (UI-015, AC-UI-6) -----------------------------------------------------
+
+
+@pytest.fixture
+def pinged(tmp_path: Path) -> Iterator[Tokli]:
+    """A Tokli with the keepalive on and one ping sent (fake time, scripted upstream)."""
+    from tests.integration.test_keepalive import (
+        START,
+        Script,
+        conversation,
+        fake_time,
+        ping_lines,
+        send,
+        wait_for,
+    )
+
+    upstream = FakeUpstream()
+    with serve(upstream.app()) as upstream_url:
+        upstream.url = upstream_url
+        config = make_config(tmp_path / "pinged", upstream_url, "keepalive.enabled=true")
+        with run_tokli(config) as t:
+            ft = fake_time(t)
+            upstream.responder = Script(ft)
+            send(t, conversation())
+            ft.until = START + 3300
+            wait_for(lambda: len(ping_lines(t)) == 1)
+            assert t.services.store is not None
+            t.services.store.flush()
+            yield t
+
+
+KEEPALIVE_TEXT = (
+    "Tokli repeats your last request with a one-token answer shortly before the cache expires, "
+    "for up to 12 hours after your last request. Each repeat costs much less than the cache "
+    "write it avoids. Tokli keeps your last request and its credentials in memory until then."
+)
+
+
+def test_ui_keepalive_card_and_toggles(fresh: Tokli, pinged: Tokli) -> None:
+    """AC-UI-6 (UI-015, CF-009 after S8l SCR-001, SCR-004): the card shows while the feature is
+    on (the default) and hides without pings once it is off; the Settings toggles start on and
+    patch `keepalive.enabled` and `keepalive.oauth`; with a ping the card shows its figures,
+    every money figure labelled "estimate" with its basis."""
+    with sync_playwright() as p:
+        browser = p.chromium.launch()
+        page = browser.new_page()
+        page.goto(fresh.url + "/tokli/")
+        page.wait_for_selector('[data-card="keepalive"]')
+        page.click('[data-tab="settings"]')
+        page.wait_for_selector('section[data-panel="settings"]:not([hidden]) [data-loaded]')
+        settings = page.locator("#keepalive-settings")
+        assert KEEPALIVE_TEXT in " ".join(settings.inner_text().split())
+        assert "Keep the provider cache warm during pauses" in settings.inner_text()
+        assert "Also for subscription logins" in settings.inner_text()
+        for key in ("keepalive.enabled", "keepalive.oauth"):
+            toggle = settings.locator(f'input[data-setting="{key}"]')
+            assert toggle.is_checked()
+            with page.expect_response(
+                lambda r: r.url.endswith("/tokli/api/config") and r.request.method == "PATCH"
+            ) as info:
+                toggle.click()
+            assert info.value.status == 200
+            page.wait_for_selector(f'#keepalive-settings input[data-setting="{key}"]:not(:checked)')
+        page.click('[data-tab="overview"]')
+        page.wait_for_selector("#cards .figure")
+        page.wait_for_function(
+            "() => document.querySelectorAll('[data-card=\"keepalive\"]').length === 0"
+        )
+
+        page.goto(pinged.url + "/tokli/")
+        page.wait_for_selector('[data-card="keepalive"]')
+        card = page.locator('[data-card="keepalive"]')
+        text = card.inner_text()
+        assert "Cache keepalive" in text and "Pings sent" in text and "Bridged pauses" in text
+        moneys = card.locator(".money")
+        assert moneys.count() == 3
+        priced = 0
+        for i in range(3):
+            item = moneys.nth(i)
+            number = item.locator(".num").inner_text().strip()
+            if number == "—":  # UI-002: unavailable, with its reason (no bridged pause yet)
+                assert item.locator(".reason").inner_text().strip()
+                continue
+            priced += 1
+            assert number.startswith(("$", "-$"))
+            assert item.locator(".method").inner_text().strip() == "estimate"
+            assert item.locator(".basis").inner_text().strip() in (
+                "estimated money saved",
+                "value at API prices",
+            )
+        assert priced >= 2  # the ping cost and the net
+        browser.close()
+    values = fresh.services.config.reload().values
+    assert values["keepalive.enabled"] is False and values["keepalive.oauth"] is False

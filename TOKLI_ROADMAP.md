@@ -350,7 +350,9 @@ slice on 2026-10-04.
 
 ## S8l — Keeping the prompt cache warm across pauses (keepalive)
 
-- **Requested** by the human on 2026-10-22. Planned, not started.
+- **Requested** by the human on 2026-10-22. **Accepted** (Gate 1 and Gate 2, 2026-10-23; on by
+  default after SCR-004): SPEC 020, ADR 0016, ADR 0017, `slices/S8l/`. The simulation and E12 are recorded in
+  `slices/S8l/SPEC_REVIEW.md` and `TOKLI_EVIDENCE.md`; the human approved the scope change.
 - **Why:** about 76 % of the cache writes follow a pause longer than the cache lifetime, when the
   provider writes the whole context again at twice the base input price. A request that reads the
   cache before it expires costs 0.1× per read.

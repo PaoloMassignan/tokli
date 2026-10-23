@@ -102,6 +102,8 @@ nav button[aria-pressed="true"] {
 }
 
 .card { min-width: 0; padding: 12px 0; }
+.keepalive-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; }
+.keepalive-settings .switch { display: inline-flex; gap: 6px; align-items: center; }
 .card .label { color: var(--muted); font-size: 0.88rem; }
 .card .num, .card .big { font-size: 1.35rem; font-weight: 650; }
 .secondary-metrics { margin: 10px 0; }

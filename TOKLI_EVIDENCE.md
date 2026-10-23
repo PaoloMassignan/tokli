@@ -557,6 +557,47 @@ parts.
   - content tokens are estimates, and the fixed part is fitted;
   - the cost share leaves out output.
 
+### E12 — a keepalive request keeps the prompt cache warm across a pause (2026-10-22)
+
+**Method:** `evals/experiments/e12_keepalive.py`, run by the developer with their API key on
+`claude-opus-5-5`, 8 calls in about 1 h 50 min; the result is in
+`evals/experiments/e12_result_1h_run1.json`. A five-minute run before it checked the script
+(`e12_result_5m_run1.json`).
+- **Three synthetic conversations** of about 64,000 provider tokens, in a coding agent's shape,
+  with one-hour cache markers on the system prompt and on the last block: `plain`, `thinking`
+  (adaptive extended thinking) and `control`. A random nonce in the system prompt keeps earlier
+  runs' caches from matching.
+- **Ping** at 55 min, for `plain` and `thinking`: the first request's body, byte for byte, except
+  `max_tokens: 1`.
+- **Return** at 110 min, for all three: the same messages plus an assistant reply and a new user
+  turn, with the marker moved to the new last block. This is more than an hour after the first
+  request and less than an hour after the ping.
+
+| Call | Cache read | Cache write | Output | Stop reason |
+|---|---|---|---|---|
+| `plain` / `thinking` first | 0 / 525 | 63,915 / 63,389 | 207 / 191 | `end_turn` |
+| `plain` / `thinking` ping | 63,915 / 63,914 | 0 / 0 | 1 / 1 | `max_tokens` |
+| `plain` / `thinking` return | 63,915 / 63,914 | 35 / 35 | 117 / 179 | `tool_use` |
+| `control` return | 525 | 63,425 | 169 | `tool_use` |
+
+(The 525 tokens the second and third conversations read at first are the system prompt they
+share, with the same nonce.)
+
+**Consequences:**
+- **A ping reads the whole prefix and writes nothing.** It costs the prefix at the cache-read
+  price plus one output token: about $0.013 here. The rewrite it avoided cost about $0.50 (the
+  control's 63,425 tokens at the one-hour write price): about 39 times the ping.
+- **A cache hit restarts the lifetime.** The pinged returns were warm 110 min after the first
+  request; the control was cold.
+- **`max_tokens` is not part of the cache key,** and `max_tokens: 1` is accepted with adaptive
+  thinking. The thinking settings are kept as sent.
+- **The five-minute check:** a thinking variant with `type: "enabled"` and a budget was refused
+  (HTTP 400) on this model, so a ping copies thinking settings as the client sent them and never
+  changes them.
+- **Not tested:** an OAuth access token held for hours (S8l review, E12 (d)), and how a
+  subscription's usage limits count pings.
+- **Cost of the run:** about $2.11 at list prices.
+
 ### Other quantitative inputs
 
 | Input | Value | Use |

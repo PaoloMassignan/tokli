@@ -19,7 +19,7 @@ class RequestRecord:
     credential_kind: str
     policy: str
     config_hash: str
-    outcome: str  # compressed | passthrough | verbatim_route | error
+    outcome: str  # compressed | passthrough | verbatim_route | error | keepalive
     passthrough_reason: str | None
     segments_total: int
     segments_mutable: int
@@ -54,6 +54,10 @@ class RequestRecord:
     saved_cache_write: int | None = None
     saved_input: int | None = None
     stop_reason: str | None = None  # schema v5 (TC-022, ADR 0015)
+    # Schema v6 (TC-023, TC-024, ADR 0017): the cache keepalive (SPEC 020).
+    keepalive_bridged: bool | None = None
+    keepalive_stop_reason: str | None = None
+    cache_ttl_s: float | None = None
 
 
 @dataclass(frozen=True)

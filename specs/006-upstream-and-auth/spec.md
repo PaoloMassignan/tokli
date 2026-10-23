@@ -2,6 +2,7 @@
 
 Status: Draft · Slice: S1 (passthrough, Anthropic), S5 (inject, both) · Related: ARCH §2, §6
 Approved for S1 (2026-09-30): UP-001, UP-002, UP-005, UP-006, UP-008, UP-009, UP-010, and live tests E1a (API key) and E1b (Pro/Max OAuth). Inject mode in S5.
+Changed by S8l SCR-001 (approved for S8l 2026-10-23): UP-002 (credentials held in memory for a kept conversation, SPEC 020).
 
 ## Purpose
 Keep provider endpoints and credentials explicit, separate from compression, and impossible to
@@ -44,7 +45,7 @@ tls:
 | ID | EARS requirement |
 |---|---|
 | UP-001 | THE SYSTEM SHALL take each provider's upstream base URL from configuration (default: official endpoint) and SHALL report it in diagnostics. |
-| UP-002 | WHILE a provider's auth mode is `passthrough`, THE SYSTEM SHALL forward the client's credential headers unchanged and SHALL NOT store them beyond the lifetime of the request. |
+| UP-002 | WHILE a provider's auth mode is `passthrough`, THE SYSTEM SHALL forward the client's credential headers unchanged and SHALL NOT store them beyond the lifetime of the request, except that it SHALL hold them in memory for a kept conversation of SPEC 020 (KA-003), until that conversation stops being kept. (S8l SCR-001.) |
 | UP-003 | WHILE a provider's auth mode is `inject`, THE SYSTEM SHALL remove client credential headers (`authorization`, `x-api-key`) and set the provider's header (`x-api-key` for Anthropic, `Authorization: Bearer` for OpenAI) from exactly one configured source (`key_env` or `key_file`). |
 | UP-004 | IF inject mode is configured AND the configured source is missing, empty or unreadable, THEN THE SYSTEM SHALL answer 503 with `tokli_missing_credential` naming the configured source (not its value) and SHALL NOT forward the request. |
 | UP-005 | THE SYSTEM SHALL NOT use one provider's credential for another provider, and SHALL NOT read any credential source that is not named in configuration. |

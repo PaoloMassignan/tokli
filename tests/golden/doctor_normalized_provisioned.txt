@@ -52,6 +52,13 @@ Configuration  hash 66a272fc366d554b
   observability.log_format = "json"  [default]
   observability.log_file = false  [default]
   telemetry.retention_days = 30  [default]
+  keepalive.enabled = true  [default]
+  keepalive.oauth = true  [default]
+  keepalive.horizon_s = 43200  [default]
+  keepalive.lead_s = 300  [default]
+  keepalive.min_ttl_s = 3600  [default]
+  keepalive.min_prefix_tokens = 20000  [default]
+  keepalive.max_conversations = 8  [default]
 
 Auth
   anthropic  passthrough

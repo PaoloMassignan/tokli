@@ -88,6 +88,17 @@ Only compressors that keep all the information are switched on:
 
 The others are off. `TOKLI_COMPRESSORS.md` explains each one, with examples.
 
+**Cache keepalive.** Also on by default, for API keys and subscription logins. When you
+pause, Tokli repeats your last request with a one-token answer shortly before Anthropic's
+one-hour cache expires, for up to 12 hours, so that your return reads the cache instead of
+writing it again. Each repeat costs about 1/40 of the cache write it avoids; with a
+subscription it counts towards your plan's usage. It applies only to conversations that use
+the one-hour cache and are large enough. Tokli keeps your last request and its credentials in
+memory until then, never on disk. To turn it off: Settings, "Keep the provider cache warm
+during pauses", or `keepalive.enabled = false` in the configuration file; "Also for
+subscription logins" (`keepalive.oauth`) turns it off for subscriptions only. The Overview's
+"Cache keepalive" card shows what the repeats cost and saved.
+
 **One cache rewrite after a change.** Switching compressors on or off changes how the history is
 sent. Anthropic then rewrites its cache once on the next request, which costs a little extra.
 Prefer changing settings between tasks, not in the middle of one.

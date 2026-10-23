@@ -7,6 +7,7 @@ Approved for S4 (2026-10-03): Settings page; UI-003 (evaluation status), UI-004,
 Approved for S8a-1 (2026-10-03): UI-012 (S8a SCR-001).
 Approved for S6 (2026-10-04): the money card (Overview), the money column (Compressors), UI-002 for money, UI-013.
 Approved for S8h (2026-10-09): UI-014.
+Approved for S8l (2026-10-23): UI-015, AC-UI-6 (cache keepalive).
 Approved for S6.5 (2026-10-05): presentation, wording and layout review; no behavioural or API change.
 
 ## Purpose
@@ -40,6 +41,7 @@ simple control: policy and per-compressor enable/disable.
 | UI-012 | WHERE a compressor declares `apply_to_verbatim_tools`, THE Settings page SHALL show a second toggle "Also on Read, Bash…" (listing the effective `verbatim_tools`), off by default. Next to it, the page SHALL state: "These tools' output is often copied back exactly by the agent (for example as an edit anchor). Changing it can make the agent's next tool call fail." (S8a SCR-001.) |
 | UI-013 | THE Overview money card SHALL show the estimated saving, its range, its method in plain words ("by where the saving sits in the cache", "by the request's average price mix", "assumes no cache"), its basis label (TC-019), the price-book version, and the caveats of TC-020 when they are non-zero. THE Compressors page SHALL show each compressor's money saved with the same labels. (S6.) |
 | UI-014 | THE Compressors page SHALL show a compressor flagged `not_applying` (TC-021) as "does not apply to your traffic", with its main skip reason in plain words. (S8h P3.) |
+| UI-015 | WHEN the summary's `keepalive` block (TC-025) has at least one ping in the range, OR `keepalive.enabled` is true, THE Overview SHALL show a "Cache keepalive" card: pings sent, bridged pauses, ping cost, estimated saving and net, each labelled "estimate" with the basis label (TC-019). THE Settings page SHALL show the toggles `keepalive.enabled` ("Keep the provider cache warm during pauses") and `keepalive.oauth` ("Also for subscription logins"), with the text: "Tokli repeats your last request with a one-token answer shortly before the cache expires, for up to 12 hours after your last request. Each repeat costs much less than the cache write it avoids. Tokli keeps your last request and its credentials in memory until then." The hours SHALL be the effective `keepalive.horizon_s`. (S8l.) |
 | UI-010 | THE Settings page SHALL explain the kinds in these words: Lossless — "Keeps all information in the request: exactly, structurally (e.g. JSON whitespace), or by reference to an identical earlier tool result. This does not guarantee identical model behaviour. Defaults are chosen from evaluations." Selective / lossy — "Drops information: selective ones keep a declared part verbatim, lossy ones do not. Enable them only with evidence that your tasks are not affected." (S4 SCR-001.) |
 
 ## Acceptance criteria
@@ -47,6 +49,7 @@ simple control: policy and per-compressor enable/disable.
 - AC-UI-2: a browser test (Playwright, headless) renders Overview, Compressors and Recent with API fixtures, and every numeric token cell has an adjacent method label.
 - AC-UI-3: toggling a compressor issues `PATCH /tokli/api/config` and re-renders from the response.
 - AC-UI-4: offline rendering: with network blocked except loopback, all assets load.
+- AC-UI-6 (UI-015): with API fixtures with and without pings, the card is shown and hidden accordingly, every money figure carries "estimate" and its basis, and the two toggles patch `keepalive.enabled` and `keepalive.oauth`.
 - AC-UI-5 (UI-011): every asset is served with the content type of its extension (`text/html`, `text/css`, `text/javascript`, `image/svg+xml`) on all CI OSes.
 
 Browser tests (AC-UI-2, UI-003, UI-008, UI-009) run with Playwright and headless Chromium in one CI job (Ubuntu, Python 3.12) and locally when Playwright is installed (ADR 0006). The evaluation-record status of UI-003 is shown from S4.
@@ -57,4 +60,5 @@ Browser tests (AC-UI-2, UI-003, UI-008, UI-009) run with Playwright and headless
 `test_ui_assets_load_offline` · `test_debug_content_banner_visible` ·
 `test_ui_shows_equivalence_assumptions_and_eval_status` · `test_ui_overhead_target_is_reference_line` · `test_ui_policy_explanations_text` ·
 `test_ui_shows_kind_equivalence_and_assumptions` · `test_ui_usable_at_360px` · `test_ui_assets_served_with_explicit_content_types` ·
-`test_ui_verbatim_opt_in_toggle` · `test_ui_cost_card_shows_estimate_range_and_method` · `test_ui_compressor_money_column`
+`test_ui_verbatim_opt_in_toggle` · `test_ui_cost_card_shows_estimate_range_and_method` · `test_ui_compressor_money_column` ·
+`test_ui_keepalive_card_and_toggles`

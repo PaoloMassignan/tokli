@@ -222,6 +222,27 @@ function costCard(cost) {
     notes.length ? el("ul", { class: "cost-notes" }, notes.map((note) => el("li", {}, note))) : "");
 }
 
+// UI-015 (S8l): the cache keepalive's figures, each money figure an estimate with its basis.
+function keepaliveMoney(m) {
+  if (!m || m.estimate === undefined) return money(m);
+  const text = (m.estimate < 0 ? "-" : "") + usd(Math.abs(m.estimate));
+  return el("span", { class: "money" },
+    el("span", { class: "num" }, text),
+    el("span", { class: "method" }, "estimate"),
+    el("span", { class: "basis" }, basisLabel(m)));
+}
+
+function keepaliveCard(k) {
+  const row = (label, content) => el("div", { class: "keepalive-row" }, el("span", { class: "label" }, label), " ", content);
+  return el("div", { class: "card", "data-card": "keepalive" },
+    el("div", { class: "label" }, "Cache keepalive"),
+    row("Pings sent", el("span", { class: "stat" }, fmt(k.pings))),
+    row("Bridged pauses", el("span", { class: "stat" }, fmt(k.bridged_requests))),
+    row("Ping cost", keepaliveMoney(k.ping_cost)),
+    row("Estimated saving", keepaliveMoney(k.saved)),
+    row("Net", keepaliveMoney(k.net)));
+}
+
 // Charts are drawn at the container's pixel width, so labels keep their size on any screen.
 function chartWidth(id) {
   return Math.max(280, Math.round(document.getElementById(id).clientWidth || 600));
@@ -336,11 +357,12 @@ function overheadTable(overhead) {
 
 async function loadOverview() {
   const { days, params } = filterParams();
-  const [summary, series, perCompressor, registry] = await Promise.all([
+  const [summary, series, perCompressor, registry, config] = await Promise.all([
     api("/tokli/api/metrics/summary", params),
     api("/tokli/api/metrics/timeseries", { ...params, bucket: days > 2 ? "day" : "hour" }),
     api("/tokli/api/metrics/compressors", params),
     api("/tokli/api/compressors"),
+    api("/tokli/api/config"),
   ]);
   const names = Object.fromEntries(registry.compressors.map((c) => [c.id, c]));
   document.getElementById("per-compressor").replaceChildren(
@@ -358,10 +380,13 @@ async function loadOverview() {
   );
   const t = summary.tokens;
   const requests = summary.requests;
+  const keepalive = summary.keepalive;
+  const keepaliveOn = settingOf(config, "keepalive.enabled");
   document.getElementById("primary-metrics").replaceChildren(
     card("saved", "Saved tokens", figure(t.saved)),
     costCard(summary.cost),
     card("saving_pct", "Saving", figure(t.saving_pct, " %")),
+    keepalive && (keepalive.pings > 0 || (keepaliveOn && keepaliveOn.value)) ? keepaliveCard(keepalive) : "",
   );
   document.getElementById("secondary-metrics").replaceChildren(
     card("requests", "Requests", el("div", { class: "stat" },
@@ -580,11 +605,36 @@ function renderSettings() {
       locked ? el("div", { class: "lock" }, `locked by ${locked}`) : null);
   });
   document.getElementById("compressor-cards").replaceChildren(...cards);
+  renderKeepaliveSettings(config);
   const retention = settingOf(config, "telemetry.retention_days");
   const input = document.getElementById("retention");
   input.value = retention ? retention.value : "";
   input.disabled = Boolean(retention && retention.locked_by);
   document.getElementById("retention-lock").textContent = retention && retention.locked_by ? `locked by ${retention.locked_by}` : "";
+}
+
+// UI-015 (S8l): the keepalive toggles and what they do.
+function renderKeepaliveSettings(config) {
+  const horizon = settingOf(config, "keepalive.horizon_s");
+  const hours = horizon ? Math.round(horizon.value / 360) / 10 : 12;
+  const toggle = (key, label) => {
+    const s = settingOf(config, key);
+    const input = el("input", { type: "checkbox", "data-setting": key, "aria-label": label });
+    input.checked = Boolean(s && s.value);
+    input.disabled = Boolean(s && s.locked_by);
+    input.addEventListener("change", () => changeSettings({ [key]: input.checked }));
+    return el("div", {},
+      el("label", { class: "switch" }, input, label),
+      s && s.locked_by ? el("div", { class: "lock" }, `locked by ${s.locked_by}`) : null);
+  };
+  document.getElementById("keepalive-settings").replaceChildren(
+    toggle("keepalive.enabled", "Keep the provider cache warm during pauses"),
+    toggle("keepalive.oauth", "Also for subscription logins"),
+    el("p", { class: "note" },
+      "Tokli repeats your last request with a one-token answer shortly before the cache expires, " +
+      `for up to ${fmt(hours, Number.isInteger(hours) ? 0 : 1)} hours after your last request. ` +
+      "Each repeat costs much less than the cache write it avoids. " +
+      "Tokli keeps your last request and its credentials in memory until then."));
 }
 
 async function changeSettings(changes) {

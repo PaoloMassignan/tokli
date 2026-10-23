@@ -115,3 +115,27 @@ def test_header_names_only() -> None:
 def test_policy_forbids_removed_from_closed_set() -> None:
     """S4 SCR-001: kinds no longer gate execution, so `policy_forbids` is never produced."""
     assert not reasons.is_known("policy_forbids(LOSSY)")
+
+
+def test_keepalive_reason_codes_are_known() -> None:
+    """KA-010, TOKLI_OBSERVABILITY §4 "Keepalive" row. Root cause: S8l added the keepalive codes
+    to the observability document but not to the closed set in `reasons`; with the keepalive off
+    by default no trace carried them, so `test_reason_codes_closed_set` only failed once SCR-004
+    turned the feature on (an `ineligible(no_usage)` decision on a request without usage)."""
+    for code in (
+        "horizon",
+        "expired",
+        "cache_missed",
+        "auth_rejected",
+        "upstream_error",
+        "evicted",
+        "disabled",
+        "shutdown",
+        "ineligible(upstream_status)",
+        "ineligible(no_usage)",
+        "ineligible(short_ttl)",
+        "ineligible(too_small)",
+        "ineligible(credential_kind)",
+        "ineligible(oauth_not_enabled)",
+    ):
+        assert reasons.is_known(code), code

@@ -75,6 +75,14 @@ EXAMPLES: dict[str, tuple[str, str, object]] = {
     "observability.log_format": ("text", "json", "json"),
     "observability.log_file": ("true", "false", False),
     "telemetry.retention_days": ("1", "2", 2),
+    # S8l, SPEC 017 "Keys added in S8l"
+    "keepalive.enabled": ("true", "false", False),
+    "keepalive.oauth": ("true", "false", False),
+    "keepalive.horizon_s": ("3600", "7200", 7200),
+    "keepalive.lead_s": ("60", "120", 120),
+    "keepalive.min_ttl_s": ("300", "600", 600),
+    "keepalive.min_prefix_tokens": ("100", "200", 200),
+    "keepalive.max_conversations": ("2", "3", 3),
 }
 FILE_EXPECTED: dict[str, object] = {
     "server.host": "localhost",
@@ -128,6 +136,13 @@ FILE_EXPECTED: dict[str, object] = {
     "observability.log_format": "text",
     "observability.log_file": True,
     "telemetry.retention_days": 1,
+    "keepalive.enabled": True,
+    "keepalive.oauth": True,
+    "keepalive.horizon_s": 3600,
+    "keepalive.lead_s": 60,
+    "keepalive.min_ttl_s": 300,
+    "keepalive.min_prefix_tokens": 100,
+    "keepalive.max_conversations": 2,
 }
 
 # Behaviour-affecting defaults, written out from SPEC 017 "Keys added in S1" (CF-006).

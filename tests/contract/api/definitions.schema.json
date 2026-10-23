@@ -219,6 +219,56 @@
           "$ref": "#/$defs/money_figure"
         }
       }
+    },
+    "keepalive_money_figure": {
+      "description": "TC-025 (S8l): a keepalive money figure; the net may be negative. Method per API-002, extended by S8l SCR-003.",
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "estimate",
+            "low",
+            "high",
+            "method",
+            "currency",
+            "price_book_version",
+            "basis"
+          ],
+          "properties": {
+            "estimate": {
+              "type": "number"
+            },
+            "low": {
+              "type": "number"
+            },
+            "high": {
+              "type": "number"
+            },
+            "method": {
+              "enum": [
+                "provider_usage",
+                "bridged_cache_reads"
+              ]
+            },
+            "currency": {
+              "const": "USD"
+            },
+            "price_book_version": {
+              "type": "string"
+            },
+            "basis": {
+              "enum": [
+                "billed",
+                "api_equivalent"
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "$ref": "#/$defs/unavailable"
+        }
+      ]
     }
   }
 }

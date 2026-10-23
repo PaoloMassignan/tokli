@@ -181,6 +181,9 @@ the provider, prices or storage.
 > **Since S1 the enforced rules are those of ADR 0004** (`docs/adr/0004-module-dependency-rules-from-s1.md`,
 > accepted 2026-10-02): `tokli.app.bootstrap` is the composition root, and the list below is kept
 > as the original intent. Every forbidden edge below still holds.
+>
+> ADR 0016 (S8l) adds `tokli.app → tokli.upstream, tokli.protocols` for the cache keepalive, which
+> sends upstream requests on a timer; the layers contract already allows these edges.
 
 ```text
 tokli.http        → tokli.app, tokli.pipeline, tokli.protocols, tokli.upstream, tokli.auth,

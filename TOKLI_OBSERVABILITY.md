@@ -63,6 +63,7 @@ Decisions that change what is forwarded are always recorded, with a machine-read
 | Upstream | `upstream_status(<code>)`, `upstream_unreachable`, `upstream_timeout`, `client_disconnected` |
 | Usage | `usage_unavailable(<why>)`, `<why>` ∈ `upstream_status`, `content_encoding`, `buffer_limit`, `parse_error`, `no_usage`, `client_disconnected` (AN-007) |
 | Calibration | `calibration_outlier`, `calibration_unavailable` (TM-009) |
+| Keepalive (SPEC 020 KA-010, S8l) | a conversation stops being kept: `horizon`, `expired`, `cache_missed`, `auth_rejected`, `upstream_error`, `evicted`, `disabled`, `shutdown`, `ineligible(<why>)`, `<why>` ∈ `upstream_status`, `no_usage`, `short_ttl`, `too_small`, `credential_kind`, `oauth_not_enabled` |
 | Cache lifetime | `cache_ttl_unrecognised`: a `cache_control` marker Tokli does not understand, so the protocol default applies (SPEC 003 AN-011, S8i) |
 
 "Why didn't `json_minify` run on my request?" is answered from the trace alone.

@@ -1,9 +1,10 @@
-"""Metrics use cases (SPEC 013 TC-013, TC-015, TC-016; SPEC 015 API-010…API-012).
+"""Metrics use cases (SPEC 013 TC-013, TC-015, TC-016, TC-025; SPEC 015 API-010…API-012).
 
 Stored figures are estimates plus the provider's usage and the per-request ``k``. Calibration is
 applied here, per request, at query time (TOKLI_TELEMETRY_AND_COST §1). A total is labelled with
 the weakest method among its parts; when that is ``estimate`` it carries the share of the total
-that has the stronger method (TC-015).
+that has the stronger method (TC-015). Keepalive rows (TC-023) count only in the summary's
+`keepalive` block (TC-025, S8l SCR-001).
 """
 
 from __future__ import annotations
@@ -14,15 +15,17 @@ import json
 import math
 import re
 from collections import defaultdict
-from collections.abc import Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from tokli.app import money
-from tokli.pricing.book import PriceTable
+from tokli.pricing.book import CURRENCY, Prices, PriceTable
+from tokli.pricing.cost import MILLION, forwarded_cost
 from tokli.telemetry import queries
 from tokli.tokens.calibration import in_range
 
@@ -49,6 +52,10 @@ FORMAT_REASONS = frozenset(
 )
 
 Figure = tuple[int, str]  # (value, method)
+KEEPALIVE = "keepalive"  # the outcome of a keepalive row (TC-023)
+BRIDGED_METHOD = "bridged_cache_reads"  # TC-025's saving method (S8l SCR-003, proposed)
+_FAILED_PINGS = frozenset({"cache_missed", "auth_rejected", "upstream_error"})
+_USD_DIGITS = 8
 
 
 class InvalidParameters(Exception):
@@ -275,9 +282,8 @@ class MetricsQuery:
     ) -> tuple[list[dict[str, Any]], dict[str, list[dict[str, Any]]]]:
         rows = [
             row
-            for row in queries.requests_between(self._db_path, filters.start, filters.end)
-            if (filters.provider is None or row["provider"] == filters.provider)
-            and (filters.model is None or row["model"] == filters.model)
+            for row in self._rows(filters)
+            if row["outcome"] != KEEPALIVE  # client requests only (S8l SCR-001)
         ]
         stats: dict[str, list[dict[str, Any]]] = defaultdict(list)
         restricted = filters.compressor is not None or filters.kind is not None
@@ -290,6 +296,14 @@ class MetricsQuery:
                 stats[request_id] = [s for s in items if _matches(s, filters)]
             rows = [row for row in rows if stats.get(row["request_id"])]
         return rows, stats
+
+    def _rows(self, filters: Filters) -> list[dict[str, Any]]:
+        return [
+            row
+            for row in queries.requests_between(self._db_path, filters.start, filters.end)
+            if (filters.provider is None or row["provider"] == filters.provider)
+            and (filters.model is None or row["model"] == filters.model)
+        ]
 
     def _figures(
         self, row: Mapping[str, Any], stats: Mapping[str, list[dict[str, Any]]], filters: Filters
@@ -333,7 +347,75 @@ class MetricsQuery:
             "tokens": tokens,
             "overhead": self._overhead(rows),
             "cost": self._cost(rows, stats, filters),
+            "keepalive": self._keepalive(filters),
         }
+
+    # -- cache keepalive (S8l: TC-025) ----------------------------------------------------------
+
+    def _keepalive(self, filters: Filters) -> dict[str, Any]:
+        """Pings, bridged requests and the estimated net saving over the range. Each bridged
+        request saved the rewrite of what it read from the cache: its cache read priced at the
+        write price of its lifetime minus the read price."""
+        rows = self._rows(filters)
+        pings = [r for r in rows if r["outcome"] == KEEPALIVE]
+        bridged = [r for r in rows if r["outcome"] != KEEPALIVE and r["keepalive_bridged"]]
+        stops: dict[str, int] = defaultdict(int)
+        for r in pings:
+            if r["keepalive_stop_reason"]:
+                stops[r["keepalive_stop_reason"]] += 1
+        successful = sum(
+            1
+            for r in pings
+            if r["status_code"] is not None
+            and 200 <= r["status_code"] < 300
+            and r["keepalive_stop_reason"] not in _FAILED_PINGS
+        )
+        cost = self._keepalive_money(pings, self._ping_cost, "provider_usage")
+        saved = self._keepalive_money(bridged, self._bridged_saving, BRIDGED_METHOD)
+        return {
+            "pings": len(pings),
+            "successful_pings": successful,
+            "bridged_requests": len(bridged),
+            "ping_cost": cost.figure(),
+            "saved": saved.figure(),
+            "net": saved.minus(cost).figure(),
+            "stop_reasons": dict(sorted(stops.items())),
+        }
+
+    def _keepalive_money(
+        self,
+        rows: list[dict[str, Any]],
+        value: Callable[[Prices, Mapping[str, Any]], Decimal | None],
+        method: str,
+    ) -> _Amount:
+        if self._prices is None:
+            return _Amount(reason="no_price_book")
+        if not rows:
+            return _Amount(reason="no_data")
+        amount = _Amount(value=Decimal(0), method=method)
+        priced = 0
+        for row in rows:
+            match = self._prices.lookup(row["model"], datetime.fromisoformat(row["ts_start"]))
+            part = value(match.prices, row) if match is not None else None
+            if match is None or part is None:
+                continue
+            priced += 1
+            amount = amount.plus(part, match.version, row["credential_kind"] == "oauth")
+        return amount if priced else _Amount(reason="no_price_for_model")
+
+    @staticmethod
+    def _ping_cost(prices: Prices, row: Mapping[str, Any]) -> Decimal | None:
+        usage = money.usage_tokens(row)
+        return forwarded_cost(prices, usage) if usage is not None else None
+
+    @staticmethod
+    def _bridged_saving(prices: Prices, row: Mapping[str, Any]) -> Decimal | None:
+        read = row["usage_cache_read"]
+        if read is None:
+            return None
+        ttl = row["cache_ttl_s"] or 0
+        write = prices.cache_write_1h if ttl >= 3600 else prices.cache_write_5m
+        return Decimal(int(read)) * (write - prices.cache_read) / MILLION
 
     # -- money (S6: TC-004…TC-006, TC-019, TC-020; API-013) -------------------------------------
 
@@ -644,3 +726,50 @@ def _bucket_starts(filters: Filters) -> list[datetime]:
     if len(starts) > MAX_BUCKETS:
         raise InvalidParameters({"bucket": f"more than {MAX_BUCKETS} buckets; narrow the range"})
     return starts
+
+
+@dataclass(frozen=True)
+class _Amount:
+    """A keepalive money amount (TC-025) before it becomes an API figure."""
+
+    value: Decimal | None = None
+    reason: str | None = None
+    versions: frozenset[str] = frozenset()
+    oauth: bool = False
+    method: str = BRIDGED_METHOD
+
+    def plus(self, part: Decimal, version: str, oauth: bool) -> _Amount:
+        return _Amount(
+            (self.value or Decimal(0)) + part,
+            None,
+            self.versions | {version},
+            self.oauth or oauth,
+            self.method,
+        )
+
+    def minus(self, other: _Amount) -> _Amount:
+        """The net (TC-025): labelled with the saving's method, which is the estimated part."""
+        if self.value is None and other.value is None:
+            return self
+        return _Amount(
+            (self.value or Decimal(0)) - (other.value or Decimal(0)),
+            None,
+            self.versions | other.versions,
+            self.oauth or other.oauth,
+            BRIDGED_METHOD,
+        )
+
+    def figure(self) -> dict[str, Any]:
+        """An estimate with the basis of TC-019, or `{value: null, reason}` (TC-005)."""
+        if self.value is None:
+            return money.unavailable(self.reason or "no_data")
+        rounded = float(round(self.value, _USD_DIGITS))
+        return {
+            "estimate": rounded,
+            "low": rounded,
+            "high": rounded,
+            "method": self.method,
+            "currency": CURRENCY,
+            "price_book_version": ", ".join(sorted(self.versions)),
+            "basis": "api_equivalent" if self.oauth else "billed",
+        }

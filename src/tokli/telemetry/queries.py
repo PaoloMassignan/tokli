@@ -43,6 +43,9 @@ REQUEST_COLUMNS = (
     "saved_cache_read",  # schema v4 (TC-017)
     "saved_cache_write",
     "saved_input",
+    "keepalive_bridged",  # schema v6 (TC-023, TC-024)
+    "keepalive_stop_reason",
+    "cache_ttl_s",
 )
 STATS_COLUMNS = (
     "request_id",

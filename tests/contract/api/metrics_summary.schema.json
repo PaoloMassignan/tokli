@@ -8,7 +8,8 @@
     "requests",
     "tokens",
     "overhead",
-    "cost"
+    "cost",
+    "keepalive"
   ],
   "additionalProperties": false,
   "properties": {
@@ -175,6 +176,49 @@
               "type": "integer",
               "minimum": 0
             }
+          }
+        }
+      }
+    },
+    "keepalive": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pings",
+        "successful_pings",
+        "bridged_requests",
+        "ping_cost",
+        "saved",
+        "net",
+        "stop_reasons"
+      ],
+      "properties": {
+        "pings": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "successful_pings": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "bridged_requests": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "ping_cost": {
+          "$ref": "definitions.schema.json#/$defs/keepalive_money_figure"
+        },
+        "saved": {
+          "$ref": "definitions.schema.json#/$defs/keepalive_money_figure"
+        },
+        "net": {
+          "$ref": "definitions.schema.json#/$defs/keepalive_money_figure"
+        },
+        "stop_reasons": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 1
           }
         }
       }

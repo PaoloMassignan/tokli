@@ -51,7 +51,7 @@ persisted by default. It is available in the in-memory trace ring buffer and at
 | `credential_kind` | `api_key` \| `oauth` \| `none` \| `unknown` | prefix classification only |
 | `policy` | `LOSSLESS_ONLY` \| `LOSSY_ALLOWED` | derived at request start: `LOSSLESS_ONLY` when every enabled compressor is LOSSLESS (CC-002) |
 | `config_hash` | text | hash of the effective compression-relevant config |
-| `outcome` | `compressed` \| `passthrough` \| `verbatim_route` \| `error` | |
+| `outcome` | `compressed` \| `passthrough` \| `verbatim_route` \| `error` \| `keepalive` | `keepalive`: a request Tokli sent itself to keep the provider cache warm (SPEC 020, TC-023); it counts only in the summary's `keepalive` block (TC-025) |
 | `passthrough_reason` | text \| null | e.g. `no_applicable_compressor`, `parse_error`, `content_encoding`, `too_large`, `policy_off` |
 | `segments_total`, `segments_mutable`, `segments_changed` | int | |
 | `tokenizer_id` | text | |
@@ -68,6 +68,9 @@ persisted by default. It is available in the in-memory trace ring buffer and at
 | `header_names` | JSON list \| null | client request header names, lower-cased and sorted, never values (OB-012; schema v2) |
 | `saved_cache_read`, `saved_cache_write`, `saved_input` | int \| null | the estimated saving split by the usage region it sat in (TC-017; schema v4, ADR 0014) |
 | `stop_reason` | text \| null | the response's `stop_reason` (`end_turn`, `tool_use`, `refusal`, …; `other` for an unexpected value; AN-012, TC-022; schema v5, ADR 0015) |
+| `keepalive_bridged` | bool \| null | a client request that found the cache kept warm by a keepalive across a pause; null while the keepalive is off (TC-024; schema v6, ADR 0017) |
+| `keepalive_stop_reason` | text \| null | on a keepalive row: the reason it stopped keeping the conversation (SPEC 020 KA-010), null when it did not (TC-023) |
+| `cache_ttl_s` | real \| null | the request's cache lifetime (SPEC 003 AN-011); prices a bridged request's saving (TC-025) |
 
 ### CompressorStats (persisted, per request × compressor)
 

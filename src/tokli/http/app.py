@@ -273,6 +273,7 @@ def create_app(services: Services, listen: str | None = None) -> ASGIApp:
         try:
             yield
         finally:
+            runtime.current().keepalive.stop_all("shutdown")  # SPEC 020 KA-011
             await services.upstream.aclose()
             if services.store is not None:
                 services.store.close()

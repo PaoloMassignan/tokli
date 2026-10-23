@@ -22,6 +22,7 @@ Evidence codes:
 | SC-005 | H34 | AC-OB-4 | `test_default_logging_contains_no_prompt_text` |
 | SC-006 | MD-02, MD-24 | AC-SC-5 | `test_no_outbound_connections_except_upstream` |
 | SC-007 | quality-first (Brief§9) | AC-CM-1 | `test_passthrough_forwards_original_bytes` |
+| SC-008 | Tokli originates requests only as keepalives, only when on, on by default (S8l review C1, SCR-004) | AC-SC-6 | `test_no_originated_requests_when_off`, `test_originated_requests_are_keepalives_only`, `test_keepalive_off_sends_nothing` |
 
 ## Canonical model (SPEC 001)
 
@@ -108,7 +109,7 @@ Evidence codes:
 | Req | Why | AC | Tests |
 |---|---|---|---|
 | UP-001 | explicit upstream configuration, reported by doctor | AC-PT-2 | `test_doctor_report_fields` |
-| UP-002 | H35 | AC-UP-1 | `test_passthrough_forwards_client_credentials` |
+| UP-002 | H35 | AC-UP-1 | `test_passthrough_forwards_client_credentials`, `test_keepalive_never_persists_content_or_credentials` (S8l SCR-001: held in memory for a kept conversation) |
 | UP-003 | Brief§1 OpenAI API key required | AC-UP-2 | `test_inject_replaces_client_credentials` |
 | UP-004 | fail-closed on credentials | AC-UP-3 | `test_missing_inject_credential_returns_503` |
 | UP-005 | H36, MD-06 | AC-UP-2 | `test_no_cross_provider_credentials`, `test_inject_uses_only_configured_source`, `test_inherited_provider_env_is_ignored_unless_configured` |
@@ -211,10 +212,10 @@ Evidence codes:
 | Shell file reads (Claude Code) | Claude Code reads files through the shell (S8j review A3) | AC-PR-33 | `test_claude_code_shell_read_rules` |
 | CC-019 with `outline_first_read` | later references to an outlined read are not forwarded | AC-PR-31 | `test_outline_later_references_forward_whole` |
 | PR-020 | SELECTIVE, off by default (E5b-lite; S8c review P4) | AC-PR-14 | `test_resume_pruning_off_by_default`, `test_resume_pruning_off_by_default_end_to_end` |
-| PR-021 | prune only when the cache is rewritten anyway (E5b-lite: 76 % of cache writes follow pauses over an hour); S8i SCR-001: when the client's cache lifetime plus a margin has passed (68 % of cache writes followed such pauses) | AC-PR-11, AC-PR-13, AC-PR-17 | `test_resume_pruning_only_at_resume_and_old_calls`, `test_unknown_conversation_is_resume`, `test_unknown_conversation_view`, `test_conversation_key`, `test_conversation_key_ignores_cache_markers` (S8i SCR-003), `test_resume_uses_previous_request_ttl_1h` (SCR-002 boundary), `test_resume_uses_previous_request_ttl_5m`, `test_resume_margin_is_configurable`, `test_resume_trace_attributes` |
+| PR-021 | prune only when the cache is rewritten anyway (E5b-lite: 76 % of cache writes follow pauses over an hour); S8i SCR-001: when the client's cache lifetime plus a margin has passed (68 % of cache writes followed such pauses) | AC-PR-11, AC-PR-13, AC-PR-17 | `test_resume_pruning_only_at_resume_and_old_calls`, `test_unknown_conversation_is_resume`, `test_unknown_conversation_view`, `test_conversation_key`, `test_conversation_key_ignores_cache_markers` (S8i SCR-003), `test_resume_uses_previous_request_ttl_1h` (SCR-002 boundary), `test_resume_uses_previous_request_ttl_5m`, `test_resume_margin_is_configurable`, `test_resume_trace_attributes`, `test_successful_ping_prevents_resume`, `test_without_ping_the_same_request_is_a_resume` (S8l SCR-001) |
 | PR-022 | E10(a): the provider accepts stubbed edit arguments and the model re-reads | AC-PR-11, AC-PR-16 | `test_resume_pruning_keeps_structure_and_paths`, `test_resume_pruning_only_at_resume_and_old_calls` |
 | PR-023 | keep the cache valid between resumes (H05) | AC-PR-12 | `test_resume_pruning_reapplies_stored_set_between_resumes`, `test_resume_pruning_stable_between_resumes` |
-| PR-024 | operational state only, bounded, no disk (ADR 0012); S8i: also the last request's lifetime | AC-PR-15 | `test_conversation_store_bounded_and_memory_only`, `test_store_keeps_ttl_of_last_request_only` |
+| PR-024 | operational state only, bounded, no disk (ADR 0012); S8i: also the last request's lifetime | AC-PR-15 | `test_conversation_store_bounded_and_memory_only`, `test_store_keeps_ttl_of_last_request_only`, `test_successful_ping_prevents_resume` (S8l SCR-001: the time of the last successful ping) |
 | PR-025 | cache invalidation visible | AC-PR-11 | `test_resume_pruning_stable_between_resumes` |
 | PR-026 | tool-only messages are not human turns (S8a review A2) | AC-PR-16 | `test_human_turn_definition`, `test_resume_pruning_only_at_resume_and_old_calls` |
 | PR-027 | a request without a lifetime Tokli understands still needs one (S8i review P2) | AC-PR-17, AC-PR-18 | `test_resume_uses_previous_request_ttl_5m`, `test_resume_longest_ttl_wins`, `test_resume_without_cache_marker_uses_protocol_default`, `test_resume_unknown_ttl_uses_protocol_default_and_traces` |
@@ -298,15 +299,18 @@ Evidence codes:
 | TC-010 | Brief§15 retention | AC-TC-1 | `test_retention_pruning`, `test_retention_zero_keeps_everything` |
 | TC-011 | telemetry must not break traffic | AC-TC-6 | `test_sink_failure_degrades_not_breaks`, `test_write_failure_counts_and_never_raises`, `test_close_never_closes_the_connection_under_a_busy_writer` (S4.5) |
 | TC-012 | additive migrations keep older data readable; ADR 0005 | AC-TC-1, AC-TC-9 | `test_schema_migration_forward`, `test_schema_migration_forward_from_v1` (v1 → v3), `test_schema_version_recorded`, `test_non_ascii_data_dir`, `test_usage_and_calibration_fields_round_trip`; S4.5 D2: `test_column_type_follows_field_annotation`, `test_unmapped_annotation_is_refused`, `test_existing_column_types_unchanged` |
-| TC-013 | R01§9: measure overhead from the first useful slice; target ≠ gate | AC-TC-7 | `test_overhead_percentiles_by_bucket`, `test_target_is_reference_not_status`, `test_unknown_size_bucket`, `test_overhead_groups_by_policy_and_config_hash`, `test_ui_overhead_target_is_reference_line` |
+| TC-013 | R01§9: measure overhead from the first useful slice; target ≠ gate | AC-TC-7 | `test_overhead_percentiles_by_bucket`, `test_target_is_reference_not_status`, `test_unknown_size_bucket`, `test_overhead_groups_by_policy_and_config_hash`, `test_ui_overhead_target_is_reference_line`, `test_keepalive_rows_excluded_from_totals` (S8l SCR-001) |
 | TC-014 | PR-009 flag was not in the record schema (R01§10 consistency pass) | AC-TC-8 | `test_request_record_pruning_fields` |
-| TC-015 | honest totals (H21); S3 review A1–A4, P4 | AC-TC-11 | `test_summary_totals_hand_computed`, `test_summary_labels_mixed_totals_as_estimate_with_share`, `test_requests_list_metadata_only` |
+| TC-015 | honest totals (H21); S3 review A1–A4, P4 | AC-TC-11 | `test_summary_totals_hand_computed`, `test_summary_labels_mixed_totals_as_estimate_with_share`, `test_requests_list_metadata_only`, `test_keepalive_rows_excluded_from_totals` (S8l SCR-001) |
 | TC-017 | S6 P1, P2: where a saving sits decides its price; ADR 0014 | AC-TC-13 | `test_saving_regions_hand_computed`, `test_saving_regions_scale_by_k`, `test_saving_in_an_emptied_segment_sits_at_its_offset`, `prop_saving_regions_sum_to_saving`, `test_segment_places_follow_provider_order`, `test_saving_regions_recorded_end_to_end`, `test_saving_in_written_region_end_to_end`, `test_schema_migration_v3_to_v4` |
 | TC-018 | S6 P4, P5: dated, sourced prices; the user's own prices | AC-TC-14 | `test_user_price_book_overrides_shipped`, `test_user_price_book_used_at_startup`, `test_invalid_user_price_book_stops_startup`, `test_doctor_reports_price_books`, `test_doctor_fails_on_invalid_user_price_book` |
 | TC-019 | S6 P3: a subscription is not billed per token | AC-TC-15 | `test_oauth_cost_basis_api_equivalent` |
 | TC-020 | S6 P8: cache rewrites Tokli causes are not deducted | AC-TC-16 | `test_cost_caveats_hand_computed`, `test_summary_cost_block_without_price_book` |
 | TC-021 | S8h P3: a compressor that never applies is visible the same day | AC-TC-17 | `test_not_applying_flag_hand_computed`, `test_health_reports_applicability`, `test_ui_flags_compressor_not_applying` |
 | TC-022 | refusals in real use must be visible (S8j review D; ADR 0015, schema v5) | AC-TC-18 | `test_stop_reason_persisted_and_in_api`, `test_migration_v4_to_v5` |
+| TC-023 | a ping has a cost that must be shown (S8l review M5; ADR 0017, schema v6) | AC-TC-19 | `test_keepalive_rows_persisted`, `test_ping_auth_rejected_stops`, `test_ping_schedule_until_horizon` |
+| TC-024 | the saving shows on the request that came back (S8l review M5) | AC-TC-20 | `test_keepalive_rows_persisted`, `test_successful_ping_prevents_resume`, `test_without_ping_the_same_request_is_a_resume`, `test_schema_migration_v5_to_v6` |
+| TC-025 | net saving, clearly an estimate (S8l review P6, P8) | AC-TC-20 | `test_keepalive_summary_hand_computed` (methods per API-002 and S8l SCR-003, proposed), `test_api_contract_schemas_s3`, `test_keepalive_saving_at_five_minute_price`, `test_keepalive_without_price`, `test_keepalive_rows_excluded_from_totals` |
 | TC-016 | which compressor saves, at what latency (TOKLI_TELEMETRY_AND_COST §3); ADR 0007 | AC-TC-12 | `test_compressor_aggregates_hand_computed`, `test_compressor_rates_without_applicable_are_null`, `test_latency_without_benefit_flag`, `test_stats_record_tokens_in_of_accepted_calls` |
 
 ## Observability (SPEC 014)
@@ -326,6 +330,7 @@ Evidence codes:
 | OB-011 | degraded visibility; S2 review A8 | AC-TC-6 | `test_health_degraded_conditions`, `test_health_endpoint`, `test_outlier_window`, `test_health_degraded_on_calibration_outliers`, `test_health_reports_applicability` (S8h) |
 | OB-012 | E1 needs the header names Claude Code sends; S1 review P6; S1 Gate 2 decision 3 | AC-OB-4, AC-OB-6 | `test_trace_records_header_names_only`, `test_header_names_persisted`, `test_header_names_persisted_end_to_end` |
 | OB-013 | logs outlive the console; S1 Gate 2 decision 4 | AC-OB-7 | `test_log_file_defaults`, `test_log_file_written_when_enabled`, `test_log_file_rotates`, `test_log_file_rotation_failure_does_not_stop_tokli`, `test_log_file_rotation_with_file_held_open`, `test_log_file_open_failure_does_not_stop_tokli`, `test_log_file_contains_no_credentials_or_content`, `test_serve_log_file_enabled`, `test_serve_log_file_off_by_default` |
+| OB-014 | a ping is visible like a request, without content or keys (S8l review §5) | AC-OB-8 | `test_keepalive_trace_and_log_line`, `test_keepalive_eligibility_reasons` |
 
 ## Application API (SPEC 015)
 
@@ -362,6 +367,7 @@ Evidence codes:
 | UI-012 | the verbatim opt-in is the user's informed choice (S8a SCR-001, E5b-lite) | — | `test_ui_verbatim_opt_in_toggle` |
 | UI-010 | honest wording (S4 SCR-001) | — | `test_ui_policy_explanations_text`, `test_ui_settings_primary_controls_and_disclosures`, `test_ui_help_reveals_contextual_field_descriptions` |
 | UI-014 | S8h P3 | — | `test_ui_flags_compressor_not_applying` |
+| UI-015 | S8l review P6 | AC-UI-6 | `test_ui_keepalive_card_and_toggles` |
 | UI-013 | S6: money with its range, method and basis | — | `test_ui_cost_card_shows_estimate_range_and_method`, `test_ui_compressor_money_column`, `test_ui_compressor_summary_and_full_details`, `test_ui_recent_request_money_is_compact_with_descriptions_in_help` |
 
 ## Configuration (SPEC 017)
@@ -376,7 +382,7 @@ Evidence codes:
 | CF-006 | fingerprint + telemetry; S4 SCR-002 (`pruning`) | AC-CF-4 | `test_config_hash_stable_and_sensitive`, `test_config_hash_changes_with_pruning_options`, `test_ui_override_changes_config_hash` |
 | CF-007 | H12, H14: no silent substitution | AC-CC-7 | `test_optional_capability_never_silently_substituted` |
 | CF-008 | MD-04, MD-07 | AC-PT-2 | `test_data_dir_resolution_per_platform`, `test_config_dir_resolution_per_platform`, `test_linux_xdg_fallbacks_use_home`, `test_missing_home_fails_clearly` |
-| CF-009 | Brief§8 UI; S4 SCR-001 | AC-API-3 | `test_keys_marked_ui_editable`, `test_patch_unknown_key_rejected`, `test_s8a1_keys_and_defaults`, `test_patch_verbatim_opt_in` (S8a SCR-001) |
+| CF-009 | Brief§8 UI; S4 SCR-001 | AC-API-3 | `test_keys_marked_ui_editable`, `test_patch_unknown_key_rejected`, `test_s8a1_keys_and_defaults`, `test_patch_verbatim_opt_in` (S8a SCR-001), `test_keepalive_disabled_at_run_time`, `test_ui_keepalive_card_and_toggles` (S8l SCR-001) |
 | CF-010 | credential hygiene | AC-CF-5 | `test_secret_values_rejected_in_config` |
 | CF-011 | MD-05; S0 review M2, X2 | AC-CF-6 | `test_env_json_value_errors_name_variable`, `test_reserved_env_vars_only` |
 | CF-012 | S0 review M1 (YAML implicit types, duplicate keys) | AC-CF-7 | `test_duplicate_yaml_key_rejected`, `test_yaml_implicit_types_rejected`, `test_empty_config_file_is_an_empty_layer` |
@@ -398,6 +404,27 @@ Evidence codes:
 | PT-011 | MD-01…MD-28 (SPEC 018 checklist) | AC-PT-6 | `test_no_dotenv_loading`, `test_cli_output_encodable_cp1252`, `test_daily_rollup_respects_tz_param`, `test_wheel_imports_tokli_in_clean_venv`, `test_no_module_reads_cwd_relative_paths` (+ the tests named per row), `test_machine_dependence_checklist_tests_exist`, `test_starts_offline_with_provisioned_tokenizer` |
 | PT-012 | S0 review X1, M3 (exit criterion, doctor exit code) | AC-PT-7, AC-PT-4 | `test_doctor_normalised_snapshot`, `test_doctor_makes_no_network_calls`, `test_invalid_config_fails_clearly`, `test_doctor_normalised_snapshot_provisioned`, `test_doctor_exit_codes`, `test_unwritable_data_dir_reported` |
 | PT-010 | MD-27 | AC-PT-1 | `test_fixtures_contain_no_developer_paths` |
+
+## Cache keepalive (SPEC 020)
+
+| Req | Why | AC | Tests |
+|---|---|---|---|
+| KA-001 | on by default, one toggle turns it off (S8l SCR-004) | AC-KA-1 | `test_keepalive_off_sends_nothing`, `test_keepalive_on_by_default` |
+| KA-002 | only conversations whose rewrite costs more than the pings (S8l review P3, P4, P7) | AC-KA-2 | `test_keepalive_eligibility_reasons`, `test_keepalive_oauth_opt_in` |
+| KA-003 | memory only, until the horizon (S8l review P5; ADR 0016) | AC-KA-11 | `test_keepalive_never_persists_content_or_credentials` |
+| KA-004 | E12: `max_tokens` is not part of the cache key; thinking settings are | AC-KA-3 | `test_ping_body_changes_only_max_tokens`, `test_ping_max_tokens_above_thinking_budget` |
+| KA-002, KA-004 (inject mode) | S8l SCR-002: no Anthropic inject mode before S5 | AC-KA-13 | deferred to S5: `test_ping_inject_mode_reads_key_at_send_time` |
+| KA-005 | E12; the S8l simulation's best net at 12 h | AC-KA-4 | `test_ping_schedule_until_horizon` |
+| KA-006 | a late ping would pay the full write (S8l review D4) | AC-KA-5 | `test_ping_not_sent_after_clock_jump` |
+| KA-007 | E12: a ping reads the prefix and writes nothing | AC-KA-6 | `test_ping_cache_missed_stops` |
+| KA-008 | no retries (S8l review M2) | AC-KA-6 | `test_ping_auth_rejected_stops`, `test_ping_upstream_error_stops_without_retry`, `test_ping_timeout_stops_without_retry` |
+| KA-009 | bounded memory (S8l review P4, M3) | AC-KA-7 | `test_keepalive_evicts_oldest` |
+| KA-010 | every stop has a reason (S8l review §5) | AC-KA-2, AC-KA-5…AC-KA-8 | `test_keepalive_eligibility_reasons`, `test_ping_not_sent_after_clock_jump`, `test_ping_cache_missed_stops`, `test_keepalive_evicts_oldest`, `test_keepalive_disabled_at_run_time`, `test_keepalive_shutdown_drops_state`, `test_keepalive_reason_codes_are_known` |
+| KA-011 | S8l review M4 | AC-KA-8 | `test_keepalive_disabled_at_run_time`, `test_keepalive_shutdown_drops_state` |
+| KA-012 | a client request already refreshes the cache (S8l review M3) | AC-KA-9 | `test_no_ping_while_client_request_in_flight` |
+| KA-013 | E12: after a ping the cache is warm, so the request is not a resume (S8l SCR-001) | AC-KA-10 | `test_successful_ping_prevents_resume`, `test_without_ping_the_same_request_is_a_resume` |
+| KA-014 | PX-015; S8l review §4 | AC-KA-12 | `test_ping_does_not_delay_client_requests`, `test_ping_timeout_stops_without_retry` |
+| KA-015 | no content kept (S8l review P5) | AC-KA-11 | `test_keepalive_never_persists_content_or_credentials`, `test_keepalive_trace_and_log_line` |
 
 ## Measurement tools (TOKLI_TEST_STRATEGY §2)
 

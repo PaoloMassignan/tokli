@@ -19,6 +19,12 @@ it saved: in tokens, and in money priced the way Anthropic really charges, cache
 it costs little, so savings on that part are modest. The dashboard shows your own figure, priced
 after the cache.
 
+**Cache keepalive (on by default).** During a pause, Tokli repeats your last request with a
+one-token answer shortly before Anthropic's one-hour cache expires, for up to 12 hours, so that
+your return does not pay to write the whole history to the cache again. Each repeat costs much
+less than the write it avoids; you can turn it off in Settings
+([details](docs/GETTING_STARTED.md#5-what-is-on-by-default)).
+
 ## Quick start
 
 You need Python 3.11–3.14 and Claude Code (with an API key or a Pro/Max subscription).

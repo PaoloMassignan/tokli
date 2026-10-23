@@ -3,6 +3,7 @@
 Status: Draft · Slice: S1 onward (DoD of every slice) · Related: TOKLI_OBSERVABILITY.md (explanatory)
 Approved for S1 (2026-09-30): OB-001…OB-008, OB-010, OB-011 (sink failure, unavailable compressor), OB-012. OB-009 deferred to the first slice that needs debug content.
 Approved for S2 (2026-10-02): OB-011 (calibration outliers), OB-012 (persisted), OB-013.
+Approved for S8l (2026-10-23): OB-014, AC-OB-8; the "Keepalive" reason codes in TOKLI_OBSERVABILITY §4.
 
 ## Requirements
 
@@ -20,6 +21,7 @@ Approved for S2 (2026-10-02): OB-011 (calibration outliers), OB-012 (persisted),
 | OB-010 | THE SYSTEM SHALL emit one INFO summary log line per request (JSON by default) containing request_id, provider, model, outcome, reason, tokens (with methods), status and overhead. |
 | OB-012 | THE trace and the persisted `RequestRecord` (`header_names`) SHALL record the **names** of the client's request headers (lower-cased, sorted) and SHALL NOT record any header value. |
 | OB-013 | WHERE `observability.log_file` is true, THE SYSTEM SHALL also write log lines as JSON to `<data dir>/logs/tokli.log`, UTF-8 with LF line endings, rotating at 10 MB and keeping 5 files. IF writing or rotating the file fails, THEN THE SYSTEM SHALL keep serving and keep logging to stderr. |
+| OB-014 | WHEN THE SYSTEM sends a keepalive request (SPEC 020), it SHALL assign it a ULID `request_id`, SHALL record a trace with the spans `keepalive` (seconds since the conversation's last client request, held prefix size, cache lifetime), `upstream` and `usage`, and SHALL emit one INFO summary log line (OB-010) with `outcome: keepalive`, the status, the usage and the stop reason when there is one. WHEN THE SYSTEM decides on a client request whether to keep its conversation, it SHALL record in that request's trace `keepalive: kept` or `keepalive: ineligible(<why>)`, and whether the request is bridged. These traces SHALL NOT carry the conversation key, header values or content. (S8l.) |
 | OB-011 | THE `GET /tokli/health` endpoint SHALL report `degraded` with named checks when a sink fails, an enabled compressor is unavailable, or calibration outliers exceed 20 % of the last 100 requests for which `k` was computed (with fewer than 20 such requests the check is `ok`). It SHALL also report the informational check `applicability`, `ok` or `not_applying: <ids>` (TC-021, over the last 7 days), which never makes the status `degraded`. (S8h P3.) |
 
 ## Acceptance criteria
@@ -29,6 +31,7 @@ Approved for S2 (2026-10-02): OB-011 (calibration outliers), OB-012 (persisted),
 - AC-OB-4: canary credential and content scans pass for all fixture paths and error paths.
 - AC-OB-6 (OB-012): after a restart, the header names of an earlier request are still readable from the DB; no header value is in the DB.
 - AC-OB-7 (OB-013): with the key on, request summary lines appear in the file as JSON even with `--log-format text`; the file rotates at the bound; a rotation that fails because the file is held open (Windows) does not stop Tokli; credential and content scans pass on the file.
+- AC-OB-8 (OB-014): a ping produces a trace with the three spans, a log line and a DB row sharing one request_id, with no conversation key, header value or content in any of them; a client request's trace shows `keepalive: kept`.
 - AC-OB-5: debug-content needs both switches. The banner is present in UI HTML and doctor output. TTL cleanup works.
 
 ## Test scenarios
@@ -38,4 +41,5 @@ Approved for S2 (2026-10-02): OB-011 (calibration outliers), OB-012 (persisted),
 `test_debug_content_requires_both_switches` · `test_debug_content_banner_visible` · `test_debug_content_ttl_and_cap` ·
 `test_request_summary_log_line` · `test_health_degraded_conditions` · `test_trace_records_header_names_only` ·
 `test_header_names_persisted` · `test_health_degraded_on_calibration_outliers` · `test_log_file_written_when_enabled` ·
-`test_log_file_rotates` · `test_log_file_rotation_failure_does_not_stop_tokli` · `test_log_file_contains_no_credentials_or_content`
+`test_log_file_rotates` · `test_log_file_rotation_failure_does_not_stop_tokli` · `test_log_file_contains_no_credentials_or_content` ·
+`test_keepalive_trace_and_log_line`

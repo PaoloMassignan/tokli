@@ -215,6 +215,20 @@ class TelemetrySection(BaseModel):
     retention_days: int = Field(default=30, ge=0)
 
 
+class KeepaliveSection(BaseModel):
+    """SPEC 020 cache keepalive (S8l); not part of `config_hash` (CF-006)."""
+
+    model_config = _STRICT
+
+    enabled: bool = True  # KA-001, S8l SCR-004
+    oauth: bool = True  # S8l SCR-004
+    horizon_s: int = Field(default=43200, ge=1)
+    lead_s: int = Field(default=300, ge=1)
+    min_ttl_s: int = Field(default=3600, ge=1)
+    min_prefix_tokens: int = Field(default=20000, ge=0)
+    max_conversations: int = Field(default=8, ge=1)
+
+
 class TokliSettings(BaseModel):
     """The validated, immutable settings. Build it only through ``load_config``."""
 
@@ -230,6 +244,7 @@ class TokliSettings(BaseModel):
     tokens: TokensSection = Field(default_factory=TokensSection)
     observability: ObservabilitySection = Field(default_factory=ObservabilitySection)
     telemetry: TelemetrySection = Field(default_factory=TelemetrySection)
+    keepalive: KeepaliveSection = Field(default_factory=KeepaliveSection)
 
 
 # Sections whose values change forwarded behaviour and therefore enter ``config_hash`` (CF-006).
@@ -280,12 +295,16 @@ def _walk(model: type[BaseModel], prefix: tuple[str, ...], keys: dict[str, KeyIn
 
 
 def _ui_editable(key: str) -> bool:
-    """CF-009 (after S8a SCR-001): compressor toggles, the verbatim opt-in where a compressor
-    declares it, and the retention period."""
+    """CF-009 (after S8a SCR-001 and S8l SCR-001): compressor toggles, the verbatim opt-in where
+    a compressor declares it, the retention period and the keepalive toggles."""
     compressor_switch = key.startswith("compressors.") and key.endswith(
         (".enabled", ".apply_to_verbatim_tools")
     )
-    return compressor_switch or key == "telemetry.retention_days"
+    return compressor_switch or key in (
+        "telemetry.retention_days",
+        "keepalive.enabled",
+        "keepalive.oauth",
+    )
 
 
 def schema_keys() -> dict[str, KeyInfo]:

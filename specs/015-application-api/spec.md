@@ -5,6 +5,7 @@ Approved for S1 (2026-09-30): `GET /tokli/api/requests/{id}`, `GET /tokli/health
 Approved for S3 (2026-10-03): `GET /tokli/api/requests`, `metrics/summary|timeseries|compressors`, read-only `GET /tokli/api/compressors`; API-001…API-004, API-008…API-012.
 Approved for S4 (2026-10-03): `GET`/`PATCH /tokli/api/config`, `GET /tokli/api/compressors` with `locked_by` and evaluation status; API-005, API-006, API-007.
 Approved for S6 (2026-10-04): API-002 money figures, API-013; API-012 retired.
+Changed by S8l SCR-003 (approved 2026-10-23): API-002 (the `bridged_cache_reads` method).
 
 ## Purpose
 One JSON API under `/tokli/api` that the dashboard, the CLI and any replacement UI consume.
@@ -30,7 +31,7 @@ It exposes application use cases, never storage tables or compressor objects.
 | ID | EARS requirement |
 |---|---|
 | API-001 | THE API SHALL return only metadata. No endpoint SHALL return prompt/response content or credential values (debug-content excepted, under OB-008/009 via a separate `/tokli/api/debug/*` namespace). |
-| API-002 | EVERY token figure in API responses SHALL be an object `{value, method}`, and every money figure SHALL be `{estimate, low, high, method, currency, price_book_version, basis}` or `{value: null, reason}`. A money `method` is `provider_usage` (the forwarded cost: provider usage at the price book), or for a saving `positional`, `proportional` or `assumes_uncached` (TC-004, TC-006); a total carries the weakest of its parts in that order and, when they differ, `method_shares` (the share of the estimate per method). `basis` is `billed` or `api_equivalent` (TC-019). (S6.) |
+| API-002 | EVERY token figure in API responses SHALL be an object `{value, method}`, and every money figure SHALL be `{estimate, low, high, method, currency, price_book_version, basis}` or `{value: null, reason}`. A money `method` is `provider_usage` (the forwarded cost: provider usage at the price book), or for a saving `positional`, `proportional` or `assumes_uncached` (TC-004, TC-006), or, for the cache keepalive's saving and net, `bridged_cache_reads` (TC-025: the bridged requests' cache reads at the write price of their lifetime minus the read price); a total carries the weakest of its parts in that order and, when they differ, `method_shares` (the share of the estimate per method). `basis` is `billed` or `api_equivalent` (TC-019). (S6, S8l SCR-003.) |
 | API-003 | THE metrics endpoints SHALL accept the filters `from`, `to`, `provider`, `model`, `compressor`, `kind` and `tz`, and SHALL validate them (400 with field errors). |
 | API-004 | THE API SHALL be versioned by a top-level `api_version` field. Breaking changes require a new version. |
 | API-005 | WHEN `PATCH /tokli/api/config` targets a key pinned by env/CLI, THE SYSTEM SHALL answer 409 naming the pinning source; WHEN it targets an unknown or non-UI-editable key, 400. |

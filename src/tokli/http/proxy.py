@@ -29,6 +29,7 @@ from tokli.app import measurement
 from tokli.app.api import CompressionReport, compression_report, compressor_summary
 from tokli.app.bootstrap import Services
 from tokli.app.conversations import pruned_call_ids
+from tokli.app.keepalive import ClientResult
 from tokli.app.request_record import Observed, now_iso, record_request, usage_categories
 from tokli.app.runtime import Runtime
 from tokli.auth.passthrough import credential_kind, forward_request_headers, header_names
@@ -100,6 +101,13 @@ class _State:
     ms_usage: float = 0.0
     estimate: asyncio.Future[measurement.RequestEstimate] | None = None
     services: Services | None = None  # the snapshot this request started with (CF-005)
+    # Cache keepalive (SPEC 020): the conversation, and what a ping would repeat.
+    conversation_key: str | None = None
+    cache_ttl_s: float | None = None
+    forward_body: bytes = b""
+    forward_headers: list[tuple[str, str]] = field(default_factory=list)
+    sent_at: float | None = None
+    keepalive_bridged: bool | None = None
 
 
 def _trace_resume(
@@ -176,6 +184,12 @@ class ProxyHandler:
             mode="passthrough",
             credential_kind=state.credential_kind,
         )
+        if state.conversation_key is not None:  # SPEC 020: held only while the request lasts
+            keepalive = services.keepalive
+            state.sent_at = keepalive.clock()
+            state.keepalive_bridged = keepalive.begin(state.conversation_key)
+            if keepalive.enabled:
+                state.forward_body, state.forward_headers = forward_body, upstream_headers
 
         state.upstream_started = time.perf_counter()
         try:
@@ -257,6 +271,7 @@ class ProxyHandler:
         # whose stubs the forwarded request really carries (none when it is passed through).
         lookup_started = time.perf_counter()
         key = conversation_key(request)
+        state.conversation_key, state.cache_ttl_s = key, request.cache_ttl_s
         conversation = services.conversations.view(key, request.protocol)
         _trace_resume(trace, lookup_started, request, conversation)
         carried: list[frozenset[str]] = [frozenset()]
@@ -490,6 +505,7 @@ class ProxyHandler:
         if transformable:
             self._record_calibration(trace, calibration, estimate)
 
+        self._keepalive(trace, state, services, usage)
         observed = Observed(
             request_id=state.request_id,
             ts_start=state.ts_start,
@@ -522,8 +538,41 @@ class ProxyHandler:
             history_rewritten=state.history_rewritten,
             usage=usage,
             error_details=state.error_details,
+            keepalive_bridged=state.keepalive_bridged,
+            cache_ttl_s=state.cache_ttl_s,
         )
         record_request(services, observed, engine, estimate, calibration, trace.to_dict())
+
+    @staticmethod
+    def _keepalive(trace: Trace, state: _State, services: Services, usage: Usage) -> None:
+        """Hands the completed request to the keepalive (SPEC 020 KA-002) and records its
+        decision in the trace (OB-014). The held body and headers are released here."""
+        key = state.conversation_key
+        if key is None or state.sent_at is None:
+            return
+        decision = services.keepalive.end(
+            key,
+            ClientResult(
+                status=state.status_code if state.error_code is None else None,
+                usage=usage,
+                cache_ttl_s=state.cache_ttl_s,
+                credential_kind=state.credential_kind,
+                body=state.forward_body,
+                headers=state.forward_headers,
+                path=state.endpoint,
+                model=state.model,
+                stream=state.stream,
+            ),
+            state.sent_at,
+        )
+        state.forward_body, state.forward_headers = b"", []
+        if decision is None:
+            return
+        trace.attrs["keepalive"] = decision
+        if decision != "kept":
+            trace.decide("keepalive", decision)
+        if state.keepalive_bridged is not None:
+            trace.attrs["keepalive_bridged"] = state.keepalive_bridged
 
     def _record_calibration(
         self,

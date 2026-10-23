@@ -72,6 +72,15 @@ class ConversationStore:
                 self._entries.popitem(last=False)
         return bool(pruned - (previous.pruned if previous is not None else frozenset()))
 
+    def touch(self, key: str, at: float) -> None:
+        """A successful keepalive request at ``at`` (SPEC 020 KA-013): the conversation was
+        last seen then; its cache lifetime and pruned calls stay those of its last request
+        (PR-021, PR-024 after S8l SCR-001; ADR 0012 amendment 3)."""
+        with self._lock:
+            entry = self._entries.get(key)
+            if entry is not None and at > entry.seen:
+                self._entries[key] = _Entry(at, entry.cache_ttl_s, entry.pruned)
+
     def __len__(self) -> int:
         with self._lock:
             return len(self._entries)

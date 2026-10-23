@@ -60,6 +60,8 @@ class Observed:
     usage: Usage
     error_details: Mapping[str, str] = field(default_factory=dict)
     history_rewritten: bool = False  # PR-009, PR-025
+    keepalive_bridged: bool | None = None  # TC-024 (S8l)
+    cache_ttl_s: float | None = None  # the request's cache lifetime (ADR 0017)
 
 
 def record_request(
@@ -124,6 +126,8 @@ def record_request(
         saved_cache_read=request_parts[0],
         saved_cache_write=request_parts[1],
         saved_input=request_parts[2],
+        keepalive_bridged=observed.keepalive_bridged,
+        cache_ttl_s=observed.cache_ttl_s,
     )
     stats = stats_records(
         observed.request_id,
